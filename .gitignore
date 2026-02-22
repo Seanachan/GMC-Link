@@ -205,3 +205,10 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# PyTorch
+*.pt
+*.pth
+
+# Dataset
+refer-kitti/

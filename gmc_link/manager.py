@@ -19,7 +19,7 @@ class GMCLinkManager:
         
         # 1. Initialize Components
         self.gmc_engine = GlobalMotion()
-        self.motion_buffer = MotionBuffer(alpha=0.8) # Smoothes out jitter
+        self.motion_buffer = MotionBuffer(alpha=0.3) # Smoothes out jitter (lower = more smoothing)
         self.aligner = MotionLanguageAligner(lang_dim=lang_dim, embed_dim=256).to(device)
         
         # 2. Load trained knowledge if available
@@ -35,9 +35,10 @@ class GMCLinkManager:
             active_tracks: A list of track objects, each with attributes like 'id', 'centroid', and 'prev_centroid'.
             language_embedding: A tensor representing the language prompt embedding (e.g., from CLIP or BERT).
         Returns:
-            A dictionary mapping track IDs to their alignment scores with the language prompt.  Scores are in the range [0, 1], where higher means more aligned with the prompt.
+            scores_dict: A dictionary mapping track IDs to their alignment scores with the language prompt.
+            velocities_dict: A dictionary mapping track IDs to their GMC-compensated velocity vectors [dx, dy].
         """
-        if not active_tracks: return {}
+        if not active_tracks: return {}, {}
 
         # Geometric Motion Compensation (GMC) to find camera movement
         # Find how the camera moved between the last frame and this one
@@ -50,7 +51,7 @@ class GMCLinkManager:
         for track in active_tracks:
             # We need the previous position to find the direction
             # If the track is new, we can't calculate motion yet
-            if not hasattr(track, 'prev_centroid'):
+            if not hasattr(track, 'prev_centroid') or track.prev_centroid is None:
                 track.prev_centroid = track.centroid
                 continue
 
@@ -71,7 +72,7 @@ class GMCLinkManager:
             compensated_velocities.append(smoothed_v)
 
         if not compensated_velocities:
-            return {}
+            return {}, {}
 
         # Reasoning: Align the compensated motion with the language embedding
         # Convert list of motions to a (N, 2) tensor
@@ -85,6 +86,9 @@ class GMCLinkManager:
         # Clean up old tracks from the motion buffer to prevent memory bloat
         self.motion_buffer.clear_dead_tracks(track_ids)
 
-        # Return a dictionary of {track_id: score} for easy look-up in your tracker
-        scores = logits.cpu().numpy().flatten()
-        return dict(zip(track_ids, scores))
+        # Return dictionaries of {track_id: score} and {track_id: velocity}
+        # Apply sigmoid so scores are [0, 1] probability (BCE-trained model)
+        scores = torch.sigmoid(logits).cpu().numpy().flatten()
+        scores_dict = dict(zip(track_ids, scores))
+        velocities_dict = dict(zip(track_ids, compensated_velocities))
+        return scores_dict, velocities_dict

@@ -1,4 +1,7 @@
 import numpy as np
+
+# Scale factor for normalized velocities so the MLP operates on ~1.0 magnitude values
+VELOCITY_SCALE = 100
 # import torch
 
 
@@ -39,6 +42,8 @@ def normalize_velocity(v_comp, frame_shape):
     # We normalize by the dimensions so a movement of 'half the screen'
     # always results in 0.5, regardless of pixel count.
     v_norm = v_comp / np.array([w, h], dtype=np.float32)
+    # Scale up so the MLP operates on values around ~1.0 instead of ~0.01
+    v_norm *= VELOCITY_SCALE
     return v_norm
 
 

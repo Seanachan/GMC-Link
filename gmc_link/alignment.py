@@ -15,7 +15,7 @@ class MotionLanguageAligner(nn.Module):
       language_dim: The dimensionality of the language features.
       hidden_dim: The dimensionality of the hidden layer for alignment.
     """
-    def __init__(self, vis_dim=512, lang_dim=768, embed_dim=256):
+    def __init__(self, motion_dim=2, lang_dim=768, embed_dim=256):
         super().__init__()
         # Motion Encoder: Project (dx, dy) into a semantic vector.
         # Use small MLP because 'meaning' of motion is non-linear.
@@ -65,3 +65,20 @@ class MotionLanguageAligner(nn.Module):
 
         return alignment_logits
 
+    def score_pairs(self, motion_feats, lang_feats):
+        """
+        Compute per-pair similarity scores for BCE training.
+        
+        Args:
+            motion_feats: (N, 2) velocity vectors
+            lang_feats: (N, L_dim) language embeddings (one per motion)
+        Returns:
+            scores: (N,) scalar similarity score per pair
+        """
+        motion_latents = F.normalize(self.motion_projector(motion_feats), p=2, dim=-1)
+        language_latents = F.normalize(self.lang_projector(lang_feats), p=2, dim=-1)
+        
+        # Element-wise dot product → per-pair cosine similarity
+        scores = (motion_latents * language_latents).sum(dim=-1)
+        scores = scores * self.logit_scale.exp()
+        return scores

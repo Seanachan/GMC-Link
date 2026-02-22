@@ -2,14 +2,14 @@ import cv2
 import torch
 import os
 import numpy as np
-from .manager import GMCLink
+from .manager import GMCLinkManager
 
 def run_visualization(frame_folder, text_prompt, text_embedding):
     """
     Visualizes GMC-Link's reasoning over a sequence of frames.
     """
     # 1. Initialize the Master Manager
-    linker = GMCLink()
+    linker = GMCLinkManager()
     
     # Load your trained weights if you have them
     # linker.aligner.load_state_dict(torch.load("gmc_link_weights.pth"))

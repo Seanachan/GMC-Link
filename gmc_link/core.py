@@ -49,7 +49,7 @@ class GlobalMotion:
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
         # Mask out detected objects, focusing on background features for motion estimation
-        mask = np.zeros_like(gray) * 255
+        mask = np.ones_like(gray, dtype=np.uint8) * 255
         if detections is not None and len(detections) > 0:
             for det in detections:
                 x1, y1, x2, y2 = map(int, det)
@@ -73,10 +73,13 @@ class GlobalMotion:
             return np.eye(3, dtype=np.float32)
 
         good_matches = []
-        for m, n in matches:
-            # 0.75 is a common threshold for Lowe's ratio test, but it can be tuned based on the dataset and requirements
-            if len(m) == len(n) == 2 and m.distance < 0.75 * n.distance:
-                good_matches.append(m)
+        for match_pair in matches:
+            # knnMatch may return fewer than k matches for some descriptors
+            if len(match_pair) == 2:
+                m, n = match_pair
+                # 0.75 is a common threshold for Lowe's ratio test
+                if m.distance < 0.75 * n.distance:
+                    good_matches.append(m)
 
         # Homography Estimation with RANSAC
         if len(good_matches) < 4:
