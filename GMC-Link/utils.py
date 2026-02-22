@@ -1,5 +1,5 @@
 import numpy as np
-import torch
+# import torch
 
 
 def warp_points(points, homography):
@@ -49,7 +49,7 @@ class MotionBuffer:
     """
     def __init__(self, alpha=0.8):
         self.alpha = alpha
-        self.registry = {} # Stores {track_id: last_v}
+        self.registry = {}  # Stores {track_id: last_v}
 
     def smooth(self, track_id, v_new):
         if track_id not in self.registry:

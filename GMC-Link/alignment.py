@@ -43,7 +43,7 @@ class MotionLanguageAligner(nn.Module):
             lang_feats: (1, L_dim) or (N, L_dim) Tensor - The text features. (1,L_dim) if using a single language description for all tracks, or (N, L_dim) if each track has its own description.
 
         Returns:
-            aligment_logits: (N, M) Matrix of simlilarity scores between motion and language features, where M is the number of language features (e.g., tokens).
+            aligment_logits: (N, N) Matrix of simlilarity scores between motion and language features, where M is the number of language features (e.g., tokens).
         """
 
         # 1. Project to Shared Latent Space (latent -> 'thought space'), now having same dim (256)
@@ -51,7 +51,7 @@ class MotionLanguageAligner(nn.Module):
         language_latents = self.lang_projector(lang_feats)
 
         # 2. L2 Normalization
-        # Standardizes vectors to a length of 1.0 for Cosine Similarity
+        # Standardizes vectors to a length of 1.0 for Cosine Similarity, both (N, 256)  now.
         motion_latents = F.normalize(motion_latents, p=2, dim=-1)
         language_latents = F.normalize(language_latents, p=2, dim=-1)
 
