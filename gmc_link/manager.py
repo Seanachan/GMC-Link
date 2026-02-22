@@ -9,7 +9,7 @@ class GMCLinkManager:
     GMC-Link Manager: The 'Brain' that orchestrates the Geometry, Compensation, and Reasoning modules. 
     This class is designed to be called from your main tracking loop, where it processes each frame and active tracks, returning alignment scores for each track against the language prompt.
     """
-    def __init__(self, weights_path=None, device='cpu'):
+    def __init__(self, weights_path=None, device='cpu', lang_dim = 384):
         """
         Args:
             weights_path: Optional path to pre-trained weights for the MotionLanguageAligner.
@@ -20,7 +20,7 @@ class GMCLinkManager:
         # 1. Initialize Components
         self.gmc_engine = GlobalMotion()
         self.motion_buffer = MotionBuffer(alpha=0.8) # Smoothes out jitter
-        self.aligner = MotionLanguageAligner().to(device)
+        self.aligner = MotionLanguageAligner(lang_dim=lang_dim, embed_dim=256).to(device)
         
         # 2. Load trained knowledge if available
         if weights_path:
