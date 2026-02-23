@@ -218,12 +218,18 @@ def _generate_bce_pairs(
     all_sentences: List[str],
     sentence_embeddings: Dict[str, np.ndarray],
     frame_gap: int,
-    frame_shape: Tuple[int, int]
+    frame_shape: Tuple[int, int],
+    frame_dir: str = None,
+    tracking_data: Dict = None,
 ) -> Tuple[List[np.ndarray], List[np.ndarray], List[float]]:
     """
     Generate positive and negative (motion, language) pairs for BCE training.
-    Computes world velocity vectors over `frame_gap`.
+    Uses dense optical flow between frame images for velocity computation,
+    matching the inference pipeline exactly.
     """
+    import cv2
+    from gmc_link.core import extract_object_velocity, extract_background_flow
+
     h, w = frame_shape
     motion_data = []
     language_data = []
@@ -248,12 +254,18 @@ def _generate_bce_pairs(
             if future_fid - curr_fid > frame_gap * 2:
                 continue
             
-            cx1, cy1 = centroids[curr_fid]
-            cx2, cy2 = centroids[future_fid]
-            
-            dx = (cx2 - cx1) / w * VELOCITY_SCALE
-            dy = (cy2 - cy1) / h * VELOCITY_SCALE
-            motion_vec = np.array([dx, dy], dtype=np.float32)
+            # --- Dense optical flow velocity ---
+            if frame_dir is not None and tracking_data is not None:
+                motion_vec = _compute_flow_velocity(
+                    frame_dir, curr_fid, future_fid, tid, tracking_data, (h, w)
+                )
+            else:
+                # Fallback: raw centroid differences
+                cx1, cy1 = centroids[curr_fid]
+                cx2, cy2 = centroids[future_fid]
+                dx = (cx2 - cx1) / w * VELOCITY_SCALE
+                dy = (cy2 - cy1) / h * VELOCITY_SCALE
+                motion_vec = np.array([dx, dy], dtype=np.float32)
             
             # 1 Positive Match
             motion_data.append(motion_vec)
@@ -261,13 +273,11 @@ def _generate_bce_pairs(
             labels.append(1.0)
             
             # Hard Negative 1: Zero velocity + correct sentence
-            # Teaches: "moving cars" should NOT match a stationary object
             motion_data.append(np.zeros(2, dtype=np.float32))
             language_data.append(embedding.copy())
             labels.append(0.0)
             
             # Hard Negative 2: Inverted velocity + correct sentence
-            # Teaches: direction matters (opposite motion ≠ match)
             motion_data.append(-motion_vec)
             language_data.append(embedding.copy())
             labels.append(0.0)
@@ -285,6 +295,62 @@ def _generate_bce_pairs(
     return motion_data, language_data, labels
 
 
+def _compute_flow_velocity(
+    frame_dir: str,
+    curr_fid: int,
+    future_fid: int,
+    track_id: int,
+    tracking_data: Dict,
+    frame_shape: Tuple[int, int],
+) -> np.ndarray:
+    """
+    Compute flow-compensated velocity for a track between two frames
+    using dense optical flow, matching the inference pipeline.
+    """
+    import cv2
+    from gmc_link.core import extract_object_velocity, extract_background_flow
+    from gmc_link.utils import normalize_velocity
+    
+    frame1_path = os.path.join(frame_dir, f"{curr_fid:06d}.png")
+    frame2_path = os.path.join(frame_dir, f"{future_fid:06d}.png")
+    
+    if not os.path.exists(frame1_path) or not os.path.exists(frame2_path):
+        return np.zeros(2, dtype=np.float32)
+
+    img1 = cv2.imread(frame1_path)
+    img2 = cv2.imread(frame2_path)
+    gray1 = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
+    gray2 = cv2.cvtColor(img2, cv2.COLOR_BGR2GRAY)
+    
+    # Use actual image dimensions (not the hardcoded frame_shape)
+    actual_h, actual_w = gray1.shape[:2]
+
+    flow = cv2.calcOpticalFlowFarneback(
+        gray1, gray2, flow=None,
+        pyr_scale=0.5, levels=3, winsize=15,
+        iterations=3, poly_n=5, poly_sigma=1.2, flags=0,
+    )
+
+    # Collect all object bounding boxes for background masking
+    bboxes = []
+    if curr_fid in tracking_data:
+        for det in tracking_data[curr_fid].values():
+            bboxes.append((det['x1'], det['y1'], det['x2'], det['y2']))
+
+    bg_flow = extract_background_flow(flow, bboxes, (actual_h, actual_w))
+
+    # Get target object's bbox
+    if curr_fid in tracking_data and track_id in tracking_data[curr_fid]:
+        det = tracking_data[curr_fid][track_id]
+        bbox = (det['x1'], det['y1'], det['x2'], det['y2'])
+        obj_flow = extract_object_velocity(flow, bbox, (actual_h, actual_w))
+    else:
+        return np.zeros(2, dtype=np.float32)
+
+    world_velocity = obj_flow - bg_flow
+    return normalize_velocity(world_velocity, (actual_h, actual_w))
+
+
 def build_training_data(
     data_root: str, 
     sequences: List[str], 
@@ -294,12 +360,13 @@ def build_training_data(
 ) -> Tuple[List[np.ndarray], List[np.ndarray], List[float]]:
     """
     Build (motion, language) training pairs from refer-kitti for BCE training.
+    Uses dense optical flow from frame images for velocity computation.
     """
     all_expressions, sentence_embeddings, all_sentences = _collect_expressions(
         data_root, sequences, text_encoder
     )
     
-    print("  Computing multi-frame velocities and generating supervision pairs...")
+    print("  Computing dense-flow velocities and generating supervision pairs...")
     motion_data = []
     language_data = []
     labels = []
@@ -312,9 +379,15 @@ def build_training_data(
         
         track_centroids = _extract_target_centroids(data_root, seq, label_map)
         
+        # Resolve frame directory and tracking data for dense flow
+        frame_dir = os.path.join(data_root, "KITTI", "training", "image_02", seq)
+        tracking_file = os.path.join(data_root, "KITTI", "tracking", "training", "label_02", f"{seq}.txt")
+        tracking_data = load_kitti_tracking_labels(tracking_file) if os.path.exists(tracking_file) else None
+        
         m_data, l_data, lbls = _generate_bce_pairs(
             track_centroids, sentence, embedding, all_sentences, 
-            sentence_embeddings, frame_gap, frame_shape
+            sentence_embeddings, frame_gap, frame_shape,
+            frame_dir=frame_dir, tracking_data=tracking_data,
         )
         
         motion_data.extend(m_data)
