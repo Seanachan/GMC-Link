@@ -260,13 +260,25 @@ def _generate_bce_pairs(
             language_data.append(embedding.copy())
             labels.append(1.0)
             
-            # 3 Negative Matches (Same motion, random wrong sentence)
-            for _ in range(3):
+            # Hard Negative 1: Zero velocity + correct sentence
+            # Teaches: "moving cars" should NOT match a stationary object
+            motion_data.append(np.zeros(2, dtype=np.float32))
+            language_data.append(embedding.copy())
+            labels.append(0.0)
+            
+            # Hard Negative 2: Inverted velocity + correct sentence
+            # Teaches: direction matters (opposite motion ≠ match)
+            motion_data.append(-motion_vec)
+            language_data.append(embedding.copy())
+            labels.append(0.0)
+            
+            # 2 Random Negatives: Same motion, wrong sentence
+            for _ in range(2):
                 wrong_sentence = random.choice(all_sentences)
                 while wrong_sentence == sentence and len(all_sentences) > 1:
                     wrong_sentence = random.choice(all_sentences)
                 
-                motion_data.append(motion_vec)
+                motion_data.append(motion_vec.copy())
                 language_data.append(sentence_embeddings[wrong_sentence].copy())
                 labels.append(0.0)
                 

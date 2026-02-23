@@ -157,7 +157,7 @@ def main() -> None:
     
     learning_rate = 1e-3
     batch_size = 128
-    epochs = 200
+    epochs = 300
     lang_dim = 384
     
     # Refer-KITTI data paths (Train on 15/16/18, test on 11)

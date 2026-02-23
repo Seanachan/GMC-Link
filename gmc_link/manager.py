@@ -1,6 +1,6 @@
 import torch
 import numpy as np
-from typing import Dict, List, Tuple, Any
+from typing import Dict, List, Tuple, Any, Optional
 
 from .core import GlobalMotion
 from .utils import warp_points, normalize_velocity, MotionBuffer
@@ -39,7 +39,8 @@ class GMCLinkManager:
         self, 
         frame: np.ndarray, 
         active_tracks: List[Any], 
-        language_embedding: torch.Tensor
+        language_embedding: torch.Tensor,
+        detections: Optional[np.ndarray] = None
     ) -> Tuple[Dict[int, float], Dict[int, np.ndarray]]:
         """
         Main method to process each frame and return alignment scores for active tracks.
@@ -48,16 +49,19 @@ class GMCLinkManager:
             frame: (H, W, 3) The current video frame.
             active_tracks: List of track objects (must have `id`, `centroid`, and `prev_centroid`).
             language_embedding: (1, L_dim) Tensor representing the language prompt embedding.
+            detections: (N, 4) array of [x1, y1, x2, y2] bounding boxes to mask out from
+                        background feature extraction. If None, no masking is applied.
             
         Returns:
-            scores_dict: Dictionary mapping track_id -> float alignment score [0, 1].
+            # scores_dict: Dictionary mapping track_id -> float alignment score [0, 1].
             velocities_dict: Dictionary mapping track_id -> [dx, dy] GMC-compensated velocity.
         """
         if not active_tracks: 
             return {}, {}
 
-        # Geometric Motion Compensation (GMC) to find camera movement
-        homography = self.gmc_engine.estimate(frame)
+        # Geometric Motion Compensation (GMC) — mask out tracked objects so
+        # the homography only captures camera ego-motion (background)
+        homography = self.gmc_engine.estimate(frame, detections=detections)
 
         # Compensation: Warp previous positions to cancel out camera motion, then calculate smoothed velocities
         track_ids = []

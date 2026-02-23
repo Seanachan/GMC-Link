@@ -124,7 +124,7 @@ def draw_frame_visualization(
     num_gt: int
 ) -> None:
     """
-    Apply OpenCV annotations to the image frame, drawing bounding boxes, velocity arrows, and scores.
+    Apply OpenCV annotations to the image frame, drawing bounding boxes and alignment scores.
     """
     for yid in yolo_ids:
         yid = int(yid)
@@ -134,7 +134,6 @@ def draw_frame_visualization(
         x1, y1, x2, y2 = [int(v) for v in yolo_boxes_dict[yid]]
         score = scores.get(yid, 0.0)
         is_gt = yid in matched_yolo_ids
-        vel = velocities.get(yid, None)
         
         # Color by MODEL SCORE: green=high confidence match, red=low confidence match
         score_color_g = int(min(255, max(0, score * 255 * 2)))
@@ -148,17 +147,16 @@ def draw_frame_visualization(
         if is_gt:
             cv2.rectangle(frame, (x1-2, y1-2), (x2+2, y2+2), (255, 255, 255), 1)
         
-        # Draw camera-motion-compensated world velocity arrow
-        if vel is not None:
-            cx = (x1 + x2) // 2
-            cy = (y1 + y2) // 2
-            speed = np.linalg.norm((vel[0], vel[1]))
-            arrow_scale = 8  # Velocities are pre-scaled by 100x via VELOCITY_SCALE
-            end_x = int(cx + vel[0] * arrow_scale)
-            end_y = int(cy + vel[1] * arrow_scale)
-            cv2.arrowedLine(frame, (cx, cy), (end_x, end_y), (255, 255, 0), 2, tipLength=0.3)
-            
-            motion_label = f"v={speed:.1f}" if speed > 0.1 else "STATIC"
+        # Overlay label: [GT] score% — the score already encodes motion alignment
+        label_text = f"{'GT ' if is_gt else ''}{score:.0%}"
+        cv2.putText(frame, label_text, (x1, y1 - 8), cv2.FONT_HERSHEY_SIMPLEX, 0.40, color, 1)
+    
+    # Global Frame Info Overlay
+    cv2.putText(frame, f"Prompt: \"{sentence}\"", (10, 25), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+    cv2.putText(frame, f"Frame {frame_idx}/{total_frames} | GT tracks: {num_gt}", 
+                (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (200, 200, 200), 1)
+
+
 def evaluate_frame_metrics(
     scores: Dict[int, float], 
     matched_yolo_ids: Set[int], 
@@ -259,7 +257,7 @@ def run_e2e_evaluation(
         
         # ── YOLO Detection + ByteTrack Tracking ──
         # KITTI classes of interest: car(2), van(2), truck(7) → COCO: car=2, truck=7, bus=5
-        results = yolo.track(frame, persist=True, verbose=False, classes=[2, 5, 7])
+        results = yolo.track(frame, persist=True, verbose=False, classes=[2, 5, 7], tracker='bytetrack.yaml')
         
         if results[0].boxes is None or results[0].boxes.id is None:
             continue
@@ -289,7 +287,9 @@ def run_e2e_evaluation(
             prev_centroids[yid] = centroid.copy()
         
         # ── GMC-Link Processing ──
-        scores, velocities = linker.process_frame(frame, active_tracks, language_embedding)
+        # Pass xyxy bounding boxes so ORB features on objects are masked out,
+        # ensuring the homography only captures background/camera motion
+        scores, velocities = linker.process_frame(frame, active_tracks, language_embedding, detections=xyxy)
         
         # ── GT Matching ──
         # Get GT track IDs for this frame

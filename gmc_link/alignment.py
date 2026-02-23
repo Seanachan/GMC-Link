@@ -14,11 +14,15 @@ class MotionLanguageAligner(nn.Module):
     def __init__(self, motion_dim: int = 2, lang_dim: int = 768, embed_dim: int = 256) -> None:
         super().__init__()
         # Motion Encoder: Project (dx, dy) into a semantic vector.
-        # Use small MLP because 'meaning' of motion is non-linear.
+        # Deeper MLP to learn nuanced motion semantics (e.g., turning vs moving forward)
         self.motion_projector = nn.Sequential(
             nn.Linear(2, 64),
             nn.ReLU(),
-            nn.Linear(64, embed_dim),
+            nn.Dropout(0.1),
+            nn.Linear(64, 128),
+            nn.ReLU(),
+            nn.Dropout(0.1),
+            nn.Linear(128, embed_dim),
             nn.LayerNorm(embed_dim)
         )
 
