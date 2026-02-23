@@ -52,10 +52,54 @@ Train a `MotionLanguageAligner` to match 2D velocity vectors with natural langua
 - **Config:** batch=128, lr=1e-3, cosine scheduler, 200 epochs
 - **Result:** Loss 0.29, Accuracy 82.2% ✅
 - **E2E on seq 0011:** GT avg=0.52, non-GT avg=0.56 (separation: -0.04 ❌)
-- **Issue:** Model doesn't generalize to held-out seq 0011. Possible causes:
-  - Different velocity distributions between sequences
-  - IoU matching only finds 19 GT matches out of ~660 expected
-  - `forward()` (N×N matrix) vs `score_pairs()` (element-wise) may behave differently at inference
+- **Issue:** Model doesn't generalize to held-out seq 0011
+
+### Exp 8: GMC Object Masking Fix ✅
+- **Change:** Passed YOLO bounding boxes to `gmc_engine.estimate()` in `manager.py`. ORB features on tracked objects were contaminating the background homography.
+- **Result (with old 82% model):**
+  - FP reduced by 50% (1176 → 586)
+  - Precision increased 2.2x (0.84% → 1.86%)
+  - GT scores slightly improved, non-GT also rose — retraining needed
+
+### Exp 9: Deeper MLP + Hard Negatives + Object Masking ✅
+- **Change:**
+  - Motion projector: 2→64→256 → 2→64→128→256 with dropout(0.1)
+  - Hard negatives: zero-velocity + correct sentence, inverted velocity + correct sentence
+  - 4 negatives per positive (up from 3): 2 hard + 2 random
+- **Config:** batch=128, lr=1e-3, cosine scheduler, 300 epochs
+- **Training:** Loss 0.2039, Accuracy **89.27%** (up from 82.5%)
+- **E2E on seq 0011 (ORB+Homography):**
+  - GT avg score: **0.7344** | Non-GT avg: **0.2115** | Separation: **+0.5229** ✅
+  - FP: 352 | TP: 15
+- **Best result so far** — ORB masking + deeper MLP + hard negatives
+
+### Exp 10: Dense Optical Flow (Farneback) — Full Pipeline
+- **Change:** Replaced ORB+homography GMC with `cv2.calcOpticalFlowFarneback`. Per-pixel flow, per-object bbox averaging, background median subtraction for camera compensation. Training also uses flow-derived velocities.
+- **Training:** Loss 0.2108, Accuracy 88.93%
+- **E2E on seq 0011:**
+  - GT avg score: 0.6088 | Non-GT avg: 0.3338 | Separation: **+0.2750**
+  - FP: 637 | TP: 17
+- **Analysis:** Worse than ORB. Farneback flow is noisy; ORB+RANSAC rejects outliers. KITTI's planar road scenes suit the homography assumption well.
+
+### Exp 11: RAFT Optical Flow (Learned, GPU-Accelerated)
+- **Change:** Replaced Farneback with `torchvision.models.optical_flow.raft_small` (pretrained). Runs on MPS/CUDA for GPU acceleration. Auto-pads frames to multiple of 8.
+- **Training:** Loss **0.1943**, Accuracy **89.91%** (best training accuracy)
+- **E2E on seq 0011:**
+  - GT avg score: 0.6000 | Non-GT avg: 0.4944 | Separation: **+0.1056**
+  - FP: 1301 | TP: 17
+- **Analysis:** Despite best training metrics, worst test-time separation. The RAFT flow field may contain too much fine-grained detail (textures, edges) that pollutes the per-bbox velocity average. The ORB+RANSAC approach, being sparser, actually produces more stable and discriminative velocity signals for this task.
+
+---
+
+## Experiment Comparison Table
+
+| Exp | Method | Train Loss | Train Acc | GT Score | Non-GT Score | Separation | FP |
+|-----|--------|-----------|-----------|----------|-------------|-----------|-----|
+| 9 | **ORB + Homography** | 0.2039 | 89.27% | **0.7344** | **0.2115** | **+0.5229** | **352** |
+| 10 | Farneback Dense Flow | 0.2108 | 88.93% | 0.6088 | 0.3338 | +0.2750 | 637 |
+| 11 | RAFT Dense Flow | **0.1943** | **89.91%** | 0.6000 | 0.4944 | +0.1056 | 1301 |
+
+**Conclusion:** ORB + Homography with object masking remains the best approach for KITTI driving scenes. Dense flow methods introduce noise that sparse keypoint matching avoids.
 
 ---
 
@@ -65,11 +109,13 @@ Train a `MotionLanguageAligner` to match 2D velocity vectors with natural langua
 |------|-----|-----|
 | `core.py` | `len(cv2.DMatch)` crash in Lowe's ratio test | Check `len(match_pair)==2` first |
 | `core.py` | Mask initialized to all zeros (no features detected) | Changed to `np.ones * 255` |
+| `manager.py` | Object bboxes not passed to GMC engine | Added `detections` parameter to `process_frame` |
 | `manager.py` | `prev_centroid=None` passes `hasattr` check | Added `or track.prev_centroid is None` |
 | `alignment.py` | `vis_dim` parameter misleading | Renamed to `motion_dim` |
 | `visualize.py` | `GMCLink` import mismatch | Changed to `GMCLinkManager` |
 | `train.py` | Relative imports fail as script | Changed to absolute imports + `sys.path.insert` |
 | `train.py` | `num_workers=4` deadlocks with HF tokenizers on MPS | Removed `num_workers` |
+| `demo_inference.py` | `draw_frame_visualization` truncated mid-function | Fixed missing else/label/HUD overlay |
 
 ---
 
@@ -77,17 +123,17 @@ Train a `MotionLanguageAligner` to match 2D velocity vectors with natural langua
 
 ```
                     ┌─────────────┐
-                    │  YOLO + BT  │ → Detect & track objects
+                    │  YOLO + BT  │ → Detect & track objects (ByteTrack)
                     └──────┬──────┘
                            │ bboxes + track IDs
                     ┌──────▼──────┐
-                    │  GMC Engine │ → ORB features + RANSAC homography
-                    │  (core.py)  │   to estimate camera motion
+                    │  Flow Engine│ → RAFT / ORB+Homography / Farneback
+                    │  (core.py)  │   for ego-motion compensation
                     └──────┬──────┘
-                           │ homography H
+                           │ per-pixel flow / homography
                     ┌──────▼──────┐
-                    │   Manager   │ → Warp prev positions by H
-                    │ (manager.py)│   Compute world velocity
+                    │   Manager   │ → Extract per-object velocity
+                    │ (manager.py)│   Subtract background flow
                     └──────┬──────┘
                            │ compensated velocity (dx, dy) × 100
                     ┌──────▼──────┐     ┌──────────────┐
@@ -101,6 +147,7 @@ Train a `MotionLanguageAligner` to match 2D velocity vectors with natural langua
 ```
 
 ## Open Questions
-1. Why does IoU matching only find 19 GT matches? (YOLO boxes vs GT boxes misalignment?)
-2. Why doesn't the 82% training accuracy generalize to seq 0011?
-3. Is the velocity distribution fundamentally different between train/test sequences?
+1. Why does IoU matching only find ~20 GT matches? (YOLO boxes vs GT boxes misalignment?)
+2. Can ORB results be further improved with better hyperparameters or ensemble methods?
+3. Would fine-tuning RAFT on KITTI-specific flow help, or is the issue fundamental to dense flow averaging?
+

@@ -2,7 +2,7 @@ import torch
 import numpy as np
 from typing import Dict, List, Tuple, Any, Optional
 
-from .core import DenseFlowEngine, extract_object_velocity, extract_background_flow
+from .core import RAFTFlowEngine, extract_object_velocity, extract_background_flow
 from .utils import normalize_velocity, MotionBuffer
 from .alignment import MotionLanguageAligner
 
@@ -20,7 +20,7 @@ class GMCLinkManager:
     ) -> None:
         self.device = device
         
-        self.flow_engine = DenseFlowEngine()
+        self.flow_engine = RAFTFlowEngine(device=device)
         self.motion_buffer = MotionBuffer(alpha=0.3)
         self.aligner = MotionLanguageAligner(lang_dim=lang_dim, embed_dim=256).to(device)
         

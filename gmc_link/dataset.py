@@ -221,15 +221,12 @@ def _generate_bce_pairs(
     frame_shape: Tuple[int, int],
     frame_dir: str = None,
     tracking_data: Dict = None,
+    raft_engine: Any = None,
 ) -> Tuple[List[np.ndarray], List[np.ndarray], List[float]]:
     """
     Generate positive and negative (motion, language) pairs for BCE training.
-    Uses dense optical flow between frame images for velocity computation,
-    matching the inference pipeline exactly.
+    Uses RAFT optical flow (GPU-accelerated) for velocity computation.
     """
-    import cv2
-    from gmc_link.core import extract_object_velocity, extract_background_flow
-
     h, w = frame_shape
     motion_data = []
     language_data = []
@@ -254,10 +251,11 @@ def _generate_bce_pairs(
             if future_fid - curr_fid > frame_gap * 2:
                 continue
             
-            # --- Dense optical flow velocity ---
+            # --- RAFT optical flow velocity ---
             if frame_dir is not None and tracking_data is not None:
                 motion_vec = _compute_flow_velocity(
-                    frame_dir, curr_fid, future_fid, tid, tracking_data, (h, w)
+                    frame_dir, curr_fid, future_fid, tid, tracking_data, (h, w),
+                    raft_engine=raft_engine,
                 )
             else:
                 # Fallback: raw centroid differences
@@ -302,10 +300,11 @@ def _compute_flow_velocity(
     track_id: int,
     tracking_data: Dict,
     frame_shape: Tuple[int, int],
+    raft_engine: Any = None,
 ) -> np.ndarray:
     """
     Compute flow-compensated velocity for a track between two frames
-    using dense optical flow, matching the inference pipeline.
+    using RAFT optical flow (GPU-accelerated), matching the inference pipeline.
     """
     import cv2
     from gmc_link.core import extract_object_velocity, extract_background_flow
@@ -319,17 +318,25 @@ def _compute_flow_velocity(
 
     img1 = cv2.imread(frame1_path)
     img2 = cv2.imread(frame2_path)
-    gray1 = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
-    gray2 = cv2.cvtColor(img2, cv2.COLOR_BGR2GRAY)
-    
-    # Use actual image dimensions (not the hardcoded frame_shape)
-    actual_h, actual_w = gray1.shape[:2]
+    actual_h, actual_w = img1.shape[:2]
 
-    flow = cv2.calcOpticalFlowFarneback(
-        gray1, gray2, flow=None,
-        pyr_scale=0.5, levels=3, winsize=15,
-        iterations=3, poly_n=5, poly_sigma=1.2, flags=0,
-    )
+    # Use RAFT if engine provided, otherwise fallback to Farneback
+    if raft_engine is not None:
+        # Reset engine state and compute flow for this specific pair
+        raft_engine.prev_tensor = None
+        raft_engine.estimate(img1)  # Set prev frame
+        flow = raft_engine.estimate(img2)  # Get flow
+    else:
+        gray1 = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
+        gray2 = cv2.cvtColor(img2, cv2.COLOR_BGR2GRAY)
+        flow = cv2.calcOpticalFlowFarneback(
+            gray1, gray2, flow=None,
+            pyr_scale=0.5, levels=3, winsize=15,
+            iterations=3, poly_n=5, poly_sigma=1.2, flags=0,
+        )
+    
+    if flow is None:
+        return np.zeros(2, dtype=np.float32)
 
     # Collect all object bounding boxes for background masking
     bboxes = []
@@ -339,7 +346,6 @@ def _compute_flow_velocity(
 
     bg_flow = extract_background_flow(flow, bboxes, (actual_h, actual_w))
 
-    # Get target object's bbox
     if curr_fid in tracking_data and track_id in tracking_data[curr_fid]:
         det = tracking_data[curr_fid][track_id]
         bbox = (det['x1'], det['y1'], det['x2'], det['y2'])
@@ -360,13 +366,21 @@ def build_training_data(
 ) -> Tuple[List[np.ndarray], List[np.ndarray], List[float]]:
     """
     Build (motion, language) training pairs from refer-kitti for BCE training.
-    Uses dense optical flow from frame images for velocity computation.
+    Uses RAFT optical flow (GPU-accelerated) for velocity computation.
     """
+    import torch
+    from gmc_link.core import RAFTFlowEngine
+
     all_expressions, sentence_embeddings, all_sentences = _collect_expressions(
         data_root, sequences, text_encoder
     )
     
-    print("  Computing dense-flow velocities and generating supervision pairs...")
+    # Create shared RAFT engine on GPU for training data generation
+    device = "mps" if torch.backends.mps.is_available() else "cuda" if torch.cuda.is_available() else "cpu"
+    print(f"  Initializing RAFT flow engine on {device}...")
+    raft_engine = RAFTFlowEngine(device=device)
+    
+    print("  Computing RAFT-flow velocities and generating supervision pairs...")
     motion_data = []
     language_data = []
     labels = []
@@ -379,7 +393,6 @@ def build_training_data(
         
         track_centroids = _extract_target_centroids(data_root, seq, label_map)
         
-        # Resolve frame directory and tracking data for dense flow
         frame_dir = os.path.join(data_root, "KITTI", "training", "image_02", seq)
         tracking_file = os.path.join(data_root, "KITTI", "tracking", "training", "label_02", f"{seq}.txt")
         tracking_data = load_kitti_tracking_labels(tracking_file) if os.path.exists(tracking_file) else None
@@ -388,6 +401,7 @@ def build_training_data(
             track_centroids, sentence, embedding, all_sentences, 
             sentence_embeddings, frame_gap, frame_shape,
             frame_dir=frame_dir, tracking_data=tracking_data,
+            raft_engine=raft_engine,
         )
         
         motion_data.extend(m_data)
