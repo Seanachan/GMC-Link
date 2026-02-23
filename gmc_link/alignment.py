@@ -10,12 +10,8 @@ import numpy as np
 class MotionLanguageAligner(nn.Module):
     """
     Reasoning Head of GMC-Link that aligns motion features with language features.
-    Args:
-      motion_dim: The dimensionality of the motion features.
-      language_dim: The dimensionality of the language features.
-      hidden_dim: The dimensionality of the hidden layer for alignment.
     """
-    def __init__(self, motion_dim=2, lang_dim=768, embed_dim=256):
+    def __init__(self, motion_dim: int = 2, lang_dim: int = 768, embed_dim: int = 256) -> None:
         super().__init__()
         # Motion Encoder: Project (dx, dy) into a semantic vector.
         # Use small MLP because 'meaning' of motion is non-linear.
@@ -34,16 +30,16 @@ class MotionLanguageAligner(nn.Module):
 
         self.logit_scale = nn.Parameter(torch.ones([]) * np.log(1 / 0.07))  # Learnable temperature parameter for scaling
 
-    def forward(self, motion_feats, lang_feats):
+    def forward(self, motion_feats: torch.Tensor, lang_feats: torch.Tensor) -> torch.Tensor:
         """
         The 'Thinking' phase: Link geometric motion to linguistic intent.
 
         Args:
-            motion_feats: (N, 2) Tensor - The normalized world velocities [dx, dy].
-            lang_feats: (1, L_dim) or (N, L_dim) Tensor - The text features. (1,L_dim) if using a single language description for all tracks, or (N, L_dim) if each track has its own description.
+            motion_feats: (N, 2) Tensor of normalized world velocities [dx, dy].
+            lang_feats: (1, L_dim) Tensor of text features representing the prompt.
 
         Returns:
-            aligment_logits: (N, N) Matrix of simlilarity scores between motion and language features, where M is the number of language features (e.g., tokens).
+            alignment_logits: (N, 1) Matrix of similarity scores between each motion and the language concept.
         """
 
         # 1. Project to Shared Latent Space (latent -> 'thought space'), now having same dim (256)
@@ -65,15 +61,16 @@ class MotionLanguageAligner(nn.Module):
 
         return alignment_logits
 
-    def score_pairs(self, motion_feats, lang_feats):
+    def score_pairs(self, motion_feats: torch.Tensor, lang_feats: torch.Tensor) -> torch.Tensor:
         """
         Compute per-pair similarity scores for BCE training.
         
         Args:
-            motion_feats: (N, 2) velocity vectors
-            lang_feats: (N, L_dim) language embeddings (one per motion)
+            motion_feats: (N, 2) Tensor of velocity vectors.
+            lang_feats: (N, L_dim) Tensor of language embeddings (one per motion).
+            
         Returns:
-            scores: (N,) scalar similarity score per pair
+            scores: (N,) Tensor of scalar similarity scores per pair.
         """
         motion_latents = F.normalize(self.motion_projector(motion_feats), p=2, dim=-1)
         language_latents = F.normalize(self.lang_projector(lang_feats), p=2, dim=-1)

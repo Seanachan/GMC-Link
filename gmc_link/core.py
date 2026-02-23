@@ -1,15 +1,18 @@
 # GMC-Link/core.py
 import cv2
 import numpy as np
-
+from typing import Optional, List, Tuple
 
 class GlobalMotion:
-    def __init__(self, method="orb", max_features=500):
+    """
+    Detect camera movement (Global Motion Compensation) while ignoring tracked objects.
+    Estimates homography between consecutive frames.
+    """
+    def __init__(self, method: str = "orb", max_features: int = 500) -> None:
         """
-        Purpose: Detect camera movement while ignoring tracked objects.
         Args:
-            method: The feature detection method to use ("orb" or "sift"). Lowe's ratio test is applied to reduce the noise in urban repetitive scenes.
-            max_features: The maximum number of features to detect.
+            method: Feature detection method ("orb" or "sift").
+            max_features: Maximum number of features to detect.
         """
         self.method = method.lower()
         if method == "orb":
@@ -25,24 +28,36 @@ class GlobalMotion:
         else:
             raise ValueError("Unsupported method: {}".format(method))
 
-        self.prev_gray = None
-        self.prev_keypoints = None
-        self.prev_descriptors = None
+        self.prev_gray: Optional[np.ndarray] = None
+        self.prev_keypoints: Optional[tuple] = None
+        self.prev_descriptors: Optional[np.ndarray] = None
 
-    def _update_state(self, gray, kp, des):
+    def _update_state(
+        self, 
+        gray: np.ndarray, 
+        kp: tuple, 
+        des: Optional[np.ndarray]
+    ) -> None:
         """Internal state update for the next frame."""
         self.prev_gray = gray
         self.prev_keypoints = kp
         self.prev_descriptors = des
 
-    def estimate(self, frame, detections=None):
+    def estimate(
+        self, 
+        frame: np.ndarray, 
+        detections: Optional[List[Tuple[float, float, float, float]]] = None
+    ) -> np.ndarray:
         """
-        Estimate the global motion between the current frame and the previous frame.
+        Estimate the global motion homography between the current and previous frame.
+        
         Args:
-            frame: The current video frame (BGR format).
-            detections: A list of bounding boxes for detected objects in the current frame, in the format [(x1, y1, x2, y2)] to be masked out.
+            frame: (H, W, 3) Current video frame in BGR format.
+            detections: List of bounding boxes [(x1, y1, x2, y2)] representing objects 
+                        to be masked out from feature detection.
+                        
         Returns:
-            A 3x3 homography matrix representing the global motion, or np.eye(3) if estimation fails.
+            homography: (3, 3) matrix representing global motion, or np.eye(3) if failed.
         """
 
         # Grayscale for feature extraction
@@ -62,7 +77,7 @@ class GlobalMotion:
 
         if self.prev_gray is None or descriptors is None or self.prev_descriptors is None:
             self._update_state(gray, keypoints, descriptors)
-            return np.eye(3, dtype=np.float32)  # No motion for the first frame, return identity matrix
+            return np.eye(3, dtype=np.float32)  # No motion for the first frame
         
         # Lowe's Ratio Test (knnMatch)
         try:

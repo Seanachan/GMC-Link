@@ -4,6 +4,8 @@ import numpy as np
 import json
 import os
 import random
+from typing import Dict, List, Tuple, Any
+
 from gmc_link.utils import VELOCITY_SCALE
 
 
@@ -129,21 +131,14 @@ def is_motion_expression(sentence):
     return any(kw in lower for kw in MOTION_KEYWORDS)
 
 
-def build_training_data(data_root, sequences, text_encoder, frame_gap=5, frame_shape=(375, 1242)):
+def _collect_expressions(
+    data_root: str, 
+    sequences: List[str], 
+    text_encoder: Any
+) -> Tuple[List[Dict[str, Any]], Dict[str, np.ndarray], List[str]]:
     """
-    Build (motion, language) training pairs from refer-kitti.
-    
-    Only positive pairs are generated. The CLIP-style contrastive loss
-    naturally treats all other in-batch items as negatives via the
-    off-diagonal, so explicit negative sampling is NOT needed.
-    
-    Key design:
-    1. Multi-frame velocity with `frame_gap` for larger, discriminative vectors
-    2. KITTI tracking labels (pixel coords) normalized to match inference
-    3. All 4 expression sequences for maximum sentence diversity
+    Load JSON expressions, filter for motion keywords, and compute language embeddings.
     """
-    h, w = frame_shape
-    
     print("  Encoding all sentences...")
     all_expressions = []
     sentence_embeddings = {}
@@ -161,23 +156,138 @@ def build_training_data(data_root, sequences, text_encoder, frame_gap=5, frame_s
             if not is_motion_expression(sentence):
                 skipped += 1
                 continue
+                
             if sentence not in sentence_embeddings:
                 emb = text_encoder.encode(sentence).squeeze(0).cpu().numpy()
                 sentence_embeddings[sentence] = emb
+                
             all_expressions.append({
                 'sentence': sentence,
                 'embedding': sentence_embeddings[sentence],
                 'label': expr['label'],
                 'seq': seq,
             })
+            
         if skipped:
             print(f"  {seq}: skipped {skipped} non-motion expressions")
-    
+            
     print(f"  Motion-related sentences: {len(sentence_embeddings)}")
     print(f"  Total expressions: {len(all_expressions)}")
     all_sentences = list(sentence_embeddings.keys())
     
-    print("  Computing multi-frame velocities...")
+    return all_expressions, sentence_embeddings, all_sentences
+
+
+def _extract_target_centroids(
+    data_root: str, 
+    seq: str, 
+    label_map: Dict[str, List[int]]
+) -> Dict[int, Dict[int, Tuple[float, float]]]:
+    """
+    Extract centroid coordinates (cx, cy) for target object tracks across frames.
+    
+    Returns mapping: {track_id: {frame_id: (cx, cy)}}
+    """
+    tracking_file = os.path.join(data_root, "KITTI", "tracking", "training", "label_02", f"{seq}.txt")
+    if not os.path.exists(tracking_file):
+        return {}
+    
+    tracking_data = load_kitti_tracking_labels(tracking_file)
+    frame_ids = sorted([int(fid) for fid in label_map.keys()])
+    
+    track_centroids = {}
+    for fid in frame_ids:
+        target_tracks = set(label_map[str(fid)])
+        if fid not in tracking_data:
+            continue
+            
+        for tid in target_tracks:
+            if tid in tracking_data[fid]:
+                det = tracking_data[fid][tid]
+                if tid not in track_centroids:
+                    track_centroids[tid] = {}
+                track_centroids[tid][fid] = (det['cx'], det['cy'])
+                
+    return track_centroids
+
+
+def _generate_bce_pairs(
+    track_centroids: Dict[int, Dict[int, Tuple[float, float]]],
+    sentence: str,
+    embedding: np.ndarray,
+    all_sentences: List[str],
+    sentence_embeddings: Dict[str, np.ndarray],
+    frame_gap: int,
+    frame_shape: Tuple[int, int]
+) -> Tuple[List[np.ndarray], List[np.ndarray], List[float]]:
+    """
+    Generate positive and negative (motion, language) pairs for BCE training.
+    Computes world velocity vectors over `frame_gap`.
+    """
+    h, w = frame_shape
+    motion_data = []
+    language_data = []
+    labels = []
+    
+    for tid, centroids in track_centroids.items():
+        sorted_frames = sorted(centroids.keys())
+        for i in range(len(sorted_frames)):
+            curr_fid = sorted_frames[i]
+            target_fid = curr_fid + frame_gap
+            
+            best_j = None
+            for j in range(i + 1, len(sorted_frames)):
+                if sorted_frames[j] >= target_fid:
+                    best_j = j
+                    break
+            
+            if best_j is None:
+                continue
+            
+            future_fid = sorted_frames[best_j]
+            if future_fid - curr_fid > frame_gap * 2:
+                continue
+            
+            cx1, cy1 = centroids[curr_fid]
+            cx2, cy2 = centroids[future_fid]
+            
+            dx = (cx2 - cx1) / w * VELOCITY_SCALE
+            dy = (cy2 - cy1) / h * VELOCITY_SCALE
+            motion_vec = np.array([dx, dy], dtype=np.float32)
+            
+            # 1 Positive Match
+            motion_data.append(motion_vec)
+            language_data.append(embedding.copy())
+            labels.append(1.0)
+            
+            # 3 Negative Matches (Same motion, random wrong sentence)
+            for _ in range(3):
+                wrong_sentence = random.choice(all_sentences)
+                while wrong_sentence == sentence and len(all_sentences) > 1:
+                    wrong_sentence = random.choice(all_sentences)
+                
+                motion_data.append(motion_vec)
+                language_data.append(sentence_embeddings[wrong_sentence].copy())
+                labels.append(0.0)
+                
+    return motion_data, language_data, labels
+
+
+def build_training_data(
+    data_root: str, 
+    sequences: List[str], 
+    text_encoder: Any, 
+    frame_gap: int = 5, 
+    frame_shape: Tuple[int, int] = (375, 1242)
+) -> Tuple[List[np.ndarray], List[np.ndarray], List[float]]:
+    """
+    Build (motion, language) training pairs from refer-kitti for BCE training.
+    """
+    all_expressions, sentence_embeddings, all_sentences = _collect_expressions(
+        data_root, sequences, text_encoder
+    )
+    
+    print("  Computing multi-frame velocities and generating supervision pairs...")
     motion_data = []
     language_data = []
     labels = []
@@ -185,66 +295,19 @@ def build_training_data(data_root, sequences, text_encoder, frame_gap=5, frame_s
     for expr in all_expressions:
         seq = expr['seq']
         label_map = expr['label']
+        sentence = expr['sentence']
         embedding = expr['embedding']
         
-        tracking_file = os.path.join(data_root, "KITTI", "tracking", "training", "label_02", f"{seq}.txt")
-        if not os.path.exists(tracking_file):
-            continue
+        track_centroids = _extract_target_centroids(data_root, seq, label_map)
         
-        tracking_data = load_kitti_tracking_labels(tracking_file)
-        frame_ids = sorted([int(fid) for fid in label_map.keys()])
+        m_data, l_data, lbls = _generate_bce_pairs(
+            track_centroids, sentence, embedding, all_sentences, 
+            sentence_embeddings, frame_gap, frame_shape
+        )
         
-        # Collect centroids for target tracks
-        track_centroids = {}
-        for fid in frame_ids:
-            target_tracks = set(label_map[str(fid)])
-            if fid not in tracking_data:
-                continue
-            for tid in target_tracks:
-                if tid in tracking_data[fid]:
-                    det = tracking_data[fid][tid]
-                    if tid not in track_centroids:
-                        track_centroids[tid] = {}
-                    track_centroids[tid][fid] = (det['cx'], det['cy'])
-        
-        # Build samples with multi-frame gap
-        for tid, centroids in track_centroids.items():
-            sorted_frames = sorted(centroids.keys())
-            for i in range(len(sorted_frames)):
-                curr_fid = sorted_frames[i]
-                target_fid = curr_fid + frame_gap
-                
-                best_j = None
-                for j in range(i + 1, len(sorted_frames)):
-                    if sorted_frames[j] >= target_fid:
-                        best_j = j
-                        break
-                
-                if best_j is None:
-                    continue
-                
-                future_fid = sorted_frames[best_j]
-                if future_fid - curr_fid > frame_gap * 2:
-                    continue
-                
-                cx1, cy1 = centroids[curr_fid]
-                cx2, cy2 = centroids[future_fid]
-                
-                dx = (cx2 - cx1) / w * VELOCITY_SCALE
-                dy = (cy2 - cy1) / h * VELOCITY_SCALE
-                
-                motion_data.append(np.array([dx, dy], dtype=np.float32))
-                language_data.append(embedding.copy())
-                labels.append(1.0)  # Positive pair
-                
-                # Generate negative pairs (same motion, wrong sentence)
-                for _ in range(3):
-                    wrong_sentence = random.choice(all_sentences)
-                    while wrong_sentence == sentence and len(all_sentences) > 1:
-                        wrong_sentence = random.choice(all_sentences)
-                    motion_data.append(np.array([dx, dy], dtype=np.float32))
-                    language_data.append(sentence_embeddings[wrong_sentence].copy())
-                    labels.append(0.0)  # Negative pair
+        motion_data.extend(m_data)
+        language_data.extend(l_data)
+        labels.extend(lbls)
     
     pos_count = sum(1 for l in labels if l == 1.0)
     neg_count = sum(1 for l in labels if l == 0.0)

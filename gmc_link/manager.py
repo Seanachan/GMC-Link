@@ -1,25 +1,33 @@
 import torch
 import numpy as np
+from typing import Dict, List, Tuple, Any
+
 from .core import GlobalMotion
 from .utils import warp_points, normalize_velocity, MotionBuffer
 from .alignment import MotionLanguageAligner
 
 class GMCLinkManager:
     """
-    GMC-Link Manager: The 'Brain' that orchestrates the Geometry, Compensation, and Reasoning modules. 
-    This class is designed to be called from your main tracking loop, where it processes each frame and active tracks, returning alignment scores for each track against the language prompt.
+    GMC-Link Manager: The 'Brain' that orchestrates Geometry (GMC), Compensation, and Reasoning modules. 
+    Processes each frame and active tracks, returning alignment scores against the language prompt.
     """
-    def __init__(self, weights_path=None, device='cpu', lang_dim = 384):
+    def __init__(
+        self, 
+        weights_path: str = None, 
+        device: str = 'cpu', 
+        lang_dim: int = 384
+    ) -> None:
         """
         Args:
-            weights_path: Optional path to pre-trained weights for the MotionLanguageAligner.
-            device: 'cpu' or 'cuda' for running the model.  Default is 'cpu' for compatibility.
+            weights_path: Path to pre-trained weights for the MotionLanguageAligner.
+            device: 'cpu', 'cuda', or 'mps' for running the model.
+            lang_dim: Dimension of the language embedding.
         """
         self.device = device
         
         # 1. Initialize Components
         self.gmc_engine = GlobalMotion()
-        self.motion_buffer = MotionBuffer(alpha=0.3) # Smoothes out jitter (lower = more smoothing)
+        self.motion_buffer = MotionBuffer(alpha=0.3)  # Smoothes out jitter (lower = more smoothing)
         self.aligner = MotionLanguageAligner(lang_dim=lang_dim, embed_dim=256).to(device)
         
         # 2. Load trained knowledge if available
@@ -27,21 +35,28 @@ class GMCLinkManager:
             self.aligner.load_state_dict(torch.load(weights_path, map_location=device))
         self.aligner.eval()
 
-    def process_frame(self, frame, active_tracks, language_embedding):
+    def process_frame(
+        self, 
+        frame: np.ndarray, 
+        active_tracks: List[Any], 
+        language_embedding: torch.Tensor
+    ) -> Tuple[Dict[int, float], Dict[int, np.ndarray]]:
         """
         Main method to process each frame and return alignment scores for active tracks.
+        
         Args:
-            frame: The current video frame (as a NumPy array).
-            active_tracks: A list of track objects, each with attributes like 'id', 'centroid', and 'prev_centroid'.
-            language_embedding: A tensor representing the language prompt embedding (e.g., from CLIP or BERT).
+            frame: (H, W, 3) The current video frame.
+            active_tracks: List of track objects (must have `id`, `centroid`, and `prev_centroid`).
+            language_embedding: (1, L_dim) Tensor representing the language prompt embedding.
+            
         Returns:
-            scores_dict: A dictionary mapping track IDs to their alignment scores with the language prompt.
-            velocities_dict: A dictionary mapping track IDs to their GMC-compensated velocity vectors [dx, dy].
+            scores_dict: Dictionary mapping track_id -> float alignment score [0, 1].
+            velocities_dict: Dictionary mapping track_id -> [dx, dy] GMC-compensated velocity.
         """
-        if not active_tracks: return {}, {}
+        if not active_tracks: 
+            return {}, {}
 
         # Geometric Motion Compensation (GMC) to find camera movement
-        # Find how the camera moved between the last frame and this one
         homography = self.gmc_engine.estimate(frame)
 
         # Compensation: Warp previous positions to cancel out camera motion, then calculate smoothed velocities

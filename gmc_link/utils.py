@@ -1,46 +1,52 @@
 import numpy as np
+from typing import Dict, List, Tuple, Optional, Union
 
 # Scale factor for normalized velocities so the MLP operates on ~1.0 magnitude values
 VELOCITY_SCALE = 100
-# import torch
 
 
-def warp_points(points, homography):
+def warp_points(points: np.ndarray, homography: np.ndarray) -> np.ndarray:
     """
-    Transforms coordinates from framt t-1 to the coordinate sysmtem of frame t using homography matrix.
+    Transforms coordinates from frame t-1 to the coordinate system of frame t using a homography matrix.
+    
     Args:
-        points: A numpy array of shape (N, 2) representing the (x, y) coordinates of the points to be warped.
-        homography: A 3x3 homography matrix.
+        points: (N, 2) array representing the (x, y) coordinates of the points to be warped.
+        homography: (3, 3) matrix representing the background translation.
+        
     Returns:
-        warped_points: A numpy array of shape (N, 2) representing the warped (x', y') coordinates of the points.
+        warped_points: (N, 2) array representing the warped (x', y') coordinates.
     """
     if points is None or len(points) == 0:
         return np.empty((0, 2))  # Return an empty array if there are no points to warp
 
     num_points = points.shape[0]
-    homogeneous_points = np.hstack((points, np.ones((num_points, 1))))  # Convert to homogeneous coordinates
-
+    homogeneous_points = np.hstack((points, np.ones((num_points, 1))))  # Convert to homogeneous
     warped_homogeneous = homogeneous_points @ homography.T  # Apply homography
 
-    warped_points = warped_homogeneous[:, :2] / warped_homogeneous[:, 2:3]  # Convert back to Cartesian coordinates
+    # Convert back to Cartesian coordinates
+    warped_points = warped_homogeneous[:, :2] / warped_homogeneous[:, 2:3]
     return warped_points
 
 
-def normalize_velocity(v_comp, frame_shape):
+def normalize_velocity(v_comp: np.ndarray, frame_shape: Tuple[int, int]) -> np.ndarray:
     """
-    Scales pixel velocity to a normalized range [-1, 1] based on frame dimensions.
+    Scales pixel velocity to a normalized range based on frame dimensions.
     This ensures GMC-Link is scale-invariant (works the same on 720p vs 4K).
     
     Args:
-        v_comp: (N, 2) array of [dx, dy]
-        frame_shape: (height, width)
+        v_comp: (N, 2) array of [dx, dy] pixel velocities.
+        frame_shape: (height, width) of the video frame.
+        
+    Returns:
+        v_norm: (N, 2) array of normalized velocities.
     """
     if len(v_comp) == 0:
         return v_comp
         
     h, w = frame_shape
-    # We normalize by the dimensions so a movement of 'half the screen'
-    # always results in 0.5, regardless of pixel count.
+    # Ensure v_comp is a numpy array
+    v_comp = np.array(v_comp, dtype=np.float32)
+    # Normalize by dimensions so a movement of 'half the screen' is 0.5, regardless of pixel count.
     v_norm = v_comp / np.array([w, h], dtype=np.float32)
     # Scale up so the MLP operates on values around ~1.0 instead of ~0.01
     v_norm *= VELOCITY_SCALE
@@ -52,11 +58,14 @@ class MotionBuffer:
     Simple temporal smoothing to prevent 'jitter' in the reasoning module.
     Calculates an Exponential Moving Average (EMA) of velocities.
     """
-    def __init__(self, alpha=0.8):
-        self.alpha = alpha
-        self.registry = {}  # Stores {track_id: last_v}
+    def __init__(self, alpha: float = 0.8) -> None:
+        self.alpha: float = alpha
+        self.registry: Dict[int, np.ndarray] = {}  # {track_id: last_v}
 
-    def smooth(self, track_id, v_new):
+    def smooth(self, track_id: int, v_new: np.ndarray) -> np.ndarray:
+        """
+        Update the track's velocity with EMA smoothing.
+        """
         if track_id not in self.registry:
             self.registry[track_id] = v_new
             return v_new
@@ -66,6 +75,10 @@ class MotionBuffer:
         self.registry[track_id] = v_smoothed
         return v_smoothed
 
-    def clear_dead_tracks(self, active_ids):
-        """Removes IDs that are no longer being tracked to save memory."""
-        self.registry = {tid: v for tid, v in self.registry.items() if tid in active_ids}
+    def clear_dead_tracks(self, active_track_ids: List[int]) -> None:
+        """
+        Remove tracks from the registry that are no longer active to prevent memory bloat.
+        """
+        dead = set(self.registry.keys()) - set(active_track_ids)
+        for d in dead:
+            del self.registry[d]

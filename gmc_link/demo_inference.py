@@ -13,6 +13,8 @@ import cv2
 import json
 import torch
 import numpy as np
+from typing import Dict, List, Set, Tuple, Any, Optional
+
 from ultralytics import YOLO
 from gmc_link.manager import GMCLinkManager
 from gmc_link.text_utils import TextEncoder
@@ -30,21 +32,22 @@ class Track:
             self.prev_centroid = np.array(prev_centroid, dtype=np.float64)
 
 
-def compute_iou(box_a, box_b):
-    """Compute IoU between two boxes [x1, y1, x2, y2]."""
+def compute_iou(box_a: List[float], box_b: List[float]) -> float:
+    """Compute Intersection over Union (IoU) between two bounding boxes [x1, y1, x2, y2]."""
     xa = max(box_a[0], box_b[0])
     ya = max(box_a[1], box_b[1])
     xb = min(box_a[2], box_b[2])
     yb = min(box_a[3], box_b[3])
-    inter = max(0, xb - xa) * max(0, yb - ya)
+    
+    inter = max(0.0, xb - xa) * max(0.0, yb - ya)
     area_a = (box_a[2] - box_a[0]) * (box_a[3] - box_a[1])
     area_b = (box_b[2] - box_b[0]) * (box_b[3] - box_b[1])
     union = area_a + area_b - inter
     return inter / union if union > 0 else 0.0
 
 
-def normalized_to_pixel(cx, cy, w, h, img_w, img_h):
-    """Convert normalized [cx, cy, w, h] → pixel [x1, y1, x2, y2]."""
+def normalized_to_pixel(cx: float, cy: float, w: float, h: float, img_w: int, img_h: int) -> List[float]:
+    """Convert normalized [cx, cy, w, h] to pixel coordinates [x1, y1, x2, y2]."""
     pw = w * img_w
     ph = h * img_h
     px = cx * img_w
@@ -52,19 +55,22 @@ def normalized_to_pixel(cx, cy, w, h, img_w, img_h):
     return [px - pw / 2, py - ph / 2, px + pw / 2, py + ph / 2]
 
 
-def match_yolo_to_gt(yolo_boxes, gt_boxes, iou_threshold=0.3):
+def match_yolo_to_gt(yolo_boxes: Dict[int, List[float]], gt_boxes: List[List[float]], iou_threshold: float = 0.3) -> Set[int]:
     """
-    Match YOLO detections to GT boxes via IoU.
+    Match YOLO detections to Ground Truth boxes using IoU bipartite matching.
+    
     Args:
-        yolo_boxes: dict {yolo_track_id: [x1,y1,x2,y2]}
-        gt_boxes: list of [x1,y1,x2,y2] for GT tracks in this frame
+        yolo_boxes: Dictionary mapping YOLO track IDs to their bounding boxes [x1, y1, x2, y2].
+        gt_boxes: List of Ground Truth bounding boxes [x1, y1, x2, y2] present in the current frame.
+        iou_threshold: Minimum IoU required to consider a match valid.
+        
     Returns:
-        set of yolo_track_ids that matched a GT box
+        Set of YOLO track IDs that successfully matched to a GT box.
     """
     matched_yolo_ids = set()
     used_gt = set()
     
-    # Greedy match: best IoU first
+    # Greedy match: establish matches starting with the highest IoU pairs
     pairs = []
     for yid, ybox in yolo_boxes.items():
         for gi, gbox in enumerate(gt_boxes):
@@ -81,9 +87,125 @@ def match_yolo_to_gt(yolo_boxes, gt_boxes, iou_threshold=0.3):
     return matched_yolo_ids
 
 
+def load_ground_truth(expression_path: str, labels_dir: str) -> Tuple[str, Dict[str, list], Dict[int, list]]:
+    """
+    Parse the expression sequence JSON and the corresponding KITTI tracking format labels.
+    
+    Args:
+        expression_path: Path to the refer-kitti JSON containing the sentence and frame-level tracking target IDs.
+        labels_dir: Path to the refer-kitti `labels_with_ids` directory for the specific sequence.
+        
+    Returns:
+        Tuple of:
+            - sentence: The natural language motion description (e.g. "moving cars").
+            - gt_label_map: Dictionary mapping string frame IDs to a list of target track IDs.
+            - gt_labels: Dictionary mapping integer frame indices to a list of bounding box dicts.
+    """
+    with open(expression_path, 'r') as f:
+        expression = json.load(f)
+    sentence = expression['sentence']
+    gt_label_map = expression['label']  # {frame_id_str: [track_ids]}
+    
+    # Load per-frame labels for all bounding boxes in the sequence
+    gt_labels = load_labels_with_ids(labels_dir)
+    return sentence, gt_label_map, gt_labels
+
+
+def draw_frame_visualization(
+    frame: np.ndarray, 
+    yolo_ids: np.ndarray, 
+    yolo_boxes_dict: Dict[int, List[float]], 
+    scores: Dict[int, float], 
+    matched_yolo_ids: Set[int], 
+    velocities: Dict[int, np.ndarray],
+    sentence: str,
+    frame_idx: int,
+    total_frames: int,
+    num_gt: int
+) -> None:
+    """
+    Apply OpenCV annotations to the image frame, drawing bounding boxes, velocity arrows, and scores.
+    """
+    for yid in yolo_ids:
+        yid = int(yid)
+        if yid not in yolo_boxes_dict:
+            continue
+            
+        x1, y1, x2, y2 = [int(v) for v in yolo_boxes_dict[yid]]
+        score = scores.get(yid, 0.0)
+        is_gt = yid in matched_yolo_ids
+        vel = velocities.get(yid, None)
+        
+        # Color by MODEL SCORE: green=high confidence match, red=low confidence match
+        score_color_g = int(min(255, max(0, score * 255 * 2)))
+        score_color_r = int(min(255, max(0, (1 - score) * 255 * 2)))
+        color = (0, score_color_g, score_color_r)
+        thickness = 2
+        
+        cv2.rectangle(frame, (x1, y1), (x2, y2), color, thickness)
+        
+        # Highlight Ground Truth objects with a white border
+        if is_gt:
+            cv2.rectangle(frame, (x1-2, y1-2), (x2+2, y2+2), (255, 255, 255), 1)
+        
+        # Draw camera-motion-compensated world velocity arrow
+        if vel is not None:
+            cx = (x1 + x2) // 2
+            cy = (y1 + y2) // 2
+            speed = np.linalg.norm((vel[0], vel[1]))
+            arrow_scale = 8  # Velocities are pre-scaled by 100x via VELOCITY_SCALE
+            end_x = int(cx + vel[0] * arrow_scale)
+            end_y = int(cy + vel[1] * arrow_scale)
+            cv2.arrowedLine(frame, (cx, cy), (end_x, end_y), (255, 255, 0), 2, tipLength=0.3)
+            
+            motion_label = f"v={speed:.1f}" if speed > 0.1 else "STATIC"
+def evaluate_frame_metrics(
+    scores: Dict[int, float], 
+    matched_yolo_ids: Set[int], 
+    num_gt_this_frame: int, 
+    score_threshold: float
+) -> Tuple[float, float, int, int, int, List[float], List[float]]:
+    """
+    Calculate Precision and Recall for a single frame based on a score threshold.
+    
+    Returns:
+        Tuple of (precision, recall, true_positives, false_positives, false_negatives, gt_scores, non_gt_scores)
+    """
+    tp, fp, fn = 0, 0, 0
+    gt_scores_this_frame = []
+    non_gt_scores_this_frame = []
+    
+    for yid, score in scores.items():
+        is_gt = yid in matched_yolo_ids
+        if is_gt:
+            gt_scores_this_frame.append(score)
+        else:
+            non_gt_scores_this_frame.append(score)
+        
+        # Threshold-based classification
+        predicted_positive = score > score_threshold
+        if predicted_positive and is_gt:
+            tp += 1
+        elif predicted_positive and not is_gt:
+            fp += 1
+    
+    fn = max(0, num_gt_this_frame - tp)
+    
+    precision = tp / (tp + fp) if tp + fp > 0 else (1.0 if num_gt_this_frame == 0 else 0.0)
+    recall = tp / (tp + fn) if tp + fn > 0 else 1.0
+    
+    return precision, recall, tp, fp, fn, gt_scores_this_frame, non_gt_scores_this_frame
+
+
 # ── Main Pipeline ────────────────────────────────────────────────────
 
-def run_e2e_evaluation(frame_dir, expression_path, labels_dir, weights_path="gmc_link_weights.pth", visualize=True):
+def run_e2e_evaluation(
+    frame_dir: str, 
+    expression_path: str, 
+    labels_dir: str, 
+    weights_path: str = "gmc_link_weights.pth", 
+    visualize: bool = True
+) -> None:
     """
     Run end-to-end YOLO + GMC-Link pipeline and evaluate against refer-kitti GT.
     
@@ -99,16 +221,10 @@ def run_e2e_evaluation(frame_dir, expression_path, labels_dir, weights_path="gmc
     device = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
     print(f"Device: {device}")
     
-    # Load expression ground truth
-    with open(expression_path, 'r') as f:
-        expression = json.load(f)
-    sentence = expression['sentence']
-    gt_label_map = expression['label']  # {frame_id_str: [track_ids]}
+    # Load expression ground truth and bounding box labels
+    sentence, gt_label_map, gt_labels = load_ground_truth(expression_path, labels_dir)
     print(f"Expression: \"{sentence}\"")
     print(f"GT spans {len(gt_label_map)} frames")
-    
-    # Load per-frame labels for GT bounding boxes
-    gt_labels = load_labels_with_ids(labels_dir)
     
     # Initialize components
     encoder = TextEncoder(device=device)
@@ -192,86 +308,33 @@ def run_e2e_evaluation(frame_dir, expression_path, labels_dir, weights_path="gmc
         else:
             matched_yolo_ids = set()
         
-        # ── Collect Scores ──
-        tp, fp, fn = 0, 0, 0
+        # ── Collect Scores and Evaluate ──
         num_gt_this_frame = len(gt_track_ids_this_frame)
         
-        for yid, score in scores.items():
-            is_gt = yid in matched_yolo_ids
-            if is_gt:
-                gt_scores.append(score)
-            else:
-                non_gt_scores.append(score)
-            
-            # Threshold-based classification
-            predicted_positive = score > score_threshold
-            if predicted_positive and is_gt:
-                tp += 1
-            elif predicted_positive and not is_gt:
-                fp += 1
+        precision, recall, tp, fp, fn, gt_img_scores, non_gt_img_scores = evaluate_frame_metrics(
+            scores, matched_yolo_ids, num_gt_this_frame, score_threshold
+        )
         
-        fn = max(0, num_gt_this_frame - tp)
+        gt_scores.extend(gt_img_scores)
+        non_gt_scores.extend(non_gt_img_scores)
         
-        if tp + fp > 0:
-            precision = tp / (tp + fp)
-        else:
-            precision = 1.0 if num_gt_this_frame == 0 else 0.0
-        
-        if tp + fn > 0:
-            recall = tp / (tp + fn)
-        else:
-            recall = 1.0
-        
-        if gt_track_ids_this_frame:  # Only count frames that have GT
+        if gt_track_ids_this_frame:  # Only count frames that have GT for summary metrics
             frame_results.append((precision, recall, tp, fp, fn))
         
         # ── Visualization ──
         if visualize:
-            for yid in yolo_ids:
-                yid = int(yid)
-                if yid not in yolo_boxes_dict:
-                    continue
-                x1, y1, x2, y2 = [int(v) for v in yolo_boxes_dict[yid]]
-                score = scores.get(yid, 0.0)
-                is_gt = yid in matched_yolo_ids
-                vel = velocities.get(yid, None)
-                
-                # Color by MODEL SCORE: green=high confidence match, red=low
-                score_color_g = int(min(255, max(0, score * 255 * 2)))
-                score_color_r = int(min(255, max(0, (1 - score) * 255 * 2)))
-                color = (0, score_color_g, score_color_r)
-                thickness = 2
-                
-                cv2.rectangle(frame, (x1, y1), (x2, y2), color, thickness)
-                
-                # Mark GT-matched objects with a white star/border
-                if is_gt:
-                    cv2.rectangle(frame, (x1-2, y1-2), (x2+2, y2+2), (255, 255, 255), 1)
-                
-                # Draw compensated velocity arrow (GMC effect)
-                if vel is not None:
-                    cx = (x1 + x2) // 2
-                    cy = (y1 + y2) // 2
-                    speed = np.linalg.norm(vel)
-                    arrow_scale = 8  # Velocity already scaled by 100x
-                    end_x = int(cx + vel[0] * arrow_scale)
-                    end_y = int(cy + vel[1] * arrow_scale)
-                    cv2.arrowedLine(frame, (cx, cy), (end_x, end_y), (255, 255, 0), 2, tipLength=0.3)
-                    
-                    motion_label = f"v={speed:.1f}" if speed > 0.1 else "STATIC"
-                else:
-                    motion_label = "NEW"
-                
-                # Score + motion label
-                label = f"{'GT ' if is_gt else ''}{score:.0%} {motion_label}"
-                cv2.putText(frame, label, (x1, y1 - 8),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.40, color, 1)
-            
-            # Frame info
-            cv2.putText(frame, f"Prompt: \"{sentence}\"", (10, 25),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
-            cv2.putText(frame, f"Frame {frame_idx}/{len(frame_files)} | GT tracks: {len(gt_track_ids_this_frame)}", 
-                        (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (200, 200, 200), 1)
+            draw_frame_visualization(
+                frame=frame,
+                yolo_ids=yolo_ids,
+                yolo_boxes_dict=yolo_boxes_dict,
+                scores=scores,
+                matched_yolo_ids=matched_yolo_ids,
+                velocities=velocities,
+                sentence=sentence,
+                frame_idx=frame_idx,
+                total_frames=len(frame_files),
+                num_gt=num_gt_this_frame
+            )
             
             cv2.imshow("GMC-Link E2E (press q to quit)", frame)
             if cv2.waitKey(30) & 0xFF == ord('q'):
