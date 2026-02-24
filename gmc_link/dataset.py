@@ -9,9 +9,6 @@ from typing import Dict, List, Tuple, Any
 from gmc_link.utils import VELOCITY_SCALE, warp_points
 from gmc_link.core import ORBHomographyEngine
 
-
-from gmc_link.core import ORBHomographyEngine
-
 HOMOGRAPHY_CACHE = {}
 
 class MotionLanguageDataset(Dataset):
@@ -353,90 +350,6 @@ def _generate_bce_pairs(
     return motion_data, language_data, labels
 
 
-def _compute_flow_velocity(
-    frame_dir: str,
-    curr_fid: int,
-    future_fid: int,
-    track_id: int,
-    labels_by_frame: Dict,
-    frame_shape: Tuple[int, int],
-    raft_engine: Any = None,
-) -> np.ndarray:
-    """
-    Compute flow-compensated velocity for a track between two frames
-    using RAFT optical flow (GPU-accelerated), matching the inference pipeline.
-    
-    Args:
-        labels_by_frame: Output of load_labels_with_ids() — {frame_id: [{track_id, cx, cy, w, h}, ...]}
-    """
-    import cv2
-    from gmc_link.core import extract_object_velocity, extract_background_flow
-    from gmc_link.utils import normalize_velocity
-    
-    frame1_path = os.path.join(frame_dir, f"{curr_fid:06d}.png")
-    frame2_path = os.path.join(frame_dir, f"{future_fid:06d}.png")
-    
-    if not os.path.exists(frame1_path) or not os.path.exists(frame2_path):
-        return np.zeros(2, dtype=np.float32)
-
-    img1 = cv2.imread(frame1_path)
-    img2 = cv2.imread(frame2_path)
-    actual_h, actual_w = img1.shape[:2]
-
-    # Use RAFT if engine provided, otherwise fallback to Farneback
-    if raft_engine is not None:
-        # Reset engine state and compute flow for this specific pair
-        raft_engine.prev_tensor = None
-        raft_engine.estimate(img1)  # Set prev frame
-        flow = raft_engine.estimate(img2)  # Get flow
-    else:
-        gray1 = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
-        gray2 = cv2.cvtColor(img2, cv2.COLOR_BGR2GRAY)
-        flow = cv2.calcOpticalFlowFarneback(
-            gray1, gray2, flow=None,
-            pyr_scale=0.5, levels=3, winsize=15,
-            iterations=3, poly_n=5, poly_sigma=1.2, flags=0,
-        )
-    
-    if flow is None:
-        return np.zeros(2, dtype=np.float32)
-
-    # Build bboxes from labels_with_ids (normalized → pixel coords) for background masking
-    bboxes = []
-    if curr_fid in labels_by_frame:
-        for det in labels_by_frame[curr_fid]:
-            cx_px = det['cx'] * actual_w
-            cy_px = det['cy'] * actual_h
-            w_px = det['w'] * actual_w
-            h_px = det['h'] * actual_h
-            x1 = cx_px - w_px / 2
-            y1 = cy_px - h_px / 2
-            x2 = cx_px + w_px / 2
-            y2 = cy_px + h_px / 2
-            bboxes.append((x1, y1, x2, y2))
-
-    bg_flow = extract_background_flow(flow, bboxes, (actual_h, actual_w))
-
-    # Find this track's bbox for object flow extraction
-    target_bbox = None
-    if curr_fid in labels_by_frame:
-        for det in labels_by_frame[curr_fid]:
-            if det['track_id'] == track_id:
-                cx_px = det['cx'] * actual_w
-                cy_px = det['cy'] * actual_h
-                w_px = det['w'] * actual_w
-                h_px = det['h'] * actual_h
-                target_bbox = (cx_px - w_px/2, cy_px - h_px/2, cx_px + w_px/2, cy_px + h_px/2)
-                break
-
-    if target_bbox is None:
-        return np.zeros(2, dtype=np.float32)
-
-    obj_flow = extract_object_velocity(flow, target_bbox, (actual_h, actual_w))
-    world_velocity = obj_flow - bg_flow
-    return normalize_velocity(world_velocity, (actual_h, actual_w))
-
-
 def build_training_data(
     data_root: str, 
     sequences: List[str], 
@@ -446,7 +359,7 @@ def build_training_data(
 ) -> Tuple[List[np.ndarray], List[np.ndarray], List[float]]:
     """
     Build (motion, language) training pairs from refer-kitti for BCE training.
-    Uses RAFT optical flow (GPU-accelerated) for velocity computation.
+    Uses ORB Homography and centroid-difference tracking for ego-motion compensation.
     """
     import torch
     import cv2

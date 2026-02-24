@@ -1,10 +1,7 @@
 # GMC-Link/core.py
 import cv2
-import torch
 import numpy as np
 from typing import Optional, List, Tuple
-from torchvision.models.optical_flow import raft_small, Raft_Small_Weights
-from torchvision.transforms import functional as F
 
 
 class ORBHomographyEngine:
