@@ -89,6 +89,14 @@ Train a `MotionLanguageAligner` to match 2D velocity vectors with natural langua
   - FP: 1301 | TP: 17
 - **Analysis:** Despite best training metrics, worst test-time separation. The RAFT flow field may contain too much fine-grained detail (textures, edges) that pollutes the per-bbox velocity average. The ORB+RANSAC approach, being sparser, actually produces more stable and discriminative velocity signals for this task.
 
+### Exp 12: Resolving Training-Inference Domain Gap & Velocity Scaling
+- **Change:** Unified pipeline to use centroid-difference velocities with `frame_gap=1` (replaced RAFT with centroid diffs during inference to match training). Increased `VELOCITY_SCALE` from `100` to `500` to properly amplify the tiny 1-frame pixel distances. Lowered E2E threshold to `0.4`.
+- **Training:** Loss 0.3405, Accuracy 84.36% (50 epochs, all 4 sequences)
+- **E2E on seq 0011 (Centroid-diff `frame_gap=1`):**
+  - GT avg score: 0.4803 | Non-GT avg: 0.3336 | Separation: **+0.1466** ✅
+  - FP: 723 | TP: 18 (with threshold 0.4)
+- **Analysis:** Domain gap Fixed. Dataset confirmed to be actual GT tracking boxes, not predictions. While signal is much better, pure 1-frame centroid differences are heavily distorted by YOLO bounding-box jitter, leading to high FP. Next step is multi-frame velocity windowing (`frame_gap=5`).
+
 ---
 
 ## Experiment Comparison Table
@@ -98,8 +106,9 @@ Train a `MotionLanguageAligner` to match 2D velocity vectors with natural langua
 | 9 | **ORB + Homography** | 0.2039 | 89.27% | **0.7344** | **0.2115** | **+0.5229** | **352** |
 | 10 | Farneback Dense Flow | 0.2108 | 88.93% | 0.6088 | 0.3338 | +0.2750 | 637 |
 | 11 | RAFT Dense Flow | **0.1943** | **89.91%** | 0.6000 | 0.4944 | +0.1056 | 1301 |
+| 12 | Centroid-diff (`gap=1`) | 0.3405 | 84.36% | 0.4803 | 0.3336 | +0.1466 | 723 |
 
-**Conclusion:** ORB + Homography with object masking remains the best approach for KITTI driving scenes. Dense flow methods introduce noise that sparse keypoint matching avoids.
+**Conclusion:** ORB + Homography with object masking remains the best approach for KITTI driving scenes. Dense flow methods introduce noise that sparse keypoint matching avoids. Centroid differences are fast and stable but highly susceptible to YOLO detection jitter when `frame_gap=1`.
 
 ---
 

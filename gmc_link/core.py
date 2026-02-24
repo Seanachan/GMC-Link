@@ -13,7 +13,7 @@ class RAFTFlowEngine:
     GPU-accelerated via MPS/CUDA. Produces significantly more accurate flow
     than classical methods like Farneback.
     """
-    def __init__(self, device: str = "cpu") -> None:
+    def __init__(self, device: str = "cuda") -> None:
         self.device = torch.device(device)
         weights = Raft_Small_Weights.DEFAULT
         self.model = raft_small(weights=weights).to(self.device)

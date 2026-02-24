@@ -70,7 +70,7 @@ def setup_data(
     data_root: str, 
     sequences: list, 
     batch_size: int, 
-    frame_gap: int = 5
+    frame_gap: int = 1
 ) -> Optional[DataLoader]:
     """
     Initialize text encoder, build training dataset, and return a DataLoader.
@@ -157,12 +157,15 @@ def main() -> None:
     
     learning_rate = 1e-3
     batch_size = 128
-    epochs = 300
+    epochs = 50
     lang_dim = 384
     
-    # Refer-KITTI data paths (Train on 15/16/18, test on 11)
+    # Refer-KITTI data paths (Train on all available seqs, test on 11)
     data_root = "refer-kitti"
-    sequences = ["0015", "0016", "0018"]
+    sequences = [
+        "0001", "0002", "0003", "0004", "0005", "0006", "0007", "0008",
+        "0009", "0010", "0012", "0013", "0014", "0015", "0016", "0018", "0020",
+    ]
     
     # --- Pipeline ---
     dataloader = setup_data(device, data_root, sequences, batch_size)

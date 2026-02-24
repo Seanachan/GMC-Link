@@ -181,32 +181,38 @@ def _collect_expressions(
 def _extract_target_centroids(
     data_root: str, 
     seq: str, 
-    label_map: Dict[str, List[int]]
+    label_map: Dict[str, List[int]],
+    frame_shape: Tuple[int, int] = (375, 1242),
 ) -> Dict[int, Dict[int, Tuple[float, float]]]:
     """
-    Extract centroid coordinates (cx, cy) for target object tracks across frames.
+    Extract centroid coordinates (cx, cy) in pixel space for target object tracks across frames.
+    Uses labels_with_ids per-frame format (class_id track_id cx cy w h in normalized coords).
     
-    Returns mapping: {track_id: {frame_id: (cx, cy)}}
+    Returns mapping: {track_id: {frame_id: (cx_px, cy_px)}}
     """
-    tracking_file = os.path.join(data_root, "KITTI", "tracking", "training", "label_02", f"{seq}.txt")
-    if not os.path.exists(tracking_file):
+    labels_dir = os.path.join(data_root, "KITTI", "labels_with_ids", "image_02", seq)
+    if not os.path.exists(labels_dir):
         return {}
     
-    tracking_data = load_kitti_tracking_labels(tracking_file)
+    labels_by_frame = load_labels_with_ids(labels_dir)
     frame_ids = sorted([int(fid) for fid in label_map.keys()])
+    h, w = frame_shape
     
     track_centroids = {}
     for fid in frame_ids:
         target_tracks = set(label_map[str(fid)])
-        if fid not in tracking_data:
+        if fid not in labels_by_frame:
             continue
             
-        for tid in target_tracks:
-            if tid in tracking_data[fid]:
-                det = tracking_data[fid][tid]
+        for det in labels_by_frame[fid]:
+            tid = det['track_id']
+            if tid in target_tracks:
+                # Convert normalized coords to pixel coords
+                cx_px = det['cx'] * w
+                cy_px = det['cy'] * h
                 if tid not in track_centroids:
                     track_centroids[tid] = {}
-                track_centroids[tid][fid] = (det['cx'], det['cy'])
+                track_centroids[tid][fid] = (cx_px, cy_px)
                 
     return track_centroids
 
@@ -298,13 +304,16 @@ def _compute_flow_velocity(
     curr_fid: int,
     future_fid: int,
     track_id: int,
-    tracking_data: Dict,
+    labels_by_frame: Dict,
     frame_shape: Tuple[int, int],
     raft_engine: Any = None,
 ) -> np.ndarray:
     """
     Compute flow-compensated velocity for a track between two frames
     using RAFT optical flow (GPU-accelerated), matching the inference pipeline.
+    
+    Args:
+        labels_by_frame: Output of load_labels_with_ids() — {frame_id: [{track_id, cx, cy, w, h}, ...]}
     """
     import cv2
     from gmc_link.core import extract_object_velocity, extract_background_flow
@@ -338,21 +347,38 @@ def _compute_flow_velocity(
     if flow is None:
         return np.zeros(2, dtype=np.float32)
 
-    # Collect all object bounding boxes for background masking
+    # Build bboxes from labels_with_ids (normalized → pixel coords) for background masking
     bboxes = []
-    if curr_fid in tracking_data:
-        for det in tracking_data[curr_fid].values():
-            bboxes.append((det['x1'], det['y1'], det['x2'], det['y2']))
+    if curr_fid in labels_by_frame:
+        for det in labels_by_frame[curr_fid]:
+            cx_px = det['cx'] * actual_w
+            cy_px = det['cy'] * actual_h
+            w_px = det['w'] * actual_w
+            h_px = det['h'] * actual_h
+            x1 = cx_px - w_px / 2
+            y1 = cy_px - h_px / 2
+            x2 = cx_px + w_px / 2
+            y2 = cy_px + h_px / 2
+            bboxes.append((x1, y1, x2, y2))
 
     bg_flow = extract_background_flow(flow, bboxes, (actual_h, actual_w))
 
-    if curr_fid in tracking_data and track_id in tracking_data[curr_fid]:
-        det = tracking_data[curr_fid][track_id]
-        bbox = (det['x1'], det['y1'], det['x2'], det['y2'])
-        obj_flow = extract_object_velocity(flow, bbox, (actual_h, actual_w))
-    else:
+    # Find this track's bbox for object flow extraction
+    target_bbox = None
+    if curr_fid in labels_by_frame:
+        for det in labels_by_frame[curr_fid]:
+            if det['track_id'] == track_id:
+                cx_px = det['cx'] * actual_w
+                cy_px = det['cy'] * actual_h
+                w_px = det['w'] * actual_w
+                h_px = det['h'] * actual_h
+                target_bbox = (cx_px - w_px/2, cy_px - h_px/2, cx_px + w_px/2, cy_px + h_px/2)
+                break
+
+    if target_bbox is None:
         return np.zeros(2, dtype=np.float32)
 
+    obj_flow = extract_object_velocity(flow, target_bbox, (actual_h, actual_w))
     world_velocity = obj_flow - bg_flow
     return normalize_velocity(world_velocity, (actual_h, actual_w))
 
@@ -361,7 +387,7 @@ def build_training_data(
     data_root: str, 
     sequences: List[str], 
     text_encoder: Any, 
-    frame_gap: int = 5, 
+    frame_gap: int = 1, 
     frame_shape: Tuple[int, int] = (375, 1242)
 ) -> Tuple[List[np.ndarray], List[np.ndarray], List[float]]:
     """
@@ -369,18 +395,13 @@ def build_training_data(
     Uses RAFT optical flow (GPU-accelerated) for velocity computation.
     """
     import torch
-    from gmc_link.core import RAFTFlowEngine
+    import cv2
 
     all_expressions, sentence_embeddings, all_sentences = _collect_expressions(
         data_root, sequences, text_encoder
     )
     
-    # Create shared RAFT engine on GPU for training data generation
-    device = "mps" if torch.backends.mps.is_available() else "cuda" if torch.cuda.is_available() else "cpu"
-    print(f"  Initializing RAFT flow engine on {device}...")
-    raft_engine = RAFTFlowEngine(device=device)
-    
-    print("  Computing RAFT-flow velocities and generating supervision pairs...")
+    print("  Computing centroid-difference velocities and generating supervision pairs...")
     motion_data = []
     language_data = []
     labels = []
@@ -391,17 +412,25 @@ def build_training_data(
         sentence = expr['sentence']
         embedding = expr['embedding']
         
-        track_centroids = _extract_target_centroids(data_root, seq, label_map)
-        
+        # Detect actual frame dimensions from first image
         frame_dir = os.path.join(data_root, "KITTI", "training", "image_02", seq)
-        tracking_file = os.path.join(data_root, "KITTI", "tracking", "training", "label_02", f"{seq}.txt")
-        tracking_data = load_kitti_tracking_labels(tracking_file) if os.path.exists(tracking_file) else None
+        actual_shape = frame_shape
+        if os.path.exists(frame_dir):
+            sample_frames = [f for f in os.listdir(frame_dir) if f.endswith('.png')]
+            if sample_frames:
+                sample = cv2.imread(os.path.join(frame_dir, sample_frames[0]))
+                if sample is not None:
+                    actual_shape = (sample.shape[0], sample.shape[1])
         
+        track_centroids = _extract_target_centroids(
+            data_root, seq, label_map, frame_shape=actual_shape
+        )
+        
+        # Use centroid-difference velocities (fast, no RAFT needed)
+        # RAFT is used at inference time for compensation; training uses label centroids
         m_data, l_data, lbls = _generate_bce_pairs(
             track_centroids, sentence, embedding, all_sentences, 
-            sentence_embeddings, frame_gap, frame_shape,
-            frame_dir=frame_dir, tracking_data=tracking_data,
-            raft_engine=raft_engine,
+            sentence_embeddings, frame_gap, actual_shape,
         )
         
         motion_data.extend(m_data)

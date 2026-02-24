@@ -2,7 +2,8 @@ import numpy as np
 from typing import Dict, List, Tuple, Optional, Union
 
 # Scale factor for normalized velocities so the MLP operates on ~1.0 magnitude values
-VELOCITY_SCALE = 100
+# Calibrated for frame_gap=1 (consecutive frames produce small centroid diffs)
+VELOCITY_SCALE = 500
 
 
 def warp_points(points: np.ndarray, homography: np.ndarray) -> np.ndarray:
@@ -82,3 +83,46 @@ class MotionBuffer:
         dead = set(self.registry.keys()) - set(active_track_ids)
         for d in dead:
             del self.registry[d]
+
+
+class ScoreBuffer:
+    """
+    Temporal smoothing for alignment scores to prevent flickering in visualization.
+    Uses EMA to stabilize per-track scores across frames.
+    """
+    def __init__(self, alpha: float = 0.4) -> None:
+        self.alpha: float = alpha
+        self.registry: Dict[int, float] = {}  # {track_id: smoothed_score}
+
+    def smooth(self, track_id: int, raw_score: float) -> float:
+        """Apply EMA smoothing to a track's alignment score."""
+        if track_id not in self.registry:
+            self.registry[track_id] = raw_score
+            return raw_score
+        
+        smoothed = self.alpha * raw_score + (1 - self.alpha) * self.registry[track_id]
+        self.registry[track_id] = smoothed
+        return smoothed
+
+    def clear_dead_tracks(self, active_track_ids: List[int]) -> None:
+        dead = set(self.registry.keys()) - set(active_track_ids)
+        for d in dead:
+            del self.registry[d]
+
+
+def velocity_confidence(velocity: np.ndarray, threshold: float = 0.3, steepness: float = 10.0) -> float:
+    """
+    Compute a [0, 1] confidence that the object is actually moving, 
+    based on velocity magnitude. Uses a sigmoid gate centered at `threshold`.
+    
+    Objects with near-zero compensated velocity (i.e. stationary after camera 
+    compensation) get confidence → 0, suppressing their alignment score.
+    
+    Args:
+        velocity: (2,) normalized velocity vector [dx, dy].
+        threshold: Velocity magnitude below which confidence drops sharply.
+        steepness: Controls how sharp the sigmoid transition is.
+    """
+    speed = float(np.linalg.norm(velocity))
+    # Sigmoid: 1 / (1 + exp(-steepness * (speed - threshold)))
+    return 1.0 / (1.0 + np.exp(-steepness * (speed - threshold)))

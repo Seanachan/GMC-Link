@@ -244,7 +244,7 @@ def run_e2e_evaluation(
     gt_scores = []       # Alignment scores for GT-matched detections
     non_gt_scores = []   # Alignment scores for non-GT detections
     frame_results = []   # Per-frame (precision, recall) at threshold
-    score_threshold = 0.5
+    score_threshold = 0.4
     
     for frame_idx, frame_name in enumerate(frame_files):
         frame_path = os.path.join(frame_dir, frame_name)
@@ -393,5 +393,5 @@ if __name__ == "__main__":
         expression_path="refer-kitti/expression/0011/moving-cars.json",
         labels_dir="refer-kitti/KITTI/labels_with_ids/image_02/0011",
         weights_path="gmc_link_weights.pth",
-        visualize=True,
+        visualize=False,
     )
