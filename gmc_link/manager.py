@@ -2,7 +2,7 @@ import torch
 import numpy as np
 from typing import Dict, List, Tuple, Any, Optional
 
-from .utils import normalize_velocity, MotionBuffer, ScoreBuffer, warp_points
+from .utils import normalize_velocity, MotionBuffer, ScoreBuffer, warp_points, VELOCITY_SCALE
 from .alignment import MotionLanguageAligner
 from .core import ORBHomographyEngine
 
@@ -26,7 +26,7 @@ class GMCLinkManager:
         
         self.motion_buffer = MotionBuffer(alpha=0.3)
         self.score_buffer = ScoreBuffer(alpha=0.4)
-        self.aligner = MotionLanguageAligner(motion_dim=6, lang_dim=lang_dim, embed_dim=256).to(device)
+        self.aligner = MotionLanguageAligner(motion_dim=8, lang_dim=lang_dim, embed_dim=256).to(device)
         
         if weights_path:
             self.aligner.load_state_dict(torch.load(weights_path, map_location=device))
@@ -36,9 +36,9 @@ class GMCLinkManager:
         self.prev_frame = None
         self.prev_detections = None
         
-        # Store centroid history for velocity computation over a window
+        # Store centroid & dimension history for velocity computation over a window
         self.centroid_history: Dict[int, List[np.ndarray]] = {}
-
+        self.wh_history: Dict[int, List[np.ndarray]] = {}
     def process_frame(
         self, 
         frame: np.ndarray, 
@@ -90,34 +90,49 @@ class GMCLinkManager:
 
             if tid not in self.centroid_history:
                 self.centroid_history[tid] = []
+                self.wh_history[tid] = []
             
             self.centroid_history[tid].append(curr_centroid)
             if len(self.centroid_history[tid]) > self.frame_gap + 1:
                 self.centroid_history[tid].pop(0)
                 
+            if hasattr(track, 'bbox') and track.bbox is not None:
+                bx1, by1, bx2, by2 = track.bbox
+                curr_w = bx2 - bx1
+                curr_h = by2 - by1
+            else:
+                curr_w, curr_h = 0.0, 0.0
+                
+            self.wh_history[tid].append(np.array([curr_w, curr_h], dtype=np.float64))
+            if len(self.wh_history[tid]) > self.frame_gap + 1:
+                self.wh_history[tid].pop(0)
+                
             history = self.centroid_history[tid]
+            wh_history = self.wh_history[tid]
+            
             if len(history) > 1:
                 # Centroid-difference velocity over window (not divided by gap to match training)
                 gap = len(history) - 1
                 raw_velocity = (history[-1] - history[0])
                 norm_velocity = normalize_velocity(raw_velocity, frame_shape)
                 smoothed_v = self.motion_buffer.smooth(tid, norm_velocity)
+                
+                # Z-axis depth scaling velocity (dw, dh)
+                raw_dw_dh = (wh_history[-1] - wh_history[0])
+                dw = raw_dw_dh[0] / float(img_w) * VELOCITY_SCALE
+                dh = raw_dw_dh[1] / float(img_h) * VELOCITY_SCALE
             else:
                 # First appearance: zero velocity
                 smoothed_v = np.zeros(2, dtype=np.float32)
+                dw, dh = 0.0, 0.0
 
-            # Build 6D Spatial-Motion Vector
-            if hasattr(track, 'bbox') and track.bbox is not None:
-                bx1, by1, bx2, by2 = track.bbox
-                w_n = (bx2 - bx1) / float(img_w)
-                h_n = (by2 - by1) / float(img_h)
-            else:
-                w_n, h_n = 0.0, 0.0
-
+            # Build 8D Spatial-Motion Vector
+            w_n = curr_w / float(img_w)
+            h_n = curr_h / float(img_h)
             cx_n = curr_centroid[0] / float(img_w)
             cy_n = curr_centroid[1] / float(img_h)
 
-            spatial_motion = np.array([smoothed_v[0], smoothed_v[1], cx_n, cy_n, w_n, h_n], dtype=np.float32)
+            spatial_motion = np.array([smoothed_v[0], smoothed_v[1], dw, dh, cx_n, cy_n, w_n, h_n], dtype=np.float32)
 
             track_ids.append(tid)
             compensated_velocities.append(spatial_motion)

@@ -98,12 +98,7 @@ Train a `MotionLanguageAligner` to match 2D velocity vectors with natural langua
 - **Analysis:** Domain gap Fixed. Dataset confirmed to be actual GT tracking boxes, not predictions. While signal is much better, pure 1-frame centroid differences are heavily distorted by YOLO bounding-box jitter, leading to high FP. Next step is multi-frame velocity windowing (`frame_gap=5`).
 
 ### Exp 13: Multi-Frame Windowing & Ego-Motion Pollution
-- **Change:** Implemented a 5-frame velocity window (`frame_gap=5`) tracking in `manager.py` to overcome YOLO bounding box jitter. Synced `dataset.py` & `train.py` to use `frame_gap=5` to preserve domain consistency. Reverted `VELOCITY_SCALE` to `100`.
-- **Training:** Loss 0.3093, Accuracy 85.07% (50 epochs)
-- **E2E on seq 0011 (Centroid-diff `frame_gap=5`):**
-  - GT avg score: 0.4392 | Non-GT avg: 0.3454 | Separation: **+0.0938**
-  - FP: 695 | TP: 14 (with threshold 0.4)
-- **Analysis:** Separation *decreased* and FP barely changed. **Root Cause:** By removing Homography ego-motion compensation to fix the domain gap (Exp 12), the model is purely learning absolute pixel motion. In a moving dashcam, parked cars zoom backward (huge motion vector) while cars driving ahead at the same speed stay still (zero motion vector). This destroys the semantics of "moving" vs "parked".
+- **Change:** Implemented a 5-frame velocity window (`frame_gap=5`) tracking in `manager.py` to overcome YOLO bounding box jitter. Synced `dataset.py` & `train.py` to usars zoom backward (huge motion vector) while cars driving ahead at the same speed stay still (zero motion vector). This destroys the semantics of "moving" vs "parked".
 
 ### Exp 14: Restoring Ego-Motion Compensation Pipeline (ORB+Homography via Centroids)
 - **Change:** We diagnosed that disabling background compensation in Exp 12 & 13 caused the model to learn raw pixel motion, destroying the semantics of moving vs. parked. We restored mathematical ego-motion compensation.
