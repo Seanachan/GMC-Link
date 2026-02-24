@@ -11,12 +11,12 @@ class MotionLanguageAligner(nn.Module):
     """
     Reasoning Head of GMC-Link that aligns motion features with language features.
     """
-    def __init__(self, motion_dim: int = 2, lang_dim: int = 768, embed_dim: int = 256) -> None:
+    def __init__(self, motion_dim: int = 6, lang_dim: int = 768, embed_dim: int = 256) -> None:
         super().__init__()
-        # Motion Encoder: Project (dx, dy) into a semantic vector.
+        # Motion Encoder: Project (dx, dy, cx, cy, w, h) into a semantic vector.
         # Deeper MLP to learn nuanced motion semantics (e.g., turning vs moving forward)
         self.motion_projector = nn.Sequential(
-            nn.Linear(2, 64),
+            nn.Linear(motion_dim, 64),
             nn.ReLU(),
             nn.Dropout(0.1),
             nn.Linear(64, 128),
@@ -39,7 +39,7 @@ class MotionLanguageAligner(nn.Module):
         The 'Thinking' phase: Link geometric motion to linguistic intent.
 
         Args:
-            motion_feats: (N, 2) Tensor of normalized world velocities [dx, dy].
+            motion_feats: (N, 6) Tensor of normalized world velocities [dx, dy] and positions [cx, cy, w, h].
             lang_feats: (1, L_dim) Tensor of text features representing the prompt.
 
         Returns:
@@ -70,7 +70,7 @@ class MotionLanguageAligner(nn.Module):
         Compute per-pair similarity scores for BCE training.
         
         Args:
-            motion_feats: (N, 2) Tensor of velocity vectors.
+            motion_feats: (N, 6) Tensor of velocity and position vectors.
             lang_feats: (N, L_dim) Tensor of language embeddings (one per motion).
             
         Returns:

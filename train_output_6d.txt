@@ -1,0 +1,53 @@
+Device: cuda
+Loading text encoder...
+Building training data...
+  Encoding all sentences...
+  0001: skipped 34 non-motion expressions
+  0002: skipped 34 non-motion expressions
+  0003: skipped 20 non-motion expressions
+  0004: skipped 23 non-motion expressions
+  0005: skipped 30 non-motion expressions
+  0006: skipped 4 non-motion expressions
+  0007: skipped 44 non-motion expressions
+  0008: skipped 40 non-motion expressions
+  0009: skipped 34 non-motion expressions
+  0010: skipped 30 non-motion expressions
+  0012: skipped 12 non-motion expressions
+  0013: skipped 42 non-motion expressions
+  0014: skipped 18 non-motion expressions
+  0015: skipped 18 non-motion expressions
+  0016: skipped 13 non-motion expressions
+  0018: skipped 20 non-motion expressions
+  0020: skipped 20 non-motion expressions
+  Motion-related sentences: 84
+  Total expressions: 318
+  Initializing ORBHomographyEngine for dataset ego-motion compensation...
+  Computing centroid-difference velocities and generating supervision pairs...
+  Positive: 141708 | Negative: 566832 | Total: 708540
+Total training samples: 708540
+Starting training on cuda | 5536 batches/epoch...
+  0%|          | 0/50 [00:00<?, ?it/s]  0%|          | 0/50 [00:00<?, ?it/s]
+Traceback (most recent call last):
+  File "/home/seanachan/GMC-Link/gmc_link/train.py", line 183, in <module>
+    main()
+  File "/home/seanachan/GMC-Link/gmc_link/train.py", line 180, in main
+    train_loop(model, dataloader, optimizer, scheduler, criterion, device, epochs)
+  File "/home/seanachan/GMC-Link/gmc_link/train.py", line 142, in train_loop
+    avg_loss, accuracy = train_one_epoch(model, dataloader, optimizer, criterion, device)
+  File "/home/seanachan/GMC-Link/gmc_link/train.py", line 50, in train_one_epoch
+    scores = model.score_pairs(motion_features, language_features)
+  File "/home/seanachan/GMC-Link/gmc_link/alignment.py", line 79, in score_pairs
+    motion_latents = F.normalize(self.motion_projector(motion_feats), p=2, dim=-1)
+  File "/home/seanachan/miniconda/envs/RMOT/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1553, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/home/seanachan/miniconda/envs/RMOT/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1562, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/home/seanachan/miniconda/envs/RMOT/lib/python3.9/site-packages/torch/nn/modules/container.py", line 219, in forward
+    input = module(input)
+  File "/home/seanachan/miniconda/envs/RMOT/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1553, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/home/seanachan/miniconda/envs/RMOT/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1562, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/home/seanachan/miniconda/envs/RMOT/lib/python3.9/site-packages/torch/nn/modules/linear.py", line 117, in forward
+    return F.linear(input, self.weight, self.bias)
+RuntimeError: mat1 and mat2 shapes cannot be multiplied (128x6 and 2x64)

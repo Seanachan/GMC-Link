@@ -25,11 +25,15 @@ from gmc_link.dataset import load_labels_with_ids
 
 class Track:
     """Lightweight track object compatible with GMCLinkManager.process_frame()."""
-    def __init__(self, tid, centroid, prev_centroid=None):
+    def __init__(self, tid, centroid, prev_centroid=None, bbox=None):
         self.id = tid
         self.centroid = np.array(centroid, dtype=np.float64)
         if prev_centroid is not None:
             self.prev_centroid = np.array(prev_centroid, dtype=np.float64)
+        if bbox is not None:
+            self.bbox = tuple(bbox)
+        else:
+            self.bbox = None
 
 
 def compute_iou(box_a: List[float], box_b: List[float]) -> float:
@@ -236,7 +240,7 @@ def run_e2e_evaluation(
     encoder = TextEncoder(device=device)
     linker = GMCLinkManager(weights_path=weights_path, device=device, lang_dim=384)
     # Using YOLOv8 Extra Large for higher quality tracking
-    yolo = YOLO("yolo26n.pt")
+    yolo = YOLO("yolov8x.pt")
     
     # Encode the prompt once
     language_embedding = encoder.encode(sentence)
@@ -289,7 +293,7 @@ def run_e2e_evaluation(
             yolo_boxes_dict[yid] = [x1, y1, x2, y2]
             
             prev = prev_centroids.get(yid, None)
-            track = Track(yid, centroid, prev)
+            track = Track(yid, centroid, prev, bbox=[x1, y1, x2, y2])
             active_tracks.append(track)
             
             # Update prev centroid for next frame

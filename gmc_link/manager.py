@@ -26,7 +26,7 @@ class GMCLinkManager:
         
         self.motion_buffer = MotionBuffer(alpha=0.3)
         self.score_buffer = ScoreBuffer(alpha=0.4)
-        self.aligner = MotionLanguageAligner(lang_dim=lang_dim, embed_dim=256).to(device)
+        self.aligner = MotionLanguageAligner(motion_dim=6, lang_dim=lang_dim, embed_dim=256).to(device)
         
         if weights_path:
             self.aligner.load_state_dict(torch.load(weights_path, map_location=device))
@@ -106,8 +106,21 @@ class GMCLinkManager:
                 # First appearance: zero velocity
                 smoothed_v = np.zeros(2, dtype=np.float32)
 
+            # Build 6D Spatial-Motion Vector
+            if hasattr(track, 'bbox') and track.bbox is not None:
+                bx1, by1, bx2, by2 = track.bbox
+                w_n = (bx2 - bx1) / float(img_w)
+                h_n = (by2 - by1) / float(img_h)
+            else:
+                w_n, h_n = 0.0, 0.0
+
+            cx_n = curr_centroid[0] / float(img_w)
+            cy_n = curr_centroid[1] / float(img_h)
+
+            spatial_motion = np.array([smoothed_v[0], smoothed_v[1], cx_n, cy_n, w_n, h_n], dtype=np.float32)
+
             track_ids.append(tid)
-            compensated_velocities.append(smoothed_v)
+            compensated_velocities.append(spatial_motion)
 
         if not compensated_velocities:
             return {}, {}

@@ -112,7 +112,7 @@ def setup_model_and_optimizer(
     Initialize the MotionLanguageAligner, BCE loss function, and AdamW optimizer.
     """
     model = MotionLanguageAligner(
-        motion_dim=2, 
+        motion_dim=6, 
         lang_dim=lang_dim, 
         embed_dim=256
     ).to(device)

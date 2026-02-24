@@ -190,10 +190,10 @@ def _extract_target_centroids(
     frame_shape: Tuple[int, int] = (375, 1242),
 ) -> Dict[int, Dict[int, Tuple[float, float]]]:
     """
-    Extract centroid coordinates (cx, cy) in pixel space for target object tracks across frames.
+    Extract centroid coordinates and dimensions (cx, cy, w, h) in pixel space for target object tracks across frames.
     Uses labels_with_ids per-frame format (class_id track_id x1 y1 w h in normalized coords).
     
-    Returns mapping: {track_id: {frame_id: (cx_px, cy_px)}}
+    Returns mapping: {track_id: {frame_id: (cx_px, cy_px, w_px, h_px)}}
     """
     labels_dir = os.path.join(data_root, "KITTI", "labels_with_ids", "image_02", seq)
     if not os.path.exists(labels_dir):
@@ -223,13 +223,13 @@ def _extract_target_centroids(
                 
                 if tid not in track_centroids:
                     track_centroids[tid] = {}
-                track_centroids[tid][fid] = (cx_px, cy_px)
+                track_centroids[tid][fid] = (cx_px, cy_px, w_px, h_px)
                 
     return track_centroids
 
 
 def _generate_bce_pairs(
-    track_centroids: Dict[int, Dict[int, Tuple[float, float]]],
+    track_centroids: Dict[int, Dict[int, Tuple[float, float, float, float]]],
     sentence: str,
     embedding: np.ndarray,
     all_sentences: List[str],
@@ -288,8 +288,8 @@ def _generate_bce_pairs(
                     HOMOGRAPHY_CACHE[cache_key] = H
                 
                 if H is not None:
-                    cx1, cy1 = centroids[curr_fid]
-                    cx2, cy2 = centroids[future_fid]
+                    cx1, cy1, bw1, bh1 = centroids[curr_fid]
+                    cx2, cy2, _, _ = centroids[future_fid]
                     
                     pts = np.array([[cx1, cy1]], dtype=np.float32)
                     warped_pts = warp_points(pts, H)
@@ -297,20 +297,29 @@ def _generate_bce_pairs(
                     
                     dx = (cx2 - wcx1) / w * VELOCITY_SCALE
                     dy = (cy2 - wcy1) / h * VELOCITY_SCALE
-                    motion_vec = np.array([dx, dy], dtype=np.float32)
+                    
+                    cx_n, cy_n = cx1 / w, cy1 / h
+                    bw_n, bh_n = bw1 / w, bh1 / h
+                    motion_vec = np.array([dx, dy, cx_n, cy_n, bw_n, bh_n], dtype=np.float32)
                 else:
-                    cx1, cy1 = centroids[curr_fid]
-                    cx2, cy2 = centroids[future_fid]
+                    cx1, cy1, bw1, bh1 = centroids[curr_fid]
+                    cx2, cy2, _, _ = centroids[future_fid]
                     dx = (cx2 - cx1) / w * VELOCITY_SCALE
                     dy = (cy2 - cy1) / h * VELOCITY_SCALE
-                    motion_vec = np.array([dx, dy], dtype=np.float32)
+                    
+                    cx_n, cy_n = cx1 / w, cy1 / h
+                    bw_n, bh_n = bw1 / w, bh1 / h
+                    motion_vec = np.array([dx, dy, cx_n, cy_n, bw_n, bh_n], dtype=np.float32)
             else:
                 # Fallback: raw centroid differences
-                cx1, cy1 = centroids[curr_fid]
-                cx2, cy2 = centroids[future_fid]
+                cx1, cy1, bw1, bh1 = centroids[curr_fid]
+                cx2, cy2, _, _ = centroids[future_fid]
                 dx = (cx2 - cx1) / w * VELOCITY_SCALE
                 dy = (cy2 - cy1) / h * VELOCITY_SCALE
-                motion_vec = np.array([dx, dy], dtype=np.float32)
+                
+                cx_n, cy_n = cx1 / w, cy1 / h
+                bw_n, bh_n = bw1 / w, bh1 / h
+                motion_vec = np.array([dx, dy, cx_n, cy_n, bw_n, bh_n], dtype=np.float32)
             
             # 1 Positive Match
             motion_data.append(motion_vec)
@@ -318,12 +327,16 @@ def _generate_bce_pairs(
             labels.append(1.0)
             
             # Hard Negative 1: Zero velocity + correct sentence
-            motion_data.append(np.zeros(2, dtype=np.float32))
+            zero_mot = motion_vec.copy()
+            zero_mot[0:2] = 0.0
+            motion_data.append(zero_mot)
             language_data.append(embedding.copy())
             labels.append(0.0)
             
             # Hard Negative 2: Inverted velocity + correct sentence
-            motion_data.append(-motion_vec)
+            inv_mot = motion_vec.copy()
+            inv_mot[0:2] = -inv_mot[0:2]
+            motion_data.append(inv_mot)
             language_data.append(embedding.copy())
             labels.append(0.0)
             
