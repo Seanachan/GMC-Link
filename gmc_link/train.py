@@ -70,7 +70,7 @@ def setup_data(
     data_root: str, 
     sequences: list, 
     batch_size: int, 
-    frame_gap: int = 1
+    frame_gap: int = 5
 ) -> Optional[DataLoader]:
     """
     Initialize text encoder, build training dataset, and return a DataLoader.

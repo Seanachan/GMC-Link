@@ -2,8 +2,8 @@ import numpy as np
 from typing import Dict, List, Tuple, Optional, Union
 
 # Scale factor for normalized velocities so the MLP operates on ~1.0 magnitude values
-# Calibrated for frame_gap=1 (consecutive frames produce small centroid diffs)
-VELOCITY_SCALE = 500
+# Calibrated for frame_gap=5 (5-frame window produces clean, robust centroid diffs)
+VELOCITY_SCALE = 100
 
 
 def warp_points(points: np.ndarray, homography: np.ndarray) -> np.ndarray:

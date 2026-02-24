@@ -2,8 +2,9 @@ import torch
 import numpy as np
 from typing import Dict, List, Tuple, Any, Optional
 
-from .utils import normalize_velocity, MotionBuffer, ScoreBuffer
+from .utils import normalize_velocity, MotionBuffer, ScoreBuffer, warp_points
 from .alignment import MotionLanguageAligner
+from .core import ORBHomographyEngine
 
 
 class GMCLinkManager:
@@ -17,9 +18,11 @@ class GMCLinkManager:
         self, 
         weights_path: str = None, 
         device: str = 'cpu', 
-        lang_dim: int = 384
+        lang_dim: int = 384,
+        frame_gap: int = 5
     ) -> None:
         self.device = device
+        self.frame_gap = frame_gap
         
         self.motion_buffer = MotionBuffer(alpha=0.3)
         self.score_buffer = ScoreBuffer(alpha=0.4)
@@ -29,8 +32,12 @@ class GMCLinkManager:
             self.aligner.load_state_dict(torch.load(weights_path, map_location=device))
         self.aligner.eval()
         
-        # Store previous centroids for velocity computation
-        self.prev_centroids: Dict[int, np.ndarray] = {}
+        self.ego_engine = ORBHomographyEngine(max_features=1500)
+        self.prev_frame = None
+        self.prev_detections = None
+        
+        # Store centroid history for velocity computation over a window
+        self.centroid_history: Dict[int, List[np.ndarray]] = {}
 
     def process_frame(
         self, 
@@ -54,6 +61,22 @@ class GMCLinkManager:
 
         img_h, img_w = frame.shape[:2]
         frame_shape = (img_h, img_w)
+        
+        # Estimate ego-motion homography and warp all historical centroids
+        H = np.eye(3, dtype=np.float32)
+        if self.prev_frame is not None:
+            H = self.ego_engine.estimate_homography(self.prev_frame, frame, self.prev_detections)
+            # Warp historical centroids to current frame coordinates
+            for tid, hist in self.centroid_history.items():
+                if hist:
+                    warped = warp_points(np.array(hist), H)
+                    self.centroid_history[tid] = [np.array(p) for p in warped]
+
+        self.prev_frame = frame.copy()
+        if detections is not None:
+            self.prev_detections = [tuple(d) for d in detections]
+        else:
+            self.prev_detections = None
 
         track_ids = []
         compensated_velocities = []
@@ -65,16 +88,24 @@ class GMCLinkManager:
             tid = track.id
             curr_centroid = np.array(track.centroid, dtype=np.float64)
 
-            if tid in self.prev_centroids:
-                # Centroid-difference velocity (pixels/frame)
-                raw_velocity = curr_centroid - self.prev_centroids[tid]
+            if tid not in self.centroid_history:
+                self.centroid_history[tid] = []
+            
+            self.centroid_history[tid].append(curr_centroid)
+            if len(self.centroid_history[tid]) > self.frame_gap + 1:
+                self.centroid_history[tid].pop(0)
+                
+            history = self.centroid_history[tid]
+            if len(history) > 1:
+                # Centroid-difference velocity over window (not divided by gap to match training)
+                gap = len(history) - 1
+                raw_velocity = (history[-1] - history[0])
                 norm_velocity = normalize_velocity(raw_velocity, frame_shape)
                 smoothed_v = self.motion_buffer.smooth(tid, norm_velocity)
             else:
                 # First appearance: zero velocity
                 smoothed_v = np.zeros(2, dtype=np.float32)
 
-            self.prev_centroids[tid] = curr_centroid
             track_ids.append(tid)
             compensated_velocities.append(smoothed_v)
 
@@ -103,8 +134,8 @@ class GMCLinkManager:
         active_ids = set(track_ids)
         self.motion_buffer.clear_dead_tracks(track_ids)
         self.score_buffer.clear_dead_tracks(track_ids)
-        dead_centroids = set(self.prev_centroids.keys()) - active_ids
+        dead_centroids = set(self.centroid_history.keys()) - active_ids
         for d in dead_centroids:
-            del self.prev_centroids[d]
+            del self.centroid_history[d]
 
         return scores_dict, velocities_dict

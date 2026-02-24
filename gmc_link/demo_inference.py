@@ -46,13 +46,13 @@ def compute_iou(box_a: List[float], box_b: List[float]) -> float:
     return inter / union if union > 0 else 0.0
 
 
-def normalized_to_pixel(cx: float, cy: float, w: float, h: float, img_w: int, img_h: int) -> List[float]:
-    """Convert normalized [cx, cy, w, h] to pixel coordinates [x1, y1, x2, y2]."""
-    pw = w * img_w
-    ph = h * img_h
-    px = cx * img_w
-    py = cy * img_h
-    return [px - pw / 2, py - ph / 2, px + pw / 2, py + ph / 2]
+def normalized_to_pixel(n_x1: float, n_y1: float, n_w: float, n_h: float, img_w: int, img_h: int) -> List[float]:
+    """Convert normalized [x1, y1, w, h] to pixel coordinates [x1, y1, x2, y2]."""
+    x1 = n_x1 * img_w
+    y1 = n_y1 * img_h
+    w = n_w * img_w
+    h = n_h * img_h
+    return [x1, y1, x1 + w, y1 + h]
 
 
 def match_yolo_to_gt(yolo_boxes: Dict[int, List[float]], gt_boxes: List[List[float]], iou_threshold: float = 0.3) -> Set[int]:
@@ -121,7 +121,8 @@ def draw_frame_visualization(
     sentence: str,
     frame_idx: int,
     total_frames: int,
-    num_gt: int
+    num_gt: int,
+    gt_bboxes: List[List[float]] = None
 ) -> None:
     """
     Apply OpenCV annotations to the image frame, drawing bounding boxes and alignment scores.
@@ -151,6 +152,13 @@ def draw_frame_visualization(
         label_text = f"{'GT ' if is_gt else ''}{score:.0%}"
         cv2.putText(frame, label_text, (x1, y1 - 8), cv2.FONT_HERSHEY_SIMPLEX, 0.40, color, 1)
     
+    # Highlight actual Ground Truth boxes in bright Cyan
+    if gt_bboxes:
+        for bbox in gt_bboxes:
+            gx1, gy1, gx2, gy2 = map(int, bbox)
+            cv2.rectangle(frame, (gx1, gy1), (gx2, gy2), (255, 255, 0), 2)
+            cv2.putText(frame, "GT Target", (gx1, gy1 - 8), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (255, 255, 0), 2)
+            
     # Global Frame Info Overlay
     cv2.putText(frame, f"Prompt: \"{sentence}\"", (10, 25), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
     cv2.putText(frame, f"Frame {frame_idx}/{total_frames} | GT tracks: {num_gt}", 
@@ -227,7 +235,8 @@ def run_e2e_evaluation(
     # Initialize components
     encoder = TextEncoder(device=device)
     linker = GMCLinkManager(weights_path=weights_path, device=device, lang_dim=384)
-    yolo = YOLO("yolov8n.pt")
+    # Using YOLOv8 Extra Large for higher quality tracking
+    yolo = YOLO("yolo26n.pt")
     
     # Encode the prompt once
     language_embedding = encoder.encode(sentence)
@@ -300,13 +309,14 @@ def run_e2e_evaluation(
             gt_bboxes = []
             for det in gt_labels[frame_idx]:
                 if det['track_id'] in gt_track_ids_this_frame:
-                    bbox = normalized_to_pixel(det['cx'], det['cy'], det['w'], det['h'], img_w, img_h)
+                    bbox = normalized_to_pixel(det['x1_n'], det['y1_n'], det['w_n'], det['h_n'], img_w, img_h)
                     gt_bboxes.append(bbox)
             
-            # Match YOLO detections to GT
+            # Match YOLO detections to GT using standard 0.3 IoU overlap
             matched_yolo_ids = match_yolo_to_gt(yolo_boxes_dict, gt_bboxes, iou_threshold=0.3)
         else:
             matched_yolo_ids = set()
+            gt_bboxes = []
         
         # ── Collect Scores and Evaluate ──
         num_gt_this_frame = len(gt_track_ids_this_frame)
@@ -333,7 +343,8 @@ def run_e2e_evaluation(
                 sentence=sentence,
                 frame_idx=frame_idx,
                 total_frames=len(frame_files),
-                num_gt=num_gt_this_frame
+                num_gt=num_gt_this_frame,
+                gt_bboxes=gt_bboxes
             )
             
             cv2.imshow("GMC-Link E2E (press q to quit)", frame)
@@ -393,5 +404,5 @@ if __name__ == "__main__":
         expression_path="refer-kitti/expression/0011/moving-cars.json",
         labels_dir="refer-kitti/KITTI/labels_with_ids/image_02/0011",
         weights_path="gmc_link_weights.pth",
-        visualize=False,
+        visualize=True,
     )

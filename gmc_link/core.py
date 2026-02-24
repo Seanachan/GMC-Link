@@ -7,105 +7,65 @@ from torchvision.models.optical_flow import raft_small, Raft_Small_Weights
 from torchvision.transforms import functional as F
 
 
-class RAFTFlowEngine:
+class ORBHomographyEngine:
     """
-    Compute dense optical flow using RAFT (Recurrent All-Pairs Field Transforms).
-    GPU-accelerated via MPS/CUDA. Produces significantly more accurate flow
-    than classical methods like Farneback.
+    Compute rigid background motion (ego-motion) between frames using ORB features
+    and RANSAC homography estimation. Masking foreground objects ensures we
+    only track the true camera motion.
     """
-    def __init__(self, device: str = "cuda") -> None:
-        self.device = torch.device(device)
-        weights = Raft_Small_Weights.DEFAULT
-        self.model = raft_small(weights=weights).to(self.device)
-        self.model.eval()
-        self.transforms = weights.transforms()
-        self.prev_tensor: Optional[torch.Tensor] = None
+    def __init__(self, max_features: int = 1500) -> None:
+        self.orb = cv2.ORB_create(max_features)
+        self.matcher = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=False)
 
-    @torch.no_grad()
-    def estimate(self, frame: np.ndarray) -> Optional[np.ndarray]:
+    def estimate_homography(
+        self, 
+        prev_frame: np.ndarray, 
+        curr_frame: np.ndarray,
+        prev_bboxes: Optional[List[Tuple[float, float, float, float]]] = None
+    ) -> np.ndarray:
         """
-        Compute dense optical flow between the current and previous frame using RAFT.
-        Automatically pads frames to be divisible by 8 (RAFT requirement).
-        
-        Args:
-            frame: (H, W, 3) Current video frame in BGR format.
+        Estimate the 3x3 homography matrix H_prev_to_curr that transforms points
+        from prev_frame to curr_frame coordinates.
+        """
+        prev_gray = cv2.cvtColor(prev_frame, cv2.COLOR_BGR2GRAY) if len(prev_frame.shape) == 3 else prev_frame
+        curr_gray = cv2.cvtColor(curr_frame, cv2.COLOR_BGR2GRAY) if len(curr_frame.shape) == 3 else curr_frame
+
+        mask = None
+        if prev_bboxes:
+            h, w = prev_gray.shape
+            mask = np.ones((h, w), dtype=np.uint8) * 255
+            for bbox in prev_bboxes:
+                x1, y1, x2, y2 = map(int, bbox)
+                x1, y1 = max(0, x1), max(0, y1)
+                x2, y2 = min(w, x2), min(h, y2)
+                if x2 > x1 and y2 > y1:
+                    mask[y1:y2, x1:x2] = 0
+
+        kp1, des1 = self.orb.detectAndCompute(prev_gray, mask=mask)
+        kp2, des2 = self.orb.detectAndCompute(curr_gray, mask=None)
+
+        if des1 is None or des2 is None or len(kp1) < 4 or len(kp2) < 4:
+            return np.eye(3, dtype=np.float32)
+
+        matches = self.matcher.knnMatch(des1, des2, k=2)
+        good_matches = []
+        for match_pair in matches:
+            if len(match_pair) == 2:
+                m, n = match_pair
+                if m.distance < 0.7 * n.distance:  # Lowe's ratio test
+                    good_matches.append(m)
+            elif len(match_pair) == 1:
+                good_matches.append(match_pair[0])
+
+        if len(good_matches) < 4:
+            return np.eye(3, dtype=np.float32)
+
+        src_pts = np.float32([kp1[m.queryIdx].pt for m in good_matches]).reshape(-1, 1, 2)
+        dst_pts = np.float32([kp2[m.trainIdx].pt for m in good_matches]).reshape(-1, 1, 2)
+
+        H, _ = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
+
+        if H is None:
+            return np.eye(3, dtype=np.float32)
             
-        Returns:
-            flow: (H, W, 2) per-pixel flow field [dx, dy], or None for the first frame.
-        """
-        rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        tensor = torch.from_numpy(rgb).permute(2, 0, 1).float().to(self.device)
-        orig_h, orig_w = tensor.shape[1], tensor.shape[2]
-
-        if self.prev_tensor is None:
-            self.prev_tensor = tensor
-            return None
-
-        # Pad to multiple of 8 (RAFT requirement)
-        pad_h = (8 - orig_h % 8) % 8
-        pad_w = (8 - orig_w % 8) % 8
-        if pad_h > 0 or pad_w > 0:
-            prev_padded = torch.nn.functional.pad(self.prev_tensor, (0, pad_w, 0, pad_h))
-            curr_padded = torch.nn.functional.pad(tensor, (0, pad_w, 0, pad_h))
-        else:
-            prev_padded = self.prev_tensor
-            curr_padded = tensor
-
-        img1_batch, img2_batch = self.transforms(
-            prev_padded.unsqueeze(0), curr_padded.unsqueeze(0)
-        )
-
-        flow_predictions = self.model(img1_batch, img2_batch)
-        flow = flow_predictions[-1]  # (1, 2, H_pad, W_pad)
-
-        self.prev_tensor = tensor
-
-        # Crop back to original dimensions and convert to numpy
-        return flow[0, :, :orig_h, :orig_w].permute(1, 2, 0).cpu().numpy()
-
-
-def extract_object_velocity(
-    flow: np.ndarray,
-    bbox: Tuple[float, float, float, float],
-    frame_shape: Tuple[int, int],
-) -> np.ndarray:
-    """
-    Average the dense flow vectors inside a bounding box to get that object's apparent motion.
-    """
-    h, w = frame_shape
-    x1 = int(max(0, bbox[0]))
-    y1 = int(max(0, bbox[1]))
-    x2 = int(min(w, bbox[2]))
-    y2 = int(min(h, bbox[3]))
-
-    if x2 <= x1 or y2 <= y1:
-        return np.zeros(2, dtype=np.float32)
-
-    roi_flow = flow[y1:y2, x1:x2]
-    return np.mean(roi_flow, axis=(0, 1)).astype(np.float32)
-
-
-def extract_background_flow(
-    flow: np.ndarray,
-    bboxes: List[Tuple[float, float, float, float]],
-    frame_shape: Tuple[int, int],
-) -> np.ndarray:
-    """
-    Compute median flow across background pixels (excluding object bounding boxes).
-    This represents the camera's ego-motion.
-    """
-    h, w = frame_shape
-    mask = np.ones((h, w), dtype=bool)
-
-    for bbox in bboxes:
-        x1 = int(max(0, bbox[0]))
-        y1 = int(max(0, bbox[1]))
-        x2 = int(min(w, bbox[2]))
-        y2 = int(min(h, bbox[3]))
-        mask[y1:y2, x1:x2] = False
-
-    bg_pixels = flow[mask]
-    if len(bg_pixels) == 0:
-        return np.zeros(2, dtype=np.float32)
-
-    return np.median(bg_pixels, axis=0).astype(np.float32)
+        return H.astype(np.float32)

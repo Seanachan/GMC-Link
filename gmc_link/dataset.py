@@ -6,8 +6,13 @@ import os
 import random
 from typing import Dict, List, Tuple, Any
 
-from gmc_link.utils import VELOCITY_SCALE
+from gmc_link.utils import VELOCITY_SCALE, warp_points
+from gmc_link.core import ORBHomographyEngine
 
+
+from gmc_link.core import ORBHomographyEngine
+
+HOMOGRAPHY_CACHE = {}
 
 class MotionLanguageDataset(Dataset):
     """
@@ -57,7 +62,7 @@ def load_refer_kitti_expressions(expression_dir):
 def load_labels_with_ids(labels_dir):
     """
     Load per-frame label files from labels_with_ids directory.
-    Format: class_id track_id cx cy w h (normalized coordinates)
+    Format: class_id track_id x1 y1 w h (normalized top-left coordinates)
     """
     labels = {}
     for txt_file in sorted(os.listdir(labels_dir)):
@@ -74,10 +79,10 @@ def load_labels_with_ids(labels_dir):
                 frame_labels.append({
                     'class_id': int(parts[0]),
                     'track_id': int(parts[1]),
-                    'cx': float(parts[2]),
-                    'cy': float(parts[3]),
-                    'w': float(parts[4]),
-                    'h': float(parts[5]),
+                    'x1_n': float(parts[2]),
+                    'y1_n': float(parts[3]),
+                    'w_n': float(parts[4]),
+                    'h_n': float(parts[5]),
                 })
         labels[frame_idx] = frame_labels
     return labels
@@ -186,7 +191,7 @@ def _extract_target_centroids(
 ) -> Dict[int, Dict[int, Tuple[float, float]]]:
     """
     Extract centroid coordinates (cx, cy) in pixel space for target object tracks across frames.
-    Uses labels_with_ids per-frame format (class_id track_id cx cy w h in normalized coords).
+    Uses labels_with_ids per-frame format (class_id track_id x1 y1 w h in normalized coords).
     
     Returns mapping: {track_id: {frame_id: (cx_px, cy_px)}}
     """
@@ -207,9 +212,15 @@ def _extract_target_centroids(
         for det in labels_by_frame[fid]:
             tid = det['track_id']
             if tid in target_tracks:
-                # Convert normalized coords to pixel coords
-                cx_px = det['cx'] * w
-                cy_px = det['cy'] * h
+                # Convert normalized coords to pixel coords and compute true centroid
+                x1_px = det['x1_n'] * w
+                y1_px = det['y1_n'] * h
+                w_px = det['w_n'] * w
+                h_px = det['h_n'] * h
+                
+                cx_px = x1_px + w_px / 2.0
+                cy_px = y1_px + h_px / 2.0
+                
                 if tid not in track_centroids:
                     track_centroids[tid] = {}
                 track_centroids[tid][fid] = (cx_px, cy_px)
@@ -225,13 +236,13 @@ def _generate_bce_pairs(
     sentence_embeddings: Dict[str, np.ndarray],
     frame_gap: int,
     frame_shape: Tuple[int, int],
+    seq: str = None,
     frame_dir: str = None,
-    tracking_data: Dict = None,
-    raft_engine: Any = None,
+    orb_engine: Any = None,
 ) -> Tuple[List[np.ndarray], List[np.ndarray], List[float]]:
     """
     Generate positive and negative (motion, language) pairs for BCE training.
-    Uses RAFT optical flow (GPU-accelerated) for velocity computation.
+    Uses ORBHomographyEngine to warp centroids to absolute world velocities.
     """
     h, w = frame_shape
     motion_data = []
@@ -257,12 +268,42 @@ def _generate_bce_pairs(
             if future_fid - curr_fid > frame_gap * 2:
                 continue
             
-            # --- RAFT optical flow velocity ---
-            if frame_dir is not None and tracking_data is not None:
-                motion_vec = _compute_flow_velocity(
-                    frame_dir, curr_fid, future_fid, tid, tracking_data, (h, w),
-                    raft_engine=raft_engine,
-                )
+            # --- ORB Homography compensated velocity ---
+            if frame_dir is not None and orb_engine is not None and seq is not None:
+                cache_key = (seq, curr_fid, future_fid)
+                if cache_key in HOMOGRAPHY_CACHE:
+                    H = HOMOGRAPHY_CACHE[cache_key]
+                else:
+                    curr_img_path = os.path.join(frame_dir, f"{curr_fid:06d}.png")
+                    future_img_path = os.path.join(frame_dir, f"{future_fid:06d}.png")
+                    
+                    import cv2
+                    img_curr = cv2.imread(curr_img_path)
+                    img_future = cv2.imread(future_img_path)
+                    
+                    if img_curr is not None and img_future is not None:
+                        H = orb_engine.estimate_homography(img_curr, img_future, prev_bboxes=None)
+                    else:
+                        H = None
+                    HOMOGRAPHY_CACHE[cache_key] = H
+                
+                if H is not None:
+                    cx1, cy1 = centroids[curr_fid]
+                    cx2, cy2 = centroids[future_fid]
+                    
+                    pts = np.array([[cx1, cy1]], dtype=np.float32)
+                    warped_pts = warp_points(pts, H)
+                    wcx1, wcy1 = warped_pts[0]
+                    
+                    dx = (cx2 - wcx1) / w * VELOCITY_SCALE
+                    dy = (cy2 - wcy1) / h * VELOCITY_SCALE
+                    motion_vec = np.array([dx, dy], dtype=np.float32)
+                else:
+                    cx1, cy1 = centroids[curr_fid]
+                    cx2, cy2 = centroids[future_fid]
+                    dx = (cx2 - cx1) / w * VELOCITY_SCALE
+                    dy = (cy2 - cy1) / h * VELOCITY_SCALE
+                    motion_vec = np.array([dx, dy], dtype=np.float32)
             else:
                 # Fallback: raw centroid differences
                 cx1, cy1 = centroids[curr_fid]
@@ -387,7 +428,7 @@ def build_training_data(
     data_root: str, 
     sequences: List[str], 
     text_encoder: Any, 
-    frame_gap: int = 1, 
+    frame_gap: int = 5, 
     frame_shape: Tuple[int, int] = (375, 1242)
 ) -> Tuple[List[np.ndarray], List[np.ndarray], List[float]]:
     """
@@ -400,6 +441,9 @@ def build_training_data(
     all_expressions, sentence_embeddings, all_sentences = _collect_expressions(
         data_root, sequences, text_encoder
     )
+    
+    print("  Initializing ORBHomographyEngine for dataset ego-motion compensation...")
+    orb_engine = ORBHomographyEngine(max_features=1500)
     
     print("  Computing centroid-difference velocities and generating supervision pairs...")
     motion_data = []
@@ -426,11 +470,11 @@ def build_training_data(
             data_root, seq, label_map, frame_shape=actual_shape
         )
         
-        # Use centroid-difference velocities (fast, no RAFT needed)
-        # RAFT is used at inference time for compensation; training uses label centroids
+        # Use centroid-difference velocities with ORB ego-motion compensation
         m_data, l_data, lbls = _generate_bce_pairs(
             track_centroids, sentence, embedding, all_sentences, 
             sentence_embeddings, frame_gap, actual_shape,
+            seq=seq, frame_dir=frame_dir, orb_engine=orb_engine
         )
         
         motion_data.extend(m_data)
