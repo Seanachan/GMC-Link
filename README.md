@@ -8,7 +8,7 @@ GMC-Link answers the question: **"Given a video and a sentence like _'moving car
 It bridges the gap between **object motion** (geometry) and **language** (semantics) by:
 
 1. **Compensating for camera motion** so that only true object movement remains.
-2. **Encoding that motion** into a compact velocity vector.
+2. **Encoding that motion** into an 8D geometric spatio-temporal vector (`[dx, dy, dw, dh, cx, cy, w, h]`).
 3. **Aligning motion with language** using a learned neural network to produce a match score.
 
 ---
@@ -27,7 +27,7 @@ Natural Language Prompt ──► SentenceTransformer Embedding ─────�
 |---|---|---|
 | **GlobalMotion** | `core.py` | Detects camera movement via ORB/SIFT feature matching and RANSAC homography estimation. Masks out tracked objects so only background features contribute. |
 | **Utilities** | `utils.py` | `warp_points()` transforms previous positions into the current frame's coordinate system. `normalize_velocity()` makes velocities scale-invariant. `MotionBuffer` applies EMA smoothing to reduce jitter. |
-| **MotionLanguageAligner** | `alignment.py` | A small MLP that projects a 2D velocity vector and a 384-dim language embedding into a shared space, then computes a similarity score via dot product. |
+| **MotionLanguageAligner** | `alignment.py` | A small MLP that projects an 8D spatio-temporal vector and a 384-dim language embedding into a shared space, then computes a similarity score via dot product. |
 | **TextEncoder** | `text_utils.py` | Wraps `all-MiniLM-L6-v2` (SentenceTransformers) to encode natural language prompts into 384-dim embeddings. |
 | **GMCLinkManager** | `manager.py` | The orchestrator. For each frame: runs GMC, computes compensated velocities for all tracks, and queries the aligner for alignment scores. |
 | **Dataset & Training** | `dataset.py`, `train.py`, `losses.py` | Builds (motion, language) training pairs from the [Refer-KITTI](https://github.com/wudongming97/RMOT) dataset using BCE loss. Trains on sequences 0015/0016/0018, tests on 0011. |
@@ -46,7 +46,7 @@ Natural Language Prompt ──► SentenceTransformer Embedding ─────�
 
 4. **Language Encoding**: The user's text prompt (e.g., *"moving cars"*) is encoded once into a 384-dim vector using a SentenceTransformer.
 
-5. **Alignment Scoring**: The MLP aligner projects the 2D motion vector and the 384-dim language vector into a shared 256-dim embedding space. A dot product + sigmoid produces a score in `[0, 1]` indicating how well the object's motion matches the description.
+5. **Alignment Scoring**: The MLP aligner projects the 8D motion/geometry vector and the 384-dim language vector into a shared 256-dim embedding space. A dot product + sigmoid produces a score in `[0, 1]` indicating how well the object's kinematics matches the description.
 
 ---
 

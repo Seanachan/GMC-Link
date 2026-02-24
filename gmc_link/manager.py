@@ -112,19 +112,22 @@ class GMCLinkManager:
             
             if len(history) > 1:
                 # Centroid-difference velocity over window (not divided by gap to match training)
-                gap = len(history) - 1
                 raw_velocity = (history[-1] - history[0])
                 norm_velocity = normalize_velocity(raw_velocity, frame_shape)
-                smoothed_v = self.motion_buffer.smooth(tid, norm_velocity)
                 
                 # Z-axis depth scaling velocity (dw, dh)
                 raw_dw_dh = (wh_history[-1] - wh_history[0])
-                dw = raw_dw_dh[0] / float(img_w) * VELOCITY_SCALE
-                dh = raw_dw_dh[1] / float(img_h) * VELOCITY_SCALE
+                dw_raw = raw_dw_dh[0] / float(img_w) * VELOCITY_SCALE
+                dh_raw = raw_dw_dh[1] / float(img_h) * VELOCITY_SCALE
+                
+                # Smooth the FULL 4D kinematic vector to absorb YOLO jitter
+                full_raw_v = np.array([norm_velocity[0], norm_velocity[1], dw_raw, dh_raw], dtype=np.float32)
+                smoothed_v = self.motion_buffer.smooth(tid, full_raw_v)
+                dx, dy, dw, dh = smoothed_v[0], smoothed_v[1], smoothed_v[2], smoothed_v[3]
             else:
                 # First appearance: zero velocity
-                smoothed_v = np.zeros(2, dtype=np.float32)
-                dw, dh = 0.0, 0.0
+                smoothed_v = np.zeros(4, dtype=np.float32)
+                dx, dy, dw, dh = 0.0, 0.0, 0.0, 0.0
 
             # Build 8D Spatial-Motion Vector
             w_n = curr_w / float(img_w)
@@ -132,7 +135,7 @@ class GMCLinkManager:
             cx_n = curr_centroid[0] / float(img_w)
             cy_n = curr_centroid[1] / float(img_h)
 
-            spatial_motion = np.array([smoothed_v[0], smoothed_v[1], dw, dh, cx_n, cy_n, w_n, h_n], dtype=np.float32)
+            spatial_motion = np.array([dx, dy, dw, dh, cx_n, cy_n, w_n, h_n], dtype=np.float32)
 
             track_ids.append(tid)
             compensated_velocities.append(spatial_motion)
