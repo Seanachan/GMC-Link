@@ -131,6 +131,7 @@ def draw_frame_visualization(
     """
     Apply OpenCV annotations to the image frame, drawing bounding boxes and alignment scores.
     """
+    overlay = frame.copy()
     for yid in yolo_ids:
         yid = int(yid)
         if yid not in yolo_boxes_dict:
@@ -148,6 +149,10 @@ def draw_frame_visualization(
         
         cv2.rectangle(frame, (x1, y1), (x2, y2), color, thickness)
         
+        # Add a transparent fill shade if the model predicts this is a match (> 0.4 score)
+        if score >= 0.4:
+            cv2.rectangle(overlay, (x1, y1), (x2, y2), color, -1)
+        
         # Highlight Ground Truth objects with a white border
         if is_gt:
             cv2.rectangle(frame, (x1-2, y1-2), (x2+2, y2+2), (255, 255, 255), 1)
@@ -156,6 +161,9 @@ def draw_frame_visualization(
         label_text = f"{'GT ' if is_gt else ''}{score:.0%}"
         cv2.putText(frame, label_text, (x1, y1 - 8), cv2.FONT_HERSHEY_SIMPLEX, 0.40, color, 1)
     
+    # Blend the overlay array with the frame to generate the transparent shading
+    cv2.addWeighted(overlay, 0.35, frame, 0.65, 0, frame)
+
     # Highlight actual Ground Truth boxes in bright Cyan
     if gt_bboxes:
         for bbox in gt_bboxes:
