@@ -416,5 +416,5 @@ if __name__ == "__main__":
         expression_path="refer-kitti/expression/0011/moving-cars.json",
         labels_dir="refer-kitti/KITTI/labels_with_ids/image_02/0011",
         weights_path="gmc_link_weights.pth",
-        visualize=True,
+        visualize=False,
     )
