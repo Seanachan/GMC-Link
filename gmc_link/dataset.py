@@ -1,13 +1,12 @@
 """
 Dataset generation for GMC-Link: spatial-temporal feature extraction from Refer-KITTI targets.
 """
-# pylint: disable=too-many-locals,too-many-arguments,too-many-branches,too-many-statements,too-many-positional-arguments,unused-variable,consider-using-enumerate
 import json
 import os
 import random
 from typing import Dict, List, Tuple, Any
 
-import cv2  # pylint: disable=no-member
+import cv2
 import numpy as np
 import torch
 from torch.utils.data import Dataset

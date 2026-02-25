@@ -2,7 +2,6 @@
 """
 Core utilities for extracting camera ego-motion via ORB features and homography.
 """
-# pylint: disable=no-member,too-few-public-methods,too-many-locals
 from typing import Optional, List, Tuple
 import cv2
 import numpy as np

@@ -1,7 +1,6 @@
 """
 TextEncoder utility module for extracting language embeddings using sentence-transformers.
 """
-# pylint: disable=too-few-public-methods
 from sentence_transformers import SentenceTransformer
 import torch
 

@@ -7,7 +7,6 @@ into the GMC-Link pipeline, and evaluates alignment scores against ground truth.
 
 import os
 import sys
-# pylint: disable=too-many-locals,too-many-arguments,too-many-statements,too-many-branches,no-member,line-too-long,wrong-import-position,too-few-public-methods,too-many-positional-arguments,unused-variable
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 

@@ -7,7 +7,6 @@ from refer-kitti sequences 0015/0016/0018 (test on 0011).
 
 import sys
 import os
-# pylint: disable=too-many-arguments,too-many-locals,wrong-import-position,too-many-positional-arguments
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
