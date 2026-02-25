@@ -1,3 +1,6 @@
+"""
+Setup configuration for the GMC-Link tracking library.
+"""
 from setuptools import setup, find_packages
 
 setup(
