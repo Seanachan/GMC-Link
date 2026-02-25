@@ -80,16 +80,54 @@ python -m gmc_link.train
 
 ---
 
-## Performance: TransRMOT Integration
+## TransRMOT Integration & Performance
 
-We successfully spliced GMC-Link natively into **TransRMOT** (a state-of-the-art visual RMOT tracker) to override its probability thresholds geometrically. By enforcing a strict `min(vision_prob, kinematic_prob)` requirement during evaluation, GMC-Link securely grounded visual tracking with real-world spatial physics, destroying hallucinated trajectories while vastly elevating Association Accuracy (`AssA`).
+### How It's Plugged In (For Developers)
+Integrating GMC-Link into an existing tracker like TransRMOT is straightforward because GMC-Link acts as a **post-processing filter** on top of the tracker's own predictions. 
+
+Here is the step-by-step data flow of how GMC-Link was injected into TransRMOT's `inference.py` loop:
+1. **Initialize the Manager:** We instantiate `GMCLinkManager` and `TextEncoder` alongside TransRMOT's core model. We encode the text prompt (e.g., "a red car moving left") once at the start of the video.
+2. **Intercept Detections:** For every video frame, TransRMOT generates a list of associated bounding boxes. We intercept these boxes *before* TransRMOT makes its final filtering decisions. 
+3. **Generate Kinematic Scores:** We pass the intercepted boxes and the current video frame into `GMCLinkManager.process_frame()`. GMC-Link computes the ego-motion, calculates the 8D velocity vectors, and asks its MLP aligner: *"Based purely on physics, how well do these boxes match the text prompt?"* It returns a probability score between 0 and 1 for each box.
+4. **Strict Minimax Fusion:** TransRMOT initially generates a "Vision Probability" (does this *look* like a red car?). GMC-Link generates a "Kinematic Probability" (is this object *moving* left?). We mathematically fuse them using a strict intersection: `final_score = min(vision_prob, kinematic_prob)`. 
+5. **Final Output:** If a stationary red car tricked TransRMOT's vision model, its `vision_prob` would be `0.9`. But GMC-Link's `kinematic_prob` would be `0.01` (because it's stationary). The `min()` function suppresses the score to `0.01`, instantly filtering out the hallucination.
+
+**Example Code Integration (`inference.py`)**:
+```python
+# Inside TransRMOT's main evaluation loop
+from gmc_link.manager import GMCLinkManager
+
+gmc_linker = GMCLinkManager(weights_path="checkpoints/gmc_link.pth", device="cuda")
+
+for frame in video_frames:
+    # 1. TransRMOT native visual detection
+    dt_instances = detector.detect(frame, text_prompt)
+    
+    # 2. Intercept and format for GMC-Link
+    active_tracks = format_boxes_for_gmc(dt_instances)
+    
+    # 3. Geometric kinematic evaluation
+    gmc_scores, _ = gmc_linker.process_frame(frame, active_tracks, language_embed)
+    
+    # 4. Strict Minimax Fusion
+    for track in dt_instances:
+        vision_prob = track.refers
+        kinematic_prob = gmc_scores.get(track.track_id, 0.0)
+        
+        # Override vision hallucination with strict physical intersection
+        track.refers = min(vision_prob, kinematic_prob)
+```
+
+### Benchmark Results
+
+By enforcing this `min(vision_prob, kinematic_prob)` requirement during evaluation, GMC-Link securely grounded visual tracking with real-world spatial physics, destroying hallucinated trajectories while vastly elevating Association Accuracy (`AssA`).
 
 | Tracker Configuration                | HOTA      | DetA      | AssA      | DetRe | DetPr |
 | ------------------------------------ | --------- | --------- | --------- | ----- | ----- |
 | **Baseline TransRMOT (Vision Only)** | 38.06     | 29.28     | 50.83     | 40.19 | 47.36 |
 | **TransRMOT + GMC-Link (Ours)**      | **42.61** | **28.41** | **69.29** | 37.12 | 47.29 |
 
-_Integration resulted in a massive **+18.4% absolute surge** in Tracking Association and set a new **SOTA `42.61` HOTA score**, proving geometry-aware trackers drastically outperform pure vision._
+*Integration resulted in a massive **+18.4% absolute surge** in Tracking Association and set a new **SOTA `42.61` HOTA score**, proving geometry-aware trackers drastically outperform pure vision.*
 
 ---
 
