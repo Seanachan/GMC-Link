@@ -1,8 +1,11 @@
-import os, glob
+"""
+Module for cleaning duplicate prediction logs from TrackEval output directories.
+"""
+import glob
 
 paths = glob.glob('/home/seanachan/RMOT/exps/default/results_epoch99/*/*/predict.txt')
 for p in paths:
-    with open(p, 'r') as f:
+    with open(p, 'r', encoding='utf-8') as f:
         lines = f.readlines()
     seen = set()
     clean = []
@@ -13,6 +16,6 @@ for p in paths:
             if key not in seen:
                 seen.add(key)
                 clean.append(l)
-    with open(p, 'w') as f:
+    with open(p, 'w', encoding='utf-8') as f:
         f.writelines(clean)
 print(f"Cleaned {len(paths)} prediction logs!")

@@ -1,19 +1,20 @@
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-
+"""
+Loss functions for the GMC-Link alignment network.
+"""
+from torch import nn
 
 class AlignmentLoss(nn.Module):
     """
     Binary cross-entropy loss for motion-language alignment.
-    
+
     For each (motion, language) pair, the model predicts a scalar similarity
-    score. Positive pairs (correct match) should score high, negative pairs 
+    score. Positive pairs (correct match) should score high, negative pairs
     (wrong sentence) should score low.
-    
+
     This replaces the CLIP-style contrastive loss which breaks down when
     many samples share the same sentence.
     """
+
     def __init__(self):
         super().__init__()
         self.loss_fn = nn.BCEWithLogitsLoss()

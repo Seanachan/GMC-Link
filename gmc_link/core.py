@@ -1,31 +1,42 @@
-# GMC-Link/core.py
+# gmc_link/core.py
+"""
+Core utilities for extracting camera ego-motion via ORB features and homography.
+"""
+# pylint: disable=no-member,too-few-public-methods,too-many-locals
+from typing import Optional, List, Tuple
 import cv2
 import numpy as np
-from typing import Optional, List, Tuple
-
-
 class ORBHomographyEngine:
     """
     Compute rigid background motion (ego-motion) between frames using ORB features
     and RANSAC homography estimation. Masking foreground objects ensures we
     only track the true camera motion.
     """
+
     def __init__(self, max_features: int = 1500) -> None:
         self.orb = cv2.ORB_create(max_features)
         self.matcher = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=False)
 
     def estimate_homography(
-        self, 
-        prev_frame: np.ndarray, 
+        self,
+        prev_frame: np.ndarray,
         curr_frame: np.ndarray,
-        prev_bboxes: Optional[List[Tuple[float, float, float, float]]] = None
+        prev_bboxes: Optional[List[Tuple[float, float, float, float]]] = None,
     ) -> np.ndarray:
         """
         Estimate the 3x3 homography matrix H_prev_to_curr that transforms points
         from prev_frame to curr_frame coordinates.
         """
-        prev_gray = cv2.cvtColor(prev_frame, cv2.COLOR_BGR2GRAY) if len(prev_frame.shape) == 3 else prev_frame
-        curr_gray = cv2.cvtColor(curr_frame, cv2.COLOR_BGR2GRAY) if len(curr_frame.shape) == 3 else curr_frame
+        prev_gray = (
+            cv2.cvtColor(prev_frame, cv2.COLOR_BGR2GRAY)
+            if len(prev_frame.shape) == 3
+            else prev_frame
+        )
+        curr_gray = (
+            cv2.cvtColor(curr_frame, cv2.COLOR_BGR2GRAY)
+            if len(curr_frame.shape) == 3
+            else curr_frame
+        )
 
         mask = None
         if prev_bboxes:
@@ -57,12 +68,16 @@ class ORBHomographyEngine:
         if len(good_matches) < 4:
             return np.eye(3, dtype=np.float32)
 
-        src_pts = np.float32([kp1[m.queryIdx].pt for m in good_matches]).reshape(-1, 1, 2)
-        dst_pts = np.float32([kp2[m.trainIdx].pt for m in good_matches]).reshape(-1, 1, 2)
+        src_pts = np.float32([kp1[m.queryIdx].pt for m in good_matches]).reshape(
+            -1, 1, 2
+        )
+        dst_pts = np.float32([kp2[m.trainIdx].pt for m in good_matches]).reshape(
+            -1, 1, 2
+        )
 
-        H, _ = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
+        homography_matrix, _ = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
 
-        if H is None:
+        if homography_matrix is None:
             return np.eye(3, dtype=np.float32)
-            
-        return H.astype(np.float32)
+
+        return homography_matrix.astype(np.float32)
