@@ -1,6 +1,7 @@
 """
 Loss functions for the GMC-Link alignment network.
 """
+# pylint: disable=too-few-public-methods
 from torch import nn
 
 class AlignmentLoss(nn.Module):
