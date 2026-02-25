@@ -67,7 +67,7 @@ class GMCLinkManager:
         if self.prev_frame is not None:
             H = self.ego_engine.estimate_homography(self.prev_frame, frame, self.prev_detections)
             # Warp historical centroids to current frame coordinates
-            for tid, hist in self.centroid_history.items():
+        for tid, hist in self.centroid_history.items():
                 if hist:
                     warped = warp_points(np.array(hist), H)
                     self.centroid_history[tid] = [np.array(p) for p in warped]
