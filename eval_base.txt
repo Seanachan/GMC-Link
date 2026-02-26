@@ -1,0 +1,1011 @@
+============ BASELINE ==============
+
+Eval Config:
+USE_PARALLEL         : False                         
+NUM_PARALLEL_CORES   : 8                             
+BREAK_ON_ERROR       : True                          
+RETURN_ON_ERROR      : False                         
+LOG_ON_ERROR         : /home/seanachan/TempRMOT/TrackEval/error_log.txt
+PRINT_RESULTS        : True                          
+PRINT_ONLY_COMBINED  : False                         
+PRINT_CONFIG         : True                          
+TIME_PROGRESS        : True                          
+DISPLAY_LESS_PROGRESS : False                         
+OUTPUT_SUMMARY       : True                          
+OUTPUT_EMPTY_CLASSES : True                          
+OUTPUT_DETAILED      : True                          
+PLOT_CURVES          : False                         
+
+MotChallenge2DBox Config:
+PRINT_CONFIG         : True                          
+GT_FOLDER            : /home/seanachan/TempRMOT/exps/default_rk/results_epoch50
+TRACKERS_FOLDER      : /home/seanachan/TempRMOT/exps/default_rk/results_epoch50
+OUTPUT_FOLDER        : None                          
+TRACKERS_TO_EVAL     : ['/home/seanachan/TempRMOT/exps/default_rk/results_epoch50']
+CLASSES_TO_EVAL      : ['pedestrian']                
+BENCHMARK            : MOT17                         
+SPLIT_TO_EVAL        : train                         
+INPUT_AS_ZIP         : False                         
+DO_PREPROC           : True                          
+TRACKER_SUB_FOLDER   : data                          
+OUTPUT_SUB_FOLDER    :                               
+TRACKER_DISPLAY_NAMES : None                          
+SEQMAP_FOLDER        : None                          
+SEQMAP_FILE          : /home/seanachan/GMC-Link/seqmap-e2e.txt
+SEQ_INFO             : None                          
+GT_LOC_FORMAT        : {gt_folder}/{video_id}/{expression_id}/gt.txt
+SKIP_SPLIT_FOL       : True                          
+
+Evaluating 1 tracker(s) on 136 sequence(s) for 1 class(es) on MotChallenge2DBox dataset using the following metrics: HOTA, Count
+
+
+Evaluating /home/seanachan/TempRMOT/exps/default_rk/results_epoch50
+
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0005+black-cars-in-the-left) 0.0091 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0204 sec
+    HOTA.eval_sequence()                                                   0.0222 sec
+    Count.eval_sequence()                                                  0.0000 sec
+1 eval_sequence(0005+black-cars-in-the-left, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0519 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0005+black-vehicles-in-the-left) 0.0082 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0199 sec
+    HOTA.eval_sequence()                                                   0.0213 sec
+    Count.eval_sequence()                                                  0.0000 sec
+2 eval_sequence(0005+black-vehicles-in-the-left, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0497 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0005+cars-in-black) 0.0101 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0271 sec
+    HOTA.eval_sequence()                                                   0.0325 sec
+    Count.eval_sequence()                                                  0.0000 sec
+3 eval_sequence(0005+cars-in-black, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0700 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0005+cars-in-front-of-ours) 0.0082 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0267 sec
+    HOTA.eval_sequence()                                                   0.0342 sec
+    Count.eval_sequence()                                                  0.0000 sec
+4 eval_sequence(0005+cars-in-front-of-ours, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0693 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0005+cars-in-left) 0.0109 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0265 sec
+    HOTA.eval_sequence()                                                   0.0307 sec
+    Count.eval_sequence()                                                  0.0000 sec
+5 eval_sequence(0005+cars-in-left, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0684 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0005+cars-in-light-color) 0.0090 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0208 sec
+    HOTA.eval_sequence()                                                   0.0236 sec
+    Count.eval_sequence()                                                  0.0000 sec
+6 eval_sequence(0005+cars-in-light-color, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0536 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0005+cars-in-right) 0.0063 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0079 sec
+    HOTA.eval_sequence()                                                   0.0067 sec
+    Count.eval_sequence()                                                  0.0000 sec
+7 eval_sequence(0005+cars-in-right, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0211 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0005+cars-in-silver) 0.0079 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0157 sec
+    HOTA.eval_sequence()                                                   0.0129 sec
+    Count.eval_sequence()                                                  0.0000 sec
+8 eval_sequence(0005+cars-in-silver, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0367 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0005+cars-in-the-counter-direction-of-ours) 0.0099 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0233 sec
+    HOTA.eval_sequence()                                                   0.0259 sec
+    Count.eval_sequence()                                                  0.0000 sec
+9 eval_sequence(0005+cars-in-the-counter-direction-of-ours, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0592 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0005+cars-in-the-same-direction-of-ours) 0.0088 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0264 sec
+    HOTA.eval_sequence()                                                   0.0332 sec
+    Count.eval_sequence()                                                  0.0000 sec
+10 eval_sequence(0005+cars-in-the-same-direction-of-ours, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0687 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0005+cars-which-are-braking) 0.0062 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0070 sec
+    HOTA.eval_sequence()                                                   0.0039 sec
+    Count.eval_sequence()                                                  0.0000 sec
+11 eval_sequence(0005+cars-which-are-braking, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0173 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0005+counter-direction-cars-in-the-left) 0.0096 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0223 sec
+    HOTA.eval_sequence()                                                   0.0243 sec
+    Count.eval_sequence()                                                  0.0000 sec
+12 eval_sequence(0005+counter-direction-cars-in-the-left, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0565 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0005+counter-direction-vehicles-in-the-left) 0.0143 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0219 sec
+    HOTA.eval_sequence()                                                   0.0235 sec
+    Count.eval_sequence()                                                  0.0000 sec
+13 eval_sequence(0005+counter-direction-vehicles-in-the-left, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0600 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0005+left-cars-in-black) 0.0085 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0208 sec
+    HOTA.eval_sequence()                                                   0.0232 sec
+    Count.eval_sequence()                                                  0.0000 sec
+14 eval_sequence(0005+left-cars-in-black, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0528 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0005+left-cars-in-light-color) 0.0081 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0183 sec
+    HOTA.eval_sequence()                                                   0.0199 sec
+    Count.eval_sequence()                                                  0.0000 sec
+15 eval_sequence(0005+left-cars-in-light-color, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0466 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0005+left-cars-in-silver) 0.0070 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0119 sec
+    HOTA.eval_sequence()                                                   0.0094 sec
+    Count.eval_sequence()                                                  0.0000 sec
+16 eval_sequence(0005+left-cars-in-silver, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0286 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0005+left-cars-in-the-counter-direction-of-ours) 0.0092 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0222 sec
+    HOTA.eval_sequence()                                                   0.0239 sec
+    Count.eval_sequence()                                                  0.0000 sec
+17 eval_sequence(0005+left-cars-in-the-counter-direction-of-ours, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0556 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0005+left-cars-in-the-same-direction-of-ours) 0.0070 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0086 sec
+    HOTA.eval_sequence()                                                   0.0043 sec
+    Count.eval_sequence()                                                  0.0000 sec
+18 eval_sequence(0005+left-cars-in-the-same-direction-of-ours, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0201 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0005+left-cars-which-are-parking) 0.0082 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0138 sec
+    HOTA.eval_sequence()                                                   0.0084 sec
+    Count.eval_sequence()                                                  0.0000 sec
+19 eval_sequence(0005+left-cars-which-are-parking, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0306 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0005+left-vehicles-in-black) 0.0084 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0199 sec
+    HOTA.eval_sequence()                                                   0.0221 sec
+    Count.eval_sequence()                                                  0.0000 sec
+20 eval_sequence(0005+left-vehicles-in-black, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0507 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0005+left-vehicles-in-light-color) 0.0082 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0183 sec
+    HOTA.eval_sequence()                                                   0.0201 sec
+    Count.eval_sequence()                                                  0.0000 sec
+21 eval_sequence(0005+left-vehicles-in-light-color, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0469 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0005+left-vehicles-in-silver) 0.0071 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0123 sec
+    HOTA.eval_sequence()                                                   0.0097 sec
+    Count.eval_sequence()                                                  0.0000 sec
+22 eval_sequence(0005+left-vehicles-in-silver, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0294 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0005+left-vehicles-in-the-counter-direction-of-ours) 0.0093 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0219 sec
+    HOTA.eval_sequence()                                                   0.0233 sec
+    Count.eval_sequence()                                                  0.0000 sec
+23 eval_sequence(0005+left-vehicles-in-the-counter-direction-of-ours, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0547 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0005+left-vehicles-in-the-same-direction-of-ours) 0.0068 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0083 sec
+    HOTA.eval_sequence()                                                   0.0042 sec
+    Count.eval_sequence()                                                  0.0000 sec
+24 eval_sequence(0005+left-vehicles-in-the-same-direction-of-ours, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0195 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0005+left-vehicles-which-are-parking) 0.0080 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0133 sec
+    HOTA.eval_sequence()                                                   0.0083 sec
+    Count.eval_sequence()                                                  0.0000 sec
+25 eval_sequence(0005+left-vehicles-which-are-parking, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0298 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0005+light-color-cars-in-the-left) 0.0081 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0183 sec
+    HOTA.eval_sequence()                                                   0.0206 sec
+    Count.eval_sequence()                                                  0.0000 sec
+26 eval_sequence(0005+light-color-cars-in-the-left, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0473 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0005+light-color-cars-in-the-right) 0.0063 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0072 sec
+    HOTA.eval_sequence()                                                   0.0055 sec
+    Count.eval_sequence()                                                  0.0000 sec
+27 eval_sequence(0005+light-color-cars-in-the-right, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0193 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0005+light-color-vehicles-in-the-left) 0.0085 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0184 sec
+    HOTA.eval_sequence()                                                   0.0201 sec
+    Count.eval_sequence()                                                  0.0000 sec
+28 eval_sequence(0005+light-color-vehicles-in-the-left, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0472 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0005+light-color-vehicles-in-the-right) 0.0060 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0071 sec
+    HOTA.eval_sequence()                                                   0.0053 sec
+    Count.eval_sequence()                                                  0.0000 sec
+29 eval_sequence(0005+light-color-vehicles-in-the-right, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0186 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0005+moving-cars) 0.0108 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0270 sec
+    HOTA.eval_sequence()                                                   0.0337 sec
+    Count.eval_sequence()                                                  0.0000 sec
+30 eval_sequence(0005+moving-cars, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0717 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0005+moving-vehicles) 0.0105 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0268 sec
+    HOTA.eval_sequence()                                                   0.0329 sec
+    Count.eval_sequence()                                                  0.0000 sec
+31 eval_sequence(0005+moving-vehicles, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0704 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0005+right-cars-in-light-color) 0.0061 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0075 sec
+    HOTA.eval_sequence()                                                   0.0062 sec
+    Count.eval_sequence()                                                  0.0000 sec
+32 eval_sequence(0005+right-cars-in-light-color, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0201 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0005+right-cars-in-silver) 0.0059 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0064 sec
+    HOTA.eval_sequence()                                                   0.0045 sec
+    Count.eval_sequence()                                                  0.0000 sec
+33 eval_sequence(0005+right-cars-in-silver, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0169 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0005+right-vehicles-in-light-color) 0.0060 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0073 sec
+    HOTA.eval_sequence()                                                   0.0059 sec
+    Count.eval_sequence()                                                  0.0000 sec
+34 eval_sequence(0005+right-vehicles-in-light-color, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0194 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0005+right-vehicles-in-silver) 0.0059 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0064 sec
+    HOTA.eval_sequence()                                                   0.0045 sec
+    Count.eval_sequence()                                                  0.0000 sec
+35 eval_sequence(0005+right-vehicles-in-silver, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0170 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0005+same-direction-cars-in-the-left) 0.0067 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0077 sec
+    HOTA.eval_sequence()                                                   0.0039 sec
+    Count.eval_sequence()                                                  0.0000 sec
+36 eval_sequence(0005+same-direction-cars-in-the-left, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0185 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0005+same-direction-vehicles-in-the-left) 0.0065 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0076 sec
+    HOTA.eval_sequence()                                                   0.0039 sec
+    Count.eval_sequence()                                                  0.0000 sec
+37 eval_sequence(0005+same-direction-vehicles-in-the-left, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0182 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0005+silver-cars-in-right) 0.0058 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0066 sec
+    HOTA.eval_sequence()                                                   0.0044 sec
+    Count.eval_sequence()                                                  0.0000 sec
+38 eval_sequence(0005+silver-cars-in-right, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0171 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0005+silver-cars-in-the-left) 0.0071 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0124 sec
+    HOTA.eval_sequence()                                                   0.0097 sec
+    Count.eval_sequence()                                                  0.0000 sec
+39 eval_sequence(0005+silver-cars-in-the-left, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0295 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0005+silver-vehicles-in-right) 0.0059 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0063 sec
+    HOTA.eval_sequence()                                                   0.0042 sec
+    Count.eval_sequence()                                                  0.0000 sec
+40 eval_sequence(0005+silver-vehicles-in-right, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0166 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0005+silver-vehicles-in-the-left) 0.0072 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0126 sec
+    HOTA.eval_sequence()                                                   0.0099 sec
+    Count.eval_sequence()                                                  0.0000 sec
+41 eval_sequence(0005+silver-vehicles-in-the-left, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0299 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0005+vehicles-in-black) 0.0101 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0269 sec
+    HOTA.eval_sequence()                                                   0.0325 sec
+    Count.eval_sequence()                                                  0.0000 sec
+42 eval_sequence(0005+vehicles-in-black, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0697 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0005+vehicles-in-front-of-ours) 0.0081 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0259 sec
+    HOTA.eval_sequence()                                                   0.0333 sec
+    Count.eval_sequence()                                                  0.0000 sec
+43 eval_sequence(0005+vehicles-in-front-of-ours, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0676 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0005+vehicles-in-left) 0.0104 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0263 sec
+    HOTA.eval_sequence()                                                   0.0308 sec
+    Count.eval_sequence()                                                  0.0000 sec
+44 eval_sequence(0005+vehicles-in-left, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0678 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0005+vehicles-in-light-color) 0.0089 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0209 sec
+    HOTA.eval_sequence()                                                   0.0238 sec
+    Count.eval_sequence()                                                  0.0000 sec
+45 eval_sequence(0005+vehicles-in-light-color, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0539 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0005+vehicles-in-right) 0.0063 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0079 sec
+    HOTA.eval_sequence()                                                   0.0067 sec
+    Count.eval_sequence()                                                  0.0000 sec
+46 eval_sequence(0005+vehicles-in-right, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0210 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0005+vehicles-in-silver) 0.0078 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0152 sec
+    HOTA.eval_sequence()                                                   0.0122 sec
+    Count.eval_sequence()                                                  0.0000 sec
+47 eval_sequence(0005+vehicles-in-silver, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0354 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0005+vehicles-in-the-counter-direction-of-ours) 0.0100 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0234 sec
+    HOTA.eval_sequence()                                                   0.0264 sec
+    Count.eval_sequence()                                                  0.0000 sec
+48 eval_sequence(0005+vehicles-in-the-counter-direction-of-ours, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0600 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0005+vehicles-in-the-same-direction-of-ours) 0.0093 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0275 sec
+    HOTA.eval_sequence()                                                   0.0345 sec
+    Count.eval_sequence()                                                  0.0000 sec
+49 eval_sequence(0005+vehicles-in-the-same-direction-of-ours, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0717 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0005+vehicles-which-are-braking) 0.0063 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0069 sec
+    HOTA.eval_sequence()                                                   0.0038 sec
+    Count.eval_sequence()                                                  0.0000 sec
+50 eval_sequence(0005+vehicles-which-are-braking, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0172 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0011+black-cars-in-right) 0.0093 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0218 sec
+    HOTA.eval_sequence()                                                   0.0244 sec
+    Count.eval_sequence()                                                  0.0000 sec
+51 eval_sequence(0011+black-cars-in-right, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0558 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0011+black-cars-in-the-left) 0.0115 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0247 sec
+    HOTA.eval_sequence()                                                   0.0280 sec
+    Count.eval_sequence()                                                  0.0000 sec
+52 eval_sequence(0011+black-cars-in-the-left, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0645 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0011+black-vehicles-in-right) 0.0096 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0220 sec
+    HOTA.eval_sequence()                                                   0.0240 sec
+    Count.eval_sequence()                                                  0.0000 sec
+53 eval_sequence(0011+black-vehicles-in-right, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0559 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0011+black-vehicles-in-the-left) 0.0112 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0239 sec
+    HOTA.eval_sequence()                                                   0.0260 sec
+    Count.eval_sequence()                                                  0.0000 sec
+54 eval_sequence(0011+black-vehicles-in-the-left, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0614 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0011+cars-in-black) 0.0123 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0258 sec
+    HOTA.eval_sequence()                                                   0.0284 sec
+    Count.eval_sequence()                                                  0.0000 sec
+55 eval_sequence(0011+cars-in-black, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0668 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0011+cars-in-horizon-direction) 0.0079 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0091 sec
+    HOTA.eval_sequence()                                                   0.0047 sec
+    Count.eval_sequence()                                                  0.0000 sec
+56 eval_sequence(0011+cars-in-horizon-direction, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0219 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0011+cars-in-left) 0.0155 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0322 sec
+    HOTA.eval_sequence()                                                   0.0386 sec
+    Count.eval_sequence()                                                  0.0000 sec
+57 eval_sequence(0011+cars-in-left, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0865 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0011+moving-cars) 0.0108 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0251 sec
+    HOTA.eval_sequence()                                                   0.0263 sec
+    Count.eval_sequence()                                                  0.0000 sec
+58 eval_sequence(0011+moving-cars, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0626 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0011+moving-pedestrian) 0.0078 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0103 sec
+    HOTA.eval_sequence()                                                   0.0060 sec
+    Count.eval_sequence()                                                  0.0000 sec
+59 eval_sequence(0011+moving-pedestrian, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0244 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0011+moving-vehicles) 0.0109 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0257 sec
+    HOTA.eval_sequence()                                                   0.0267 sec
+    Count.eval_sequence()                                                  0.0000 sec
+60 eval_sequence(0011+moving-vehicles, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0636 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0011+parking-cars) 0.0188 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0319 sec
+    HOTA.eval_sequence()                                                   0.0362 sec
+    Count.eval_sequence()                                                  0.0000 sec
+61 eval_sequence(0011+parking-cars, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0873 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0011+parking-vehicles) 0.0187 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0313 sec
+    HOTA.eval_sequence()                                                   0.0360 sec
+    Count.eval_sequence()                                                  0.0000 sec
+62 eval_sequence(0011+parking-vehicles, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0864 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0011+pedestrian) 0.0077 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0097 sec
+    HOTA.eval_sequence()                                                   0.0081 sec
+    Count.eval_sequence()                                                  0.0000 sec
+63 eval_sequence(0011+pedestrian, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0258 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0011+pedestrian-who-are-walking) 0.0076 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0103 sec
+    HOTA.eval_sequence()                                                   0.0090 sec
+    Count.eval_sequence()                                                  0.0000 sec
+64 eval_sequence(0011+pedestrian-who-are-walking, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0272 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0011+people) 0.0076 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0098 sec
+    HOTA.eval_sequence()                                                   0.0081 sec
+    Count.eval_sequence()                                                  0.0000 sec
+65 eval_sequence(0011+people, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0259 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0011+people-who-are-walking) 0.0075 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0097 sec
+    HOTA.eval_sequence()                                                   0.0077 sec
+    Count.eval_sequence()                                                  0.0000 sec
+66 eval_sequence(0011+people-who-are-walking, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0252 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0011+persons) 0.0077 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0103 sec
+    HOTA.eval_sequence()                                                   0.0089 sec
+    Count.eval_sequence()                                                  0.0000 sec
+67 eval_sequence(0011+persons, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0272 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0011+persons-who-are-walking) 0.0076 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0104 sec
+    HOTA.eval_sequence()                                                   0.0090 sec
+    Count.eval_sequence()                                                  0.0000 sec
+68 eval_sequence(0011+persons-who-are-walking, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0272 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0011+right-cars-in-black) 0.0093 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0217 sec
+    HOTA.eval_sequence()                                                   0.0235 sec
+    Count.eval_sequence()                                                  0.0000 sec
+69 eval_sequence(0011+right-cars-in-black, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0548 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0011+right-cars-in-light-color) 0.0094 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0195 sec
+    HOTA.eval_sequence()                                                   0.0198 sec
+    Count.eval_sequence()                                                  0.0000 sec
+70 eval_sequence(0011+right-cars-in-light-color, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0490 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0011+right-cars-in-white) 0.0075 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0083 sec
+    HOTA.eval_sequence()                                                   0.0047 sec
+    Count.eval_sequence()                                                  0.0000 sec
+71 eval_sequence(0011+right-cars-in-white, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0207 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0011+right-cars-which-are-parking) 0.0129 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0288 sec
+    HOTA.eval_sequence()                                                   0.0326 sec
+    Count.eval_sequence()                                                  0.0000 sec
+72 eval_sequence(0011+right-cars-which-are-parking, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0747 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0011+right-vehicles-in-black) 0.0091 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0219 sec
+    HOTA.eval_sequence()                                                   0.0238 sec
+    Count.eval_sequence()                                                  0.0000 sec
+73 eval_sequence(0011+right-vehicles-in-black, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0552 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0011+right-vehicles-in-light-color) 0.0093 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0186 sec
+    HOTA.eval_sequence()                                                   0.0183 sec
+    Count.eval_sequence()                                                  0.0000 sec
+74 eval_sequence(0011+right-vehicles-in-light-color, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0466 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0011+right-vehicles-in-white) 0.0074 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0084 sec
+    HOTA.eval_sequence()                                                   0.0047 sec
+    Count.eval_sequence()                                                  0.0000 sec
+75 eval_sequence(0011+right-vehicles-in-white, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0207 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0011+right-vehicles-which-are-parking) 0.0129 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0288 sec
+    HOTA.eval_sequence()                                                   0.0327 sec
+    Count.eval_sequence()                                                  0.0000 sec
+76 eval_sequence(0011+right-vehicles-which-are-parking, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0747 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0011+turning-cars) 0.0074 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0079 sec
+    HOTA.eval_sequence()                                                   0.0050 sec
+    Count.eval_sequence()                                                  0.0000 sec
+77 eval_sequence(0011+turning-cars, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0206 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0011+turning-vehicles) 0.0079 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0084 sec
+    HOTA.eval_sequence()                                                   0.0050 sec
+    Count.eval_sequence()                                                  0.0000 sec
+78 eval_sequence(0011+turning-vehicles, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0218 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0011+vehicles-in-black) 0.0133 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0277 sec
+    HOTA.eval_sequence()                                                   0.0291 sec
+    Count.eval_sequence()                                                  0.0000 sec
+79 eval_sequence(0011+vehicles-in-black, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0706 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0011+vehicles-in-horizon-direction) 0.0079 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0090 sec
+    HOTA.eval_sequence()                                                   0.0000 sec
+    Count.eval_sequence()                                                  0.0000 sec
+80 eval_sequence(0011+vehicles-in-horizon-direction, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0172 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0011+vehicles-in-left) 0.0151 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0320 sec
+    HOTA.eval_sequence()                                                   0.0385 sec
+    Count.eval_sequence()                                                  0.0000 sec
+81 eval_sequence(0011+vehicles-in-left, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0860 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0011+vehicles-in-light-color) 0.0122 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0289 sec
+    HOTA.eval_sequence()                                                   0.0339 sec
+    Count.eval_sequence()                                                  0.0000 sec
+82 eval_sequence(0011+vehicles-in-light-color, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0753 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0011+vehicles-in-right) 0.0139 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0315 sec
+    HOTA.eval_sequence()                                                   0.0361 sec
+    Count.eval_sequence()                                                  0.0000 sec
+83 eval_sequence(0011+vehicles-in-right, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0823 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0011+vehicles-in-the-counter-direction-of-ours) 0.0163 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0338 sec
+    HOTA.eval_sequence()                                                   0.0397 sec
+    Count.eval_sequence()                                                  0.0000 sec
+84 eval_sequence(0011+vehicles-in-the-counter-direction-of-ours, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0904 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0011+vehicles-in-the-same-direction-of-ours) 0.0128 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0347 sec
+    HOTA.eval_sequence()                                                   0.0451 sec
+    Count.eval_sequence()                                                  0.0000 sec
+85 eval_sequence(0011+vehicles-in-the-same-direction-of-ours, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0934 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0011+vehicles-in-white) 0.0111 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0166 sec
+    HOTA.eval_sequence()                                                   0.0087 sec
+    Count.eval_sequence()                                                  0.0000 sec
+86 eval_sequence(0011+vehicles-in-white, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0367 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0011+vehicles-which-are-faster-than-ours) 0.0101 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0231 sec
+    HOTA.eval_sequence()                                                   0.0235 sec
+    Count.eval_sequence()                                                  0.0000 sec
+87 eval_sequence(0011+vehicles-which-are-faster-than-ours, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0570 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0011+walking-pedestrian) 0.0080 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0100 sec
+    HOTA.eval_sequence()                                                   0.0068 sec
+    Count.eval_sequence()                                                  0.0000 sec
+88 eval_sequence(0011+walking-pedestrian, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0252 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0011+white-cars-in-the-left) 0.0102 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0169 sec
+    HOTA.eval_sequence()                                                   0.0087 sec
+    Count.eval_sequence()                                                  0.0000 sec
+89 eval_sequence(0011+white-cars-in-the-left, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0361 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0011+white-cars-in-the-right) 0.0084 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0105 sec
+    HOTA.eval_sequence()                                                   0.0050 sec
+    Count.eval_sequence()                                                  0.0000 sec
+90 eval_sequence(0011+white-cars-in-the-right, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0242 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0011+white-vehicles-in-the-left) 0.0100 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0164 sec
+    HOTA.eval_sequence()                                                   0.0083 sec
+    Count.eval_sequence()                                                  0.0000 sec
+91 eval_sequence(0011+white-vehicles-in-the-left, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0350 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0011+white-vehicles-in-the-right) 0.0080 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0099 sec
+    HOTA.eval_sequence()                                                   0.0048 sec
+    Count.eval_sequence()                                                  0.0000 sec
+92 eval_sequence(0011+white-vehicles-in-the-right, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0230 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0013+cars-in-the-left) 0.0067 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0081 sec
+    HOTA.eval_sequence()                                                   0.0065 sec
+    Count.eval_sequence()                                                  0.0000 sec
+93 eval_sequence(0013+cars-in-the-left, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0216 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0013+cars-in-the-right) 0.0065 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0067 sec
+    HOTA.eval_sequence()                                                   0.0048 sec
+    Count.eval_sequence()                                                  0.0000 sec
+94 eval_sequence(0013+cars-in-the-right, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0182 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0013+females) 0.0106 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0237 sec
+    HOTA.eval_sequence()                                                   0.0229 sec
+    Count.eval_sequence()                                                  0.0000 sec
+95 eval_sequence(0013+females, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0577 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0013+females-back-to-the-camera) 0.0084 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0115 sec
+    HOTA.eval_sequence()                                                   0.0070 sec
+    Count.eval_sequence()                                                  0.0000 sec
+96 eval_sequence(0013+females-back-to-the-camera, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0274 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0013+females-in-the-left) 0.0101 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0203 sec
+    HOTA.eval_sequence()                                                   0.0199 sec
+    Count.eval_sequence()                                                  0.0000 sec
+97 eval_sequence(0013+females-in-the-left, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0507 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0013+females-in-the-right) 0.0085 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0134 sec
+    HOTA.eval_sequence()                                                   0.0095 sec
+    Count.eval_sequence()                                                  0.0000 sec
+98 eval_sequence(0013+females-in-the-right, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0316 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0013+left-pedestrian-who-are-walking) 0.0087 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0152 sec
+    HOTA.eval_sequence()                                                   0.0128 sec
+    Count.eval_sequence()                                                  0.0000 sec
+99 eval_sequence(0013+left-pedestrian-who-are-walking, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0370 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0013+left-people-who-are-walking) 0.0090 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0172 sec
+    HOTA.eval_sequence()                                                   0.0159 sec
+    Count.eval_sequence()                                                  0.0000 sec
+100 eval_sequence(0013+left-people-who-are-walking, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0424 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0013+left-persons-who-are-walking) 0.0088 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0166 sec
+    HOTA.eval_sequence()                                                   0.0146 sec
+    Count.eval_sequence()                                                  0.0000 sec
+101 eval_sequence(0013+left-persons-who-are-walking, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0402 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0013+males) 0.0094 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0185 sec
+    HOTA.eval_sequence()                                                   0.0143 sec
+    Count.eval_sequence()                                                  0.0000 sec
+102 eval_sequence(0013+males, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0425 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0013+males-back-to-the-camera) 0.0067 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0065 sec
+    HOTA.eval_sequence()                                                   0.0042 sec
+    Count.eval_sequence()                                                  0.0000 sec
+103 eval_sequence(0013+males-back-to-the-camera, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0178 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0013+males-in-the-left) 0.0084 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0128 sec
+    HOTA.eval_sequence()                                                   0.0081 sec
+    Count.eval_sequence()                                                  0.0000 sec
+104 eval_sequence(0013+males-in-the-left, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0296 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0013+males-in-the-right) 0.0093 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0183 sec
+    HOTA.eval_sequence()                                                   0.0156 sec
+    Count.eval_sequence()                                                  0.0000 sec
+105 eval_sequence(0013+males-in-the-right, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0434 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0013+men) 0.0096 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0186 sec
+    HOTA.eval_sequence()                                                   0.0144 sec
+    Count.eval_sequence()                                                  0.0000 sec
+106 eval_sequence(0013+men, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0429 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0013+men-back-to-the-camera) 0.0070 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0070 sec
+    HOTA.eval_sequence()                                                   0.0044 sec
+    Count.eval_sequence()                                                  0.0000 sec
+107 eval_sequence(0013+men-back-to-the-camera, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0186 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0013+men-in-the-left) 0.0085 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0131 sec
+    HOTA.eval_sequence()                                                   0.0084 sec
+    Count.eval_sequence()                                                  0.0000 sec
+108 eval_sequence(0013+men-in-the-left, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0302 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0013+men-in-the-right) 0.0093 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0179 sec
+    HOTA.eval_sequence()                                                   0.0154 sec
+    Count.eval_sequence()                                                  0.0000 sec
+109 eval_sequence(0013+men-in-the-right, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0429 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0013+moving-left-pedestrian) 0.0086 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0139 sec
+    HOTA.eval_sequence()                                                   0.0110 sec
+    Count.eval_sequence()                                                  0.0000 sec
+110 eval_sequence(0013+moving-left-pedestrian, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0338 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0013+moving-right-pedestrian) 0.0085 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0138 sec
+    HOTA.eval_sequence()                                                   0.0107 sec
+    Count.eval_sequence()                                                  0.0000 sec
+111 eval_sequence(0013+moving-right-pedestrian, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0332 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0013+pedestrian-in-the-left) 0.0100 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0213 sec
+    HOTA.eval_sequence()                                                   0.0215 sec
+    Count.eval_sequence()                                                  0.0000 sec
+112 eval_sequence(0013+pedestrian-in-the-left, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0531 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0013+pedestrian-in-the-right) 0.0100 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0206 sec
+    HOTA.eval_sequence()                                                   0.0201 sec
+    Count.eval_sequence()                                                  0.0000 sec
+113 eval_sequence(0013+pedestrian-in-the-right, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0509 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0013+people-in-the-left) 0.0100 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0217 sec
+    HOTA.eval_sequence()                                                   0.0222 sec
+    Count.eval_sequence()                                                  0.0000 sec
+114 eval_sequence(0013+people-in-the-left, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0542 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0013+people-in-the-right) 0.0099 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0204 sec
+    HOTA.eval_sequence()                                                   0.0191 sec
+    Count.eval_sequence()                                                  0.0000 sec
+115 eval_sequence(0013+people-in-the-right, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0496 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0013+persons-in-the-left) 0.0102 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0222 sec
+    HOTA.eval_sequence()                                                   0.0222 sec
+    Count.eval_sequence()                                                  0.0000 sec
+116 eval_sequence(0013+persons-in-the-left, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0549 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0013+persons-in-the-right) 0.0099 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0195 sec
+    HOTA.eval_sequence()                                                   0.0172 sec
+    Count.eval_sequence()                                                  0.0000 sec
+117 eval_sequence(0013+persons-in-the-right, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0469 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0013+right-pedestrian-who-are-walking) 0.0082 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0117 sec
+    HOTA.eval_sequence()                                                   0.0072 sec
+    Count.eval_sequence()                                                  0.0000 sec
+118 eval_sequence(0013+right-pedestrian-who-are-walking, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0275 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0013+right-people-who-are-walking) 0.0088 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0152 sec
+    HOTA.eval_sequence()                                                   0.0116 sec
+    Count.eval_sequence()                                                  0.0000 sec
+119 eval_sequence(0013+right-people-who-are-walking, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0359 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0013+right-persons-who-are-walking) 0.0086 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0140 sec
+    HOTA.eval_sequence()                                                   0.0102 sec
+    Count.eval_sequence()                                                  0.0000 sec
+120 eval_sequence(0013+right-persons-who-are-walking, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0331 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0013+standing-females) 0.0082 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0119 sec
+    HOTA.eval_sequence()                                                   0.0067 sec
+    Count.eval_sequence()                                                  0.0000 sec
+121 eval_sequence(0013+standing-females, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0271 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0013+standing-males) 0.0074 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0079 sec
+    HOTA.eval_sequence()                                                   0.0045 sec
+    Count.eval_sequence()                                                  0.0000 sec
+122 eval_sequence(0013+standing-males, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0200 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0013+standing-men) 0.0086 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0132 sec
+    HOTA.eval_sequence()                                                   0.0084 sec
+    Count.eval_sequence()                                                  0.0000 sec
+123 eval_sequence(0013+standing-men, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0305 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0013+standing-women) 0.0088 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0156 sec
+    HOTA.eval_sequence()                                                   0.0109 sec
+    Count.eval_sequence()                                                  0.0000 sec
+124 eval_sequence(0013+standing-women, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0355 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0013+vehicles-in-the-left) 0.0071 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0084 sec
+    HOTA.eval_sequence()                                                   0.0068 sec
+    Count.eval_sequence()                                                  0.0000 sec
+125 eval_sequence(0013+vehicles-in-the-left, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0225 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0013+vehicles-in-the-right) 0.0068 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0069 sec
+    HOTA.eval_sequence()                                                   0.0050 sec
+    Count.eval_sequence()                                                  0.0000 sec
+126 eval_sequence(0013+vehicles-in-the-right, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0190 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0013+walking-females) 0.0083 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0112 sec
+    HOTA.eval_sequence()                                                   0.0065 sec
+    Count.eval_sequence()                                                  0.0000 sec
+127 eval_sequence(0013+walking-females, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0263 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0013+walking-males) 0.0075 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0082 sec
+    HOTA.eval_sequence()                                                   0.0045 sec
+    Count.eval_sequence()                                                  0.0000 sec
+128 eval_sequence(0013+walking-males, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0206 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0013+walking-men) 0.0089 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0139 sec
+    HOTA.eval_sequence()                                                   0.0079 sec
+    Count.eval_sequence()                                                  0.0000 sec
+129 eval_sequence(0013+walking-men, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0310 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0013+walking-women) 0.0094 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0181 sec
+    HOTA.eval_sequence()                                                   0.0147 sec
+    Count.eval_sequence()                                                  0.0000 sec
+130 eval_sequence(0013+walking-women, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0426 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0013+women) 0.0107 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0232 sec
+    HOTA.eval_sequence()                                                   0.0222 sec
+    Count.eval_sequence()                                                  0.0000 sec
+131 eval_sequence(0013+women, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0565 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0013+women-back-to-the-camera) 0.0079 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0092 sec
+    HOTA.eval_sequence()                                                   0.0048 sec
+    Count.eval_sequence()                                                  0.0000 sec
+132 eval_sequence(0013+women-back-to-the-camera, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0222 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0013+women-carrying-a-bag) 0.0096 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0187 sec
+    HOTA.eval_sequence()                                                   0.0167 sec
+    Count.eval_sequence()                                                  0.0000 sec
+133 eval_sequence(0013+women-carrying-a-bag, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0452 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0013+women-holding-a-bag) 0.0095 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0195 sec
+    HOTA.eval_sequence()                                                   0.0169 sec
+    Count.eval_sequence()                                                  0.0000 sec
+134 eval_sequence(0013+women-holding-a-bag, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0462 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0013+women-in-the-left) 0.0097 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0202 sec
+    HOTA.eval_sequence()                                                   0.0200 sec
+    Count.eval_sequence()                                                  0.0000 sec
+135 eval_sequence(0013+women-in-the-left, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0502 sec
+    MotChallenge2DBox.get_raw_seq_data(/home/seanachan/TempRMOT/exps/default_rk/results_epoch50, 0013+women-in-the-right) 0.0088 sec
+    MotChallenge2DBox.get_preprocessed_seq_data(pedestrian)                0.0145 sec
+    HOTA.eval_sequence()                                                   0.0100 sec
+    Count.eval_sequence()                                                  0.0000 sec
+136 eval_sequence(0013+women-in-the-right, /home/seanachan/TempRMOT/exps/default_rk/results_epoch50) 0.0336 sec
+
+All sequences for /home/seanachan/TempRMOT/exps/default_rk/results_epoch50 finished in 5.78 seconds
+
+HOTA: /home/seanachan/TempRMOT/exps/default_rk/results_epoch50-pedestrianHOTA      DetA      AssA      DetRe     DetPr     AssRe     AssPr     LocA      RHOTA     HOTA(0)   LocA(0)   HOTALocA(0)
+0005+black-cars-in-the-left        60.273    54.215    67.157    71.998    66.604    76.517    83.658    90.437    69.517    67.034    88.456    59.296    
+0005+black-vehicles-in-the-left    59.725    51.985    68.744    68.013    66.837    77.135    84.779    90.891    68.362    66.101    87.45     57.806    
+0005+cars-in-black                 76.769    72.579    81.252    80.671    84.59     83.796    92.015    91.812    80.954    83.239    90.753    75.542    
+0005+cars-in-front-of-ours         93.499    93.499    93.499    94.915    94.276    94.915    94.276    92.888    94.174    99.327    92.696    92.072    
+0005+cars-in-left                  67.986    65.232    70.911    75.458    80.329    82.602    82.758    91.867    73.145    74.176    90.551    67.167    
+0005+cars-in-light-color           64.016    56.451    72.601    61.773    84.623    74.799    93.839    92.985    66.96     68.457    92.478    63.308    
+0005+cars-in-right                 57.95     58.55     57.403    60.729    87.719    59.248    89.231    87.831    59.038    67.691    85.73     58.032    
+0005+cars-in-silver                36.53     22.995    58.043    30.278    48.266    58.895    95.136    93.472    41.91     38.518    93.181    35.891    
+0005+cars-in-the-counter-direction-of-ours55.886    46.753    66.81     61.903    64.425    68.066    94.049    93.062    64.305    59.454    92.565    55.034    
+0005+cars-in-the-same-direction-of-ours70.235    52.861    93.326    54.712    90.187    94.773    94.134    92.832    71.433    74.636    92.628    69.134    
+0005+cars-which-are-braking        0         0         0         0         0         0         0         100       0         0         100       0         
+0005+counter-direction-cars-in-the-left53.718    43.73     66.013    66.022    55.666    75.105    85.905    93.63     66.016    56.492    93.304    52.71     
+0005+counter-direction-vehicles-in-the-left53.357    43.241    65.858    65.288    55.372    75.059    85.589    93.576    65.57     56.2      93.246    52.404    
+0005+left-cars-in-black            59.893    53.077    67.724    71.423    65.433    75.904    83.98     90.793    69.533    65.734    88.905    58.441    
+0005+left-cars-in-light-color      65.861    59.288    73.17     71.267    76.5      83.427    85.297    93.598    72.205    69.722    93.198    64.979    
+0005+left-cars-in-silver           40.598    24.245    67.99     30.039    54.829    68.958    94.593    94.104    45.183    42.695    93.916    40.097    
+0005+left-cars-in-the-counter-direction-of-ours52.134    41.636    65.295    64.798    53.073    75.353    84.695    93.567    65.045    54.906    93.231    51.189    
+0005+left-cars-in-the-same-direction-of-ours0         0         0         0         0         0         0         100       0         0         100       0         
+0005+left-cars-which-are-parking   18.363    8.5391    39.537    37.35     9.9484    47.165    78.945    93.418    38.408    19.863    85.352    16.954    
+0005+left-vehicles-in-black        58.95     52.188    66.72     70.404    64.918    74.871    83.881    90.764    68.522    64.761    88.853    57.542    
+0005+left-vehicles-in-light-color  66.46     59.336    74.444    73.684    73.925    85.557    84.807    93.497    74.053    70.463    93.091    65.595    
+0005+left-vehicles-in-silver       38.582    23.75     62.685    30.179    52.052    63.487    95.202    94.292    43.485    40.364    94.134    37.996    
+0005+left-vehicles-in-the-counter-direction-of-ours53.021    43.334    64.898    67.381    54.055    75.242    83.234    93.442    66.126    55.921    93.084    52.053    
+0005+left-vehicles-in-the-same-direction-of-ours0         0         0         0         0         0         0         100       0         0         100       0         
+0005+left-vehicles-which-are-parking19.213    8.6527    42.775    41.551    9.8275    52.383    76.229    92.346    42.111    21.546    80.379    17.318    
+0005+light-color-cars-in-the-left  66.382    59.575    73.972    72.433    75.636    84.725    85.203    93.536    73.188    70.441    93.126    65.598    
+0005+light-color-cars-in-the-right 34.718    29.491    40.873    29.684    92.763    41.228    92.763    90.817    34.825    37.712    90.31     34.058    
+0005+light-color-vehicles-in-the-left66.156    59.404    73.681    72.416    75.361    84.705    84.86     93.537    73.035    70.212    93.125    65.385    
+0005+light-color-vehicles-in-the-right34.718    29.491    40.873    29.684    92.763    41.228    92.763    90.846    34.825    37.712    90.339    34.069    
+0005+moving-cars                   63.649    48.498    83.536    80.684    53.911    84.972    95.204    93.324    82.086    67.377    93.048    62.693    
+0005+moving-vehicles               62.997    47.774    83.07     76.844    54.835    84.524    94.867    93.327    79.884    66.641    93.054    62.012    
+0005+right-cars-in-light-color     56.112    55.506    56.782    57.474    87.081    58.539    88.524    87.512    57.123    66.009    85.311    56.313    
+0005+right-cars-in-silver          17.385    17.385    17.385    17.452    94.737    17.452    94.737    92.632    17.417    18.421    92.373    17.016    
+0005+right-vehicles-in-light-color 46.115    45.705    46.577    46.526    89.474    47.302    91.089    88.673    46.549    52.099    87.537    45.606    
+0005+right-vehicles-in-silver      14.904    14.904    14.904    14.958    94.737    14.958    94.737    92.494    14.931    15.789    92.202    14.558    
+0005+same-direction-cars-in-the-left0         0         0         0         0         0         0         100       0         0         100       0         
+0005+same-direction-vehicles-in-the-left0         0         0         0         0         0         0         100       0         0         100       0         
+0005+silver-cars-in-right          17.385    17.385    17.385    17.452    94.737    17.452    94.737    92.505    17.417    18.421    92.236    16.991    
+0005+silver-cars-in-the-left       39.215    22.701    67.754    30.655    46.105    68.634    94.873    94.141    45.565    41.2      92.583    38.145    
+0005+silver-vehicles-in-right      12.293    12.293    12.293    12.327    93.684    12.327    93.684    91.704    12.31     13.158    91.362    12.021    
+0005+silver-vehicles-in-the-left   40.449    24.065    68        32.643    47.206    68.911    94.963    94.139    47.102    42.475    93.957    39.909    
+0005+vehicles-in-black             76.597    72.057    81.471    80.923    83.594    84.313    91.221    91.804    81.188    83.5      90.287    75.389    
+0005+vehicles-in-front-of-ours     93.48     93.48     93.48     94.915    94.276    94.915    94.276    92.896    94.164    99.327    92.704    92.08     
+0005+vehicles-in-left              65.391    61.221    69.898    71.535    78.635    82.222    82.392    91.842    70.708    71.279    90.487    64.498    
+0005+vehicles-in-light-color       60.475    52.409    69.8      57.425    83.649    71.371    93.354    92.957    63.309    64.525    92.445    59.65     
+0005+vehicles-in-right             59.092    60.052    58.191    62.348    87.624    60.189    89.062    87.831    60.226    69.395    85.738    59.498    
+0005+vehicles-in-silver            36.83     22.745    59.643    28.161    53.368    60.508    94.804    93.448    40.974    38.782    93.178    36.136    
+0005+vehicles-in-the-counter-direction-of-ours56.732    47.408    67.898    63.429    63.999    69.441    93.553    93.032    65.62     60.429    92.599    55.956    
+0005+vehicles-in-the-same-direction-of-ours69.726    52.038    93.434    54.784    87.758    94.897    94.258    92.898    71.52     74.006    92.702    68.605    
+0005+vehicles-which-are-braking    0         0         0         0         0         0         0         100       0         0         100       0         
+0011+black-cars-in-right           65.585    56.712    75.88     69.981    74.392    77.286    96.481    94.24     72.87     69.268    93.319    64.64     
+0011+black-cars-in-the-left        62.658    54.999    71.441    71.967    67.424    74.409    90.684    89.857    71.693    71.535    87.822    62.823    
+0011+black-vehicles-in-right       65.793    56.756    76.303    70.293    74.101    77.775    96.41     94.158    73.235    69.585    93.24     64.881    
+0011+black-vehicles-in-the-left    59.345    53.88     65.394    70.67     66.876    68.149    89.824    89.8      67.971    68.04     87.617    59.615    
+0011+cars-in-black                 59.191    56.277    62.548    70.998    70.998    64.476    92.877    90.762    66.586    65.841    88.676    58.385    
+0011+cars-in-horizon-direction     0         0         0         0         0         0         0         100       0         0         100       0         
+0011+cars-in-left                  61.252    55.842    67.252    60.783    84.139    69.885    91.036    91.133    63.932    67.954    89.595    60.883    
+0011+moving-cars                   39.137    24.241    63.194    30.114    55.292    80.916    73.997    95.918    43.619    39.897    95.864    38.247    
+0011+moving-pedestrian             0         0         0         0         0         0         0         100       0         0         100       0         
+0011+moving-vehicles               37.927    23.637    60.86     29.827    53.142    80.145    71.434    95.918    42.602    38.64     95.866    37.043    
+0011+parking-cars                  50.753    41.934    61.541    50.058    70.613    68.198    85.331    91.411    55.488    56.224    85.815    48.248    
+0011+parking-vehicles              50.004    41.081    60.988    50.544    67.358    68.487    84.614    91.398    55.503    55.508    84.974    47.167    
+0011+pedestrian                    35.62     22.066    57.51     22.613    81.974    58.903    86.858    85.797    36.05     41.683    84.278    35.129    
+0011+pedestrian-who-are-walking    52.154    43.699    62.313    46.796    78.278    64.958    82.345    85.214    53.963    61.955    82.727    51.254    
+0011+people                        36.949    27.215    50.401    27.985    81.158    51.49     86.491    83.821    37.509    43.974    81.069    35.65     
+0011+people-who-are-walking        32.927    27.06     40.175    30.263    66.291    40.845    87.018    85.162    34.839    38.448    82.839    31.85     
+0011+persons                       42.28     31.557    56.807    34.265    72.006    64.426    77.448    83.485    44.093    52.241    79.875    41.728    
+0011+persons-who-are-walking       51.539    45.805    58.198    51.43     72.794    60.744    82.266    84.066    54.658    62.029    81.345    50.457    
+0011+right-cars-in-black           65.981    57.385    75.902    69.212    76.465    77.465    96.054    94.21     72.478    69.686    93.309    65.023    
+0011+right-cars-in-light-color     51.66     42.782    62.512    49.281    75.129    64.734    92.886    91.861    55.457    58.412    85.868    50.157    
+0011+right-cars-in-white           0         0         0         0         0         0         0         100       0         0         100       0         
+0011+right-cars-which-are-parking  58.282    54.084    62.872    58.551    86.311    65.675    90.323    92.892    60.671    62.945    91.106    57.347    
+0011+right-vehicles-in-black       64.636    56.313    74.242    68.546    75.4      75.457    96.392    94.108    71.334    68.43     92.843    63.533    
+0011+right-vehicles-in-light-color 49.022    38.513    62.556    43.087    77.011    63.814    94.922    91.859    51.859    54.984    84.756    46.602    
+0011+right-vehicles-in-white       0         0         0         0         0         0         0         100       0         0         100       0         
+0011+right-vehicles-which-are-parking58.5      54.254    63.149    58.848    86.046    66.312    89.181    92.738    60.958    63.416    90.908    57.65     
+0011+turning-cars                  2.2473    1.5152    3.3333    3.3333    2.7027    3.3333    100       96.736    3.3333    2.2473    96.736    2.174     
+0011+turning-vehicles              0         0         0         0         0         0         0         100       0         0         100       0         
+0011+vehicles-in-black             60.175    54.728    66.379    70.354    69.252    68.78     92.317    90.927    68.303    67.338    88.815    59.807    
+0011+vehicles-in-horizon-direction 0         0         0         0         0         0         0         100       0         0         100       0         
+0011+vehicles-in-left              61.356    55.628    67.715    60.416    84.445    70.272    91.597    91.227    63.958    68.049    89.753    61.076    
+0011+vehicles-in-light-color       53.043    44.366    63.434    49.226    79.868    64.567    94.797    92.281    55.86     57.923    89.56     51.876    
+0011+vehicles-in-right             58.689    55.119    62.57     59.692    86.197    67.097    86.98     92.31     61.111    64.227    90.02     57.817    
+0011+vehicles-in-the-counter-direction-of-ours60.321    55.134    66.043    59.609    84.848    68.023    92.405    91.256    62.74     66.555    89.959    59.872    
+0011+vehicles-in-the-same-direction-of-ours66.368    45.388    97.057    98.454    45.601    98.454    97.926    95.829    97.728    67.874    95.775    65.006    
+0011+vehicles-in-white             2.1454    0.75781   6.0964    2.4453    1.0486    9.8684    9.2105    65.516    3.8515    16.091    16.004    2.5752    
+0011+vehicles-which-are-faster-than-ours39.442    33.655    46.224    84.159    35.82     84.159    50.398    95.39     62.365    40.463    95.319    38.569    
+0011+walking-pedestrian            13.88     11.295    17.08     16.533    25.351    17.28     84.424    82.864    16.799    17.358    78.548    13.635    
+0011+white-cars-in-the-left        1.736     0.54227   5.5773    2.1842    0.6923    7.8008    8.9151    70.719    3.4827    15.371    13.622    2.0938    
+0011+white-cars-in-the-right       0         0         0         0         0         0         0         100       0         0         100       0         
+0011+white-vehicles-in-the-left    1.7065    0.5752    5.0942    2.1579    0.74927   7.0427    9.3944    71.196    3.3035    15.497    13.59     2.106     
+0011+white-vehicles-in-the-right   0         0         0         0         0         0         0         100       0         0         100       0         
+0013+cars-in-the-left              65.017    65.017    65.017    81.684    68.07     81.684    68.07     82.908    72.79     83.333    79.881    66.567    
+0013+cars-in-the-right             84.398    73.158    97.368    98.246    73.684    98.246    98.246    96.524    97.776    86.603    96.447    83.525    
+0013+females                       36.219    27.822    47.59     39.648    44.691    58.372    66.783    82.158    43.3      46.321    76.768    35.56     
+0013+females-back-to-the-camera    13.826    8.6414    22.148    10.094    33.493    22.647    70.77     76.202    14.94     20.082    68.405    13.737    
+0013+females-in-the-left           42.419    38.45     47.074    55.869    50.653    60.624    61.286    82.47     51.208    54.723    77.691    42.515    
+0013+females-in-the-right          25.203    10.311    61.691    27.924    13.724    66.927    74.582    82.327    41.466    32.104    79.175    25.419    
+0013+left-pedestrian-who-are-walking34.596    25.082    48.039    37.02     40.676    53.285    75.399    81.607    42.081    46.265    74.716    34.567    
+0013+left-people-who-are-walking   37.478    27.828    50.778    49.537    36.537    57.292    71.384    82.05     50.063    49.03     76.012    37.269    
+0013+left-persons-who-are-walking  30.107    22.717    40.057    36.586    35.393    44.192    66.871    83.002    38.233    37.349    79.224    29.589    
+0013+males                         23.838    11.599    49.735    22.698    18.561    53.737    82.678    80.995    33.396    29.017    77.179    22.395    
+0013+males-back-to-the-camera      0         0         0         0         0         0         0         100       0         0         100       0         
+0013+males-in-the-left             20.512    7.4582    57.474    49.83     7.9626    68.73     70.612    81.761    53.073    24.431    77.825    19.013    
+0013+males-in-the-right            33.613    23.569    48.173    40.727    33.54     54.47     73.729    80.926    44.242    42.573    76.911    32.743    
+0013+men                           25.233    11.752    54.662    21.688    19.789    61.596    75.027    82.184    34.313    30.413    78.924    24.004    
+0013+men-back-to-the-camera        0         0         0         0         0         0         0         100       0         0         100       0         
+0013+men-in-the-left               20.925    7.7478    57.599    50.764    8.2608    68.138    70.829    81.692    53.618    25.141    77.397    19.458    
+0013+men-in-the-right              34.493    23.053    51.677    40.246    33.036    57.517    76.526    81.554    45.6      43.769    77.774    34.041    
+0013+moving-left-pedestrian        30.425    21.728    42.635    27.459    46.111    44.177    76.883    80.107    34.186    40.441    74.974    30.32     
+0013+moving-right-pedestrian       25.26     16.702    38.65     19.977    45.315    41.637    75.954    78.986    27.673    32.966    74.073    24.419    
+0013+pedestrian-in-the-left        42.557    35.573    51.284    43.822    59.639    61.582    67.246    83.415    47.322    52.191    79.735    41.614    
+0013+pedestrian-in-the-right       40.932    28.926    58.011    37.85     50.466    67.176    74.772    82.002    46.845    51.432    78.88     40.57     
+0013+people-in-the-left            45.884    40.215    52.884    49.897    60.721    62.311    69.059    82.293    51.239    58.551    77.572    45.419    
+0013+people-in-the-right           39.043    27.615    55.23     35.301    51.221    63.75     74.52     82.65     44.153    48.861    79.46     38.825    
+0013+persons-in-the-left           45.066    38.702    52.979    49.245    58.233    63.728    68.8      82.139    50.959    57.448    77.463    44.501    
+0013+persons-in-the-right          37.143    25.105    55.044    32.634    47.663    64.108    73.252    81.497    42.376    47.273    77.108    36.452    
+0013+right-pedestrian-who-are-walking8.3294    4.9199    14.193    5.7159    24.534    14.415    75.002    79.101    8.9802    10.915    74.767    8.161     
+0013+right-people-who-are-walking  28.845    18.401    45.523    26.052    35.805    48.425    78.542    80.471    34.368    36.654    76.158    27.915    
+0013+right-persons-who-are-walking 22.548    13.415    38.216    16.733    37.051    42.797    73.248    79.009    25.212    29.532    74.049    21.869    
+0013+standing-females              8.1919    3.192     21.18     5.1749    7.531     24.105    56.238    76.618    10.431    11.59     60.799    7.0465    
+0013+standing-males                0         0         0         0         0         0         0         100       0         0         100       0         
+0013+standing-men                  19.613    6.5234    59.948    17.82     9.2057    65.263    84.212    82.246    32.441    23.134    76.925    17.796    
+0013+standing-women                21.921    11.067    43.617    25.081    16.149    48.929    70.689    83.711    33.018    26.125    77.533    20.256    
+0013+vehicles-in-the-left          65.307    65.307    65.307    81.895    68.246    81.895    68.246    83.317    73.045    83.333    80.402    67.002    
+0013+vehicles-in-the-right         90.19     83.542    97.368    98.246    84.211    98.246    98.246    96.547    97.776    92.582    96.47     89.314    
+0013+walking-females               11.421    5.8844    22.179    6.0487    59.598    22.629    75.591    78.893    11.579    15.236    73.633    11.218    
+0013+walking-males                 0         0         0         0         0         0         0         100       0         0         100       0         
+0013+walking-men                   8.2496    2.9926    22.797    7.5065    4.6566    23.114    70.82     76.073    13.063    12.284    68.387    8.4008    
+0013+walking-women                 29.281    19.726    43.557    29.584    35.02     46.461    77.084    82.157    35.873    38.667    76.199    29.464    
+0013+women                         33.569    22.203    51.13     34.2      36.471    56.539    76.607    82.211    41.701    42.088    77.449    32.597    
+0013+women-back-to-the-camera      1.0643    0.59918   1.9291    0.62485   11.404    1.9334    52.632    70.919    1.0871    2.1155    46.271    0.97889   
+0013+women-carrying-a-bag          31.778    22.507    45.08     35.161    36.01     50.522    73.208    81.388    39.759    41.246    76.354    31.493    
+0013+women-holding-a-bag           29.992    21.239    42.577    33.687    34.225    47.341    71.642    81.356    37.81     39.066    75.939    29.666    
+0013+women-in-the-left             44.291    36.315    54.358    50.549    51.527    63.717    72.925    82.479    52.333    55.609    78.955    43.907    
+0013+women-in-the-right            25.979    9.6066    70.376    27.339    12.618    75.157    77.195    81.508    43.81     33.711    74.446    25.097    
+COMBINED                           49.93     37.221    67.172    50.591    57.103    72.6      87.884    90.507    58.266    55.131    87.704    48.352    
+
+Count: /home/seanachan/TempRMOT/exps/default_rk/results_epoch50-pedestrianDets      GT_Dets   IDs       GT_IDs    
+0005+black-cars-in-the-left        307       284       16        10        
+0005+black-vehicles-in-the-left    289       284       15        10        
+0005+cars-in-black                 597       626       17        11        
+0005+cars-in-front-of-ours         297       295       1         1         
+0005+cars-in-left                  697       742       28        28        
+0005+cars-in-light-color           319       437       16        15        
+0005+cars-in-right                 36        52        3         2         
+0005+cars-in-silver                170       271       14        9         
+0005+cars-in-the-counter-direction-of-ours540       562       29        18        
+0005+cars-in-the-same-direction-of-ours310       511       5         8         
+0005+cars-which-are-braking        3         99        1         1         
+0005+counter-direction-cars-in-the-left510       430       27        18        
+0005+counter-direction-vehicles-in-the-left507       430       27        18        
+0005+left-cars-in-black            310       284       14        10        
+0005+left-cars-in-light-color      286       307       15        13        
+0005+left-cars-in-silver           103       188       9         8         
+0005+left-cars-in-the-counter-direction-of-ours525       430       28        18        
+0005+left-cars-in-the-same-direction-of-ours32        216       6         7         
+0005+left-cars-which-are-parking   428       114       29        6         
+0005+left-vehicles-in-black        308       284       15        10        
+0005+left-vehicles-in-light-color  306       307       15        13        
+0005+left-vehicles-in-silver       109       188       12        8         
+0005+left-vehicles-in-the-counter-direction-of-ours536       430       28        18        
+0005+left-vehicles-in-the-same-direction-of-ours33        216       6         7         
+0005+left-vehicles-which-are-parking482       114       28        6         
+0005+light-color-cars-in-the-left  294       307       14        13        
+0005+light-color-cars-in-the-right 16        50        1         2         
+0005+light-color-vehicles-in-the-left295       307       14        13        
+0005+light-color-vehicles-in-the-right16        50        1         2         
+0005+moving-cars                   880       588       29        11        
+0005+moving-vehicles               824       588       29        11        
+0005+right-cars-in-light-color     33        50        2         2         
+0005+right-cars-in-silver          7         38        1         1         
+0005+right-vehicles-in-light-color 26        50        2         2         
+0005+right-vehicles-in-silver      6         38        1         1         
+0005+same-direction-cars-in-the-left8         216       3         7         
+0005+same-direction-vehicles-in-the-left6         216       3         7         
+0005+silver-cars-in-right          7         38        1         1         
+0005+silver-cars-in-the-left       125       188       10        8         
+0005+silver-vehicles-in-right      5         38        1         1         
+0005+silver-vehicles-in-the-left   130       188       12        8         
+0005+vehicles-in-black             606       626       17        11        
+0005+vehicles-in-front-of-ours     297       295       1         1         
+0005+vehicles-in-left              675       742       30        28        
+0005+vehicles-in-light-color       300       437       15        15        
+0005+vehicles-in-right             37        52        3         2         
+0005+vehicles-in-silver            143       271       14        9         
+0005+vehicles-in-the-counter-direction-of-ours557       562       28        18        
+0005+vehicles-in-the-same-direction-of-ours319       511       7         8         
+0005+vehicles-which-are-braking    5         99        2         1         
+0011+black-cars-in-right           238       253       12        3         
+0011+black-cars-in-the-left        602       564       18        5         
+0011+black-vehicles-in-right       240       253       11        3         
+0011+black-vehicles-in-the-left    596       564       21        5         
+0011+cars-in-black                 817       817       29        8         
+0011+cars-in-horizon-direction     1         182       1         2         
+0011+cars-in-left                  1244      1722      33        24        
+0011+moving-cars                   360       661       8         12        
+0011+moving-pedestrian             95        92        3         2         
+0011+moving-vehicles               371       661       9         12        
+0011+parking-cars                  1880      2652      54        41        
+0011+parking-vehicles              1990      2652      55        41        
+0011+pedestrian                    40        145       3         4         
+0011+pedestrian-who-are-walking    55        92        6         2         
+0011+people                        50        145       4         4         
+0011+people-who-are-walking        42        92        7         2         
+0011+persons                       69        145       7         4         
+0011+persons-who-are-walking       65        92        6         2         
+0011+right-cars-in-black           229       253       12        3         
+0011+right-cars-in-light-color     204       311       13        8         
+0011+right-cars-in-white           71        26        4         1         
+0011+right-cars-which-are-parking  734       1082      25        22        
+0011+right-vehicles-in-black       230       253       12        3         
+0011+right-vehicles-in-light-color 174       311       12        8         
+0011+right-vehicles-in-white       88        26        5         1         
+0011+right-vehicles-which-are-parking740       1082      24        22        
+0011+turning-cars                  37        30        6         1         
+0011+turning-vehicles              24        30        4         1         
+0011+vehicles-in-black             830       817       28        8         
+0011+vehicles-in-horizon-direction 0         182       0         2         
+0011+vehicles-in-left              1232      1722      33        24        
+0011+vehicles-in-light-color       543       881       28        17        
+0011+vehicles-in-right             795       1148      24        25        
+0011+vehicles-in-the-counter-direction-of-ours1221      1738      31        23        
+0011+vehicles-in-the-same-direction-of-ours801       371       25        1         
+0011+vehicles-in-white             527       226       20        4         
+0011+vehicles-which-are-faster-than-ours484       206       20        1         
+0011+walking-pedestrian            60        92        5         2         
+0011+white-cars-in-the-left        631       200       18        3         
+0011+white-cars-in-the-right       188       26        9         1         
+0011+white-vehicles-in-the-left    576       200       16        3         
+0011+white-vehicles-in-the-right   179       26        8         1         
+0013+cars-in-the-left              30        25        1         1         
+0013+cars-in-the-right             8         6         3         1         
+0013+females                       456       514       36        21        
+0013+females-back-to-the-camera    66        219       19        6         
+0013+females-in-the-left           407       369       21        14        
+0013+females-in-the-right          293       144       31        7         
+0013+left-pedestrian-who-are-walking243       267       21        9         
+0013+left-people-who-are-walking   362       267       22        9         
+0013+left-persons-who-are-walking  276       267       22        9         
+0013+males                         395       323       49        13        
+0013+males-back-to-the-camera      9         12        5         1         
+0013+males-in-the-left             388       62        20        3         
+0013+males-in-the-right            306       252       31        9         
+0013+men                           354       323       40        13        
+0013+men-back-to-the-camera        26        12        9         1         
+0013+men-in-the-left               381       62        23        3         
+0013+men-in-the-right              307       252       25        9         
+0013+moving-left-pedestrian        159       267       20        9         
+0013+moving-right-pedestrian       123       279       17        11        
+0013+pedestrian-in-the-left        338       460       21        20        
+0013+pedestrian-in-the-right       333       444       29        21        
+0013+people-in-the-left            378       460       22        20        
+0013+people-in-the-right           306       444       28        21        
+0013+persons-in-the-left           389       460       22        20        
+0013+persons-in-the-right          304       444       35        21        
+0013+right-pedestrian-who-are-walking65        279       16        11        
+0013+right-people-who-are-walking  203       279       37        11        
+0013+right-persons-who-are-walking 126       279       21        11        
+0013+standing-females              123       179       16        10        
+0013+standing-males                3         140       3         7         
+0013+standing-men                  271       140       40        7         
+0013+standing-women                278       179       35        10        
+0013+vehicles-in-the-left          30        25        1         1         
+0013+vehicles-in-the-right         7         6         2         1         
+0013+walking-females               34        335       7         11        
+0013+walking-males                 2         183       2         6         
+0013+walking-men                   295       183       36        6         
+0013+walking-women                 283       335       39        11        
+0013+women                         482       514       50        21        
+0013+women-back-to-the-camera      12        219       7         6         
+0013+women-carrying-a-bag          373       382       39        14        
+0013+women-holding-a-bag           376       382       41        14        
+0013+women-in-the-left             362       369       23        14        
+0013+women-in-the-right            312       144       31        7         
+COMBINED                           43284     48855     2332      1268      
+
+Timing analysis:
+MotChallenge2DBox.get_raw_seq_data                                     1.2301 sec
+MotChallenge2DBox.get_preprocessed_seq_data                            2.2993 sec
+HOTA.eval_sequence                                                     2.2029 sec
+Count.eval_sequence                                                    0.0001 sec
+eval_sequence                                                          5.7732 sec
+Evaluator.evaluate                                                     5.8036 sec

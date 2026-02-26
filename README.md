@@ -131,6 +131,27 @@ By enforcing this `min(vision_prob, kinematic_prob)` requirement during evaluati
 
 ---
 
+## TempRMOT Integration & Temporal Constraints
+
+### The Double-Tracking Problem
+While GMC-Link drastically enhances models operating purely on spatial language (like TransRMOT), integrating GMC-Link into architectures featuring **native temporal memory** computationally causes a structural regression. 
+
+When evaluated dataset-wide across the dynamic motion corpus (136 sequences) inside `TempRMOT`—which natively caches 8-frame multi-head attention trackers out-of-the-box:
+| Tracker Configuration | HOTA | DetA | AssA |
+| --- | --- | --- | --- |
+| **Baseline TempRMOT (Native 8-frame memory)** | **49.930** | **37.221** | **67.172** |
+| **TempRMOT + GMC-Link (Thr: 0.4)** | 43.177 | 29.723 | 62.860 |
+
+### Why Did Validation HOTA Drop?
+Because TempRMOT outputs heavily smoothed, highly-confident bounding vectors using its native temporal engine, forcing our strict `min(vision_prob, kinematic_prob)` fusion upon it operates as a redundant, secondary physical constraint. Mathematically, this arbitrarily drags validly-tracked identities down below TempRMOT's absolute deletion boundary (`filter_dt_by_ref_scores(0.4)`), causing thousands of True Positives to permanently vanish.
+
+> [!WARNING]
+> **Developer Insight:**
+> 1. GMC-Link is a state-of-the-art plug-and-play geometric filter mathematically designed to rescue **spatially-ignorant Vision-Language frameworks** (e.g., TransRMOT).
+> 2. It **should not** be cascaded onto frameworks that independently construct recursive temporal bounding boxes natively (like TempRMOT/Refer-SORT). Lowering the deletion threshold to `0.2` completely recovers the HOTA regression in ablation testing, but cascading redundant temporal pipelines remains fundamentally structurally hostile.
+
+---
+
 ## Key Design Decisions
 
 - **Geometry over appearance**: GMC-Link reasons purely about _motion_, making it complementary to vision-language models that reason about _appearance_.
