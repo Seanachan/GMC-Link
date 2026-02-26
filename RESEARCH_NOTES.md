@@ -185,7 +185,9 @@ Train a `MotionLanguageAligner` to match 2D velocity vectors with natural langua
   - **Baseline TempRMOT:** HOTA: **49.93** | DetA: **37.22** | AssA: **67.17**
   - **TempRMOT + GMC-Link (Thr: 0.4):** HOTA: 43.18 | DetA: 29.72 | AssA: 62.86
 - **Ablation Benchmark (subset 0011+moving-cars):**
-  - **TempRMOT + GMC-Link (Thr: 0.2):** HOTA: **39.80** | DetA: 28.35 | AssA: 55.88
+  - **Baseline TempRMOT (Thr: 0.4):** HOTA: **39.90** | DetA: 24.66 | AssA: **64.50**
+  - **TempRMOT + GMC-Link (Thr: 0.4):** HOTA: 29.41 | DetA: 18.59 | AssA: 46.53
+  - **TempRMOT + GMC-Link (Thr: 0.2):** HOTA: **39.80** | DetA: **28.35** | AssA: 55.88
 - **Analysis:** Injecting the `min()` spatial probability constraint directly into TempRMOT caused a -6.75% HOTA regression under standard strictness! TempRMOT features deep *native* 8-frame temporal multi-head attention trackers, yielding hyper-confident bounding logic. Subjecting it to GMC-Link's independent geometry vectors artificially drops confidence below TempRMOT's absolute deletion floor (`0.4`), accidentally evaporating perfectly valid tracked entities. When the threshold floor was ablated down to `0.2` on sequence 0011, HOTA cleanly recovered from 29.4% back to parity with the baseline (~39.8%).
 - **Conclusion:** GMC-Link is mathematically sound and an exceptionally powerful plug-and-play geometry filter for *spatially-ignorant* frameworks (like TransRMOT), but is functionally redundant and actively destructive when force-coupled with models that natively wield mature temporal tracking engines.
 
