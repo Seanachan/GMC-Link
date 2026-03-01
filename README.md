@@ -22,11 +22,13 @@ Video Frame ──► GMC (Homography) ──► Compensated Velocity ──► 
 Natural Language Prompt ──► SentenceTransformer Embedding ─────────┘
 ```
 
+> We're training a Neural Network that can align the textual embeddings and motion embeddings together, and give a score of their alignment.
+
 ### Key Components
 
 | Module                    | File                                  | Role                                                                                                                                                                                                      |
 | ------------------------- | ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **GlobalMotion**          | `core.py`                             | Detects camera movement via ORB/SIFT feature matching and RANSAC homography estimation. Masks out tracked objects so only background features contribute.                                                 |
+| **GlobalMotion**          | `core.py`                             | Detects camera movement via ORB feature matching and RANSAC homography estimation. Return the Homography matrix for warping frames.                                                 |
 | **Utilities**             | `utils.py`                            | `warp_points()` transforms previous positions into the current frame's coordinate system. `normalize_velocity()` makes velocities scale-invariant. `MotionBuffer` applies EMA smoothing to reduce jitter. |
 | **MotionLanguageAligner** | `alignment.py`                        | A small MLP that projects an 8D spatio-temporal vector and a 384-dim language embedding into a shared space, then computes a similarity score via dot product.                                            |
 | **TextEncoder**           | `text_utils.py`                       | Wraps `all-MiniLM-L6-v2` (SentenceTransformers) to encode natural language prompts into 384-dim embeddings.                                                                                               |
