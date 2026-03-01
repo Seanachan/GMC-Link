@@ -1,7 +1,11 @@
 """
 Inference Manager linking tracks to text prompts using physical vectors and spatial models.
+
+UPDATED: Now uses cumulative homography method for better numerical stability
+and debugging capabilities.
 """
 from typing import Dict, List, Tuple, Any, Optional
+from collections import deque
 import torch
 import numpy as np
 
@@ -20,8 +24,12 @@ class GMCLinkManager:
     """
     GMC-Link Manager: Orchestrates Motion Estimation and Reasoning modules.
 
-    Uses centroid-difference velocities from the tracker for motion estimation,
-    matching the training pipeline for consistent performance.
+    Uses cumulative homography method:
+    - Stores ORIGINAL centroid coordinates (never modified)
+    - Stores CUMULATIVE homographies: H[t] transforms frame[t] -> current_frame
+    - Warps coordinates ONCE when computing velocities (not every frame)
+    
+    This provides better numerical stability and debugging capabilities.
     """
 
     def __init__(
@@ -48,9 +56,12 @@ class GMCLinkManager:
         self.prev_frame = None
         self.prev_detections = None
 
-        # Store centroid & dimension history for velocity computation over a window
-        self.centroid_history: Dict[int, List[np.ndarray]] = {}
-        self.wh_history: Dict[int, List[np.ndarray]] = {}
+        # CUMULATIVE HOMOGRAPHY: Store original coordinates (never warped)
+        self.centroid_history: Dict[int, deque] = {}
+        self.wh_history: Dict[int, deque] = {}
+        
+        # Store cumulative homographies: H[i] warps frame[t-i] -> current frame
+        self.homography_buffer: deque = deque(maxlen=frame_gap + 1)
 
     def process_frame(
         self,
@@ -68,7 +79,8 @@ class GMCLinkManager:
             frame: (H, W, 3) The current video frame.
             active_tracks: List of track objects (must have `id` and `centroid`).
             language_embedding: (1, L_dim) Tensor representing the language prompt.
-            detections: (N, 4) array of bounding boxes (unused, API compat).
+            detections: (N, 4) array of bounding boxes for ego-motion masking.
+            update_state: Whether to update internal state (for multiple evaluations per frame)
         """
         if not active_tracks:
             return {}, {}
@@ -76,18 +88,29 @@ class GMCLinkManager:
         img_h, img_w = frame.shape[:2]
         frame_shape = (img_h, img_w)
 
-        # Estimate ego-motion homography and warp all historical centroids
-        homography = np.eye(3, dtype=np.float32)
+        # CUMULATIVE HOMOGRAPHY UPDATE
         if update_state:
             if self.prev_frame is not None:
-                homography = self.ego_engine.estimate_homography(
+                # Estimate H_{t-1 -> t}
+                H_prev_to_curr = self.ego_engine.estimate_homography(
                     self.prev_frame, frame, self.prev_detections
                 )
-                # Warp historical centroids to current frame coordinates
-            for tid, hist in self.centroid_history.items():
-                if hist:
-                    warped = warp_points(np.array(hist), homography)
-                    self.centroid_history[tid] = [np.array(p) for p in warped]
+                
+                # Update ALL cumulative homographies by composing with new homography
+                updated_homographies = deque(maxlen=self.frame_gap + 1)
+                for H_old in self.homography_buffer:
+                    # H_old maps frame[t_old] -> frame[t-1]
+                    # H_prev_to_curr maps frame[t-1] -> frame[t]
+                    # Composition: frame[t_old] -> frame[t]
+                    H_cumulative = H_prev_to_curr @ H_old
+                    updated_homographies.append(H_cumulative)
+                
+                # Current frame has identity homography (maps to itself)
+                updated_homographies.append(np.eye(3, dtype=np.float32))
+                self.homography_buffer = updated_homographies
+            else:
+                # First frame: identity homography
+                self.homography_buffer.append(np.eye(3, dtype=np.float32))
 
             self.prev_frame = frame.copy()
             if detections is not None:
@@ -106,13 +129,12 @@ class GMCLinkManager:
             curr_centroid = np.array(track.centroid, dtype=np.float64)
 
             if tid not in self.centroid_history:
-                self.centroid_history[tid] = []
-                self.wh_history[tid] = []
+                self.centroid_history[tid] = deque(maxlen=self.frame_gap + 1)
+                self.wh_history[tid] = deque(maxlen=self.frame_gap + 1)
 
+            # Store ORIGINAL coordinates (never warp!)
             if update_state:
                 self.centroid_history[tid].append(curr_centroid)
-                if len(self.centroid_history[tid]) > self.frame_gap + 1:
-                    self.centroid_history[tid].pop(0)
 
             if hasattr(track, "bbox") and track.bbox is not None:
                 bx1, by1, bx2, by2 = track.bbox
@@ -123,19 +145,35 @@ class GMCLinkManager:
 
             if update_state:
                 self.wh_history[tid].append(np.array([curr_w, curr_h], dtype=np.float64))
-                if len(self.wh_history[tid]) > self.frame_gap + 1:
-                    self.wh_history[tid].pop(0)
 
-            history = self.centroid_history[tid]
-            wh_history = self.wh_history[tid]
+            # Get original coordinate history
+            centroid_hist = list(self.centroid_history[tid])
+            wh_hist = list(self.wh_history[tid])
 
-            if len(history) > 1:
-                # Centroid-difference velocity over window (not divided by gap to match training)
-                raw_velocity = history[-1] - history[0]
+            if len(centroid_hist) > 1:
+                # WARP ORIGINAL COORDINATES TO CURRENT FRAME (warp once!)
+                T = len(centroid_hist)
+                homographies = list(self.homography_buffer)[-T:]
+                
+                # Ensure we have enough homographies
+                while len(homographies) < T:
+                    homographies.insert(0, np.eye(3, dtype=np.float32))
+                
+                # Warp ORIGINAL coordinates to current frame
+                world_frame_centroids = []
+                for centroid, H in zip(centroid_hist, homographies):
+                    warped = warp_points(np.array([centroid]), H)
+                    world_frame_centroids.append(warped[0])
+                
+                # Compute velocity from world-frame coordinates
+                world_frame_first = world_frame_centroids[0]
+                world_frame_last = world_frame_centroids[-1]
+                
+                raw_velocity = world_frame_last - world_frame_first
                 norm_velocity = normalize_velocity(raw_velocity, frame_shape)
 
                 # Z-axis depth scaling velocity (dw, dh)
-                raw_dw_dh = wh_history[-1] - wh_history[0]
+                raw_dw_dh = wh_hist[-1] - wh_hist[0]
                 dw_raw = raw_dw_dh[0] / float(img_w) * VELOCITY_SCALE
                 dh_raw = raw_dw_dh[1] / float(img_h) * VELOCITY_SCALE
 
@@ -147,9 +185,6 @@ class GMCLinkManager:
                 if update_state:
                     smoothed_v = self.motion_buffer.smooth(tid, full_raw_v)
                 else:
-                    # just apply smoothing equation without updating the state
-                    # or returning the previous state, we can just use full_raw_v directly 
-                    # for intermediate non-updating queries. 
                     if tid in self.motion_buffer.registry:
                         alpha = self.motion_buffer.alpha
                         smoothed_v = (alpha * full_raw_v) + ((1 - alpha) * self.motion_buffer.registry[tid])
@@ -215,5 +250,7 @@ class GMCLinkManager:
             dead_centroids = set(self.centroid_history.keys()) - active_ids
             for d in dead_centroids:
                 del self.centroid_history[d]
+                if d in self.wh_history:
+                    del self.wh_history[d]
 
         return scores_dict, velocities_dict
