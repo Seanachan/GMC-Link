@@ -16,7 +16,7 @@ It bridges the gap between **object motion** (geometry) and **language** (semant
 
 ## Architecture & Pipeline
 
-```
+```text
 Video Frame ──► GMC (Homography) ──► Compensated Velocity ──► MLP Aligner ──► Score [0, 1]
                                                                    ▲
 Natural Language Prompt ──► SentenceTransformer Embedding ─────────┘
@@ -83,16 +83,19 @@ python -m gmc_link.train
 ## TransRMOT Integration & Performance
 
 ### How It's Plugged In (For Developers)
-Integrating GMC-Link into an existing tracker like TransRMOT is straightforward because GMC-Link acts as a **post-processing filter** on top of the tracker's own predictions. 
+
+Integrating GMC-Link into an existing tracker like TransRMOT is straightforward because GMC-Link acts as a **post-processing filter** on top of the tracker's own predictions.
 
 Here is the step-by-step data flow of how GMC-Link was injected into TransRMOT's `inference.py` loop:
+
 1. **Initialize the Manager:** We instantiate `GMCLinkManager` and `TextEncoder` alongside TransRMOT's core model. We encode the text prompt (e.g., "a red car moving left") once at the start of the video.
-2. **Intercept Detections:** For every video frame, TransRMOT generates a list of associated bounding boxes. We intercept these boxes *before* TransRMOT makes its final filtering decisions. 
-3. **Generate Kinematic Scores:** We pass the intercepted boxes and the current video frame into `GMCLinkManager.process_frame()`. GMC-Link computes the ego-motion, calculates the 8D velocity vectors, and asks its MLP aligner: *"Based purely on physics, how well do these boxes match the text prompt?"* It returns a probability score between 0 and 1 for each box.
-4. **Strict Minimax Fusion:** TransRMOT initially generates a "Vision Probability" (does this *look* like a red car?). GMC-Link generates a "Kinematic Probability" (is this object *moving* left?). We mathematically fuse them using a strict intersection: `final_score = min(vision_prob, kinematic_prob)`. 
+2. **Intercept Detections:** For every video frame, TransRMOT generates a list of associated bounding boxes. We intercept these boxes _before_ TransRMOT makes its final filtering decisions.
+3. **Generate Kinematic Scores:** We pass the intercepted boxes and the current video frame into `GMCLinkManager.process_frame()`. GMC-Link computes the ego-motion, calculates the 8D velocity vectors, and asks its MLP aligner: _"Based purely on physics, how well do these boxes match the text prompt?"_ It returns a probability score between 0 and 1 for each box.
+4. **Strict Minimax Fusion:** TransRMOT initially generates a "Vision Probability" (does this _look_ like a red car?). GMC-Link generates a "Kinematic Probability" (is this object _moving_ left?). We mathematically fuse them using a strict intersection: `final_score = min(vision_prob, kinematic_prob)`.
 5. **Final Output:** If a stationary red car tricked TransRMOT's vision model, its `vision_prob` would be `0.9`. But GMC-Link's `kinematic_prob` would be `0.01` (because it's stationary). The `min()` function suppresses the score to `0.01`, instantly filtering out the hallucination.
 
 **Example Code Integration (`inference.py`)**:
+
 ```python
 # Inside TransRMOT's main evaluation loop
 from gmc_link.manager import GMCLinkManager
@@ -102,18 +105,18 @@ gmc_linker = GMCLinkManager(weights_path="checkpoints/gmc_link.pth", device="cud
 for frame in video_frames:
     # 1. TransRMOT native visual detection
     dt_instances = detector.detect(frame, text_prompt)
-    
+
     # 2. Intercept and format for GMC-Link
     active_tracks = format_boxes_for_gmc(dt_instances)
-    
+
     # 3. Geometric kinematic evaluation
     gmc_scores, _ = gmc_linker.process_frame(frame, active_tracks, language_embed)
-    
+
     # 4. Strict Minimax Fusion
     for track in dt_instances:
         vision_prob = track.refers
         kinematic_prob = gmc_scores.get(track.track_id, 0.0)
-        
+
         # Override vision hallucination with strict physical intersection
         track.refers = min(vision_prob, kinematic_prob)
 ```
@@ -127,37 +130,42 @@ By enforcing this `min(vision_prob, kinematic_prob)` requirement during evaluati
 | **Baseline TransRMOT (Vision Only)** | 38.06     | 29.28     | 50.83     | 40.19 | 47.36 |
 | **TransRMOT + GMC-Link (Ours)**      | **42.61** | **28.41** | **69.29** | 37.12 | 47.29 |
 
-*Integration resulted in a massive **+18.4% absolute surge** in Tracking Association and set a new **SOTA `42.61` HOTA score**, proving geometry-aware trackers drastically outperform pure vision.*
+_Integration resulted in a massive **+18.4% absolute surge** in Tracking Association and set a new **SOTA `42.61` HOTA score**, proving geometry-aware trackers drastically outperform pure vision._
 
 ---
 
 ## TempRMOT Integration & Temporal Constraints
 
 ### The Double-Tracking Problem
-While GMC-Link drastically enhances models operating purely on spatial language (like TransRMOT), integrating GMC-Link into architectures featuring **native temporal memory** computationally causes a structural regression. 
+
+While GMC-Link drastically enhances models operating purely on spatial language (like TransRMOT), integrating GMC-Link into architectures featuring **native temporal memory** computationally causes a structural regression.
 
 When evaluated dataset-wide across the dynamic motion corpus (136 sequences) inside `TempRMOT`—which natively caches 8-frame multi-head attention trackers out-of-the-box:
+
 | Tracker Configuration | HOTA | DetA | AssA |
 | --- | --- | --- | --- |
 | **Baseline TempRMOT (Native 8-frame memory)** | **49.930** | **37.221** | **67.172** |
 | **TempRMOT + GMC-Link (Thr: 0.4)** | 43.177 | 29.723 | 62.860 |
 
 ### Why Did Validation HOTA Drop?
+
 Because TempRMOT outputs heavily smoothed, highly-confident bounding vectors using its native temporal engine, forcing our strict `min(vision_prob, kinematic_prob)` fusion upon it operates as a redundant, secondary physical constraint. Mathematically, this arbitrarily drags validly-tracked identities down below TempRMOT's absolute deletion boundary (`filter_dt_by_ref_scores(0.4)`), causing thousands of True Positives to permanently vanish.
 
 #### Addendum: Threshold Ablation Study (`0011+moving-cars`)
+
 To formally verify if adjusting TempRMOT's internal deletion boundary could recover the performance regression, we conducted a targeted ablation on the `0011+moving-cars` subset by manually relaxing the deletion floor from `0.4` down to `0.2` when fusing GMC-Link probabilities.
 
-| Setup (`0011+moving-cars`) | HOTA | DetA | AssA |
-|---|---|---|---|
-| **Baseline TempRMOT (Thr: 0.4)** | **39.896** | 24.664 | **64.502** |
-| TempRMOT + GMC-Link (Thr: 0.4) | 29.408 | 18.591 | 46.529 |
-| **TempRMOT + GMC-Link (Thr: 0.2)** | **39.797** | **28.350** | 55.881 |
+| Setup (`0011+moving-cars`)         | HOTA       | DetA       | AssA       |
+| ---------------------------------- | ---------- | ---------- | ---------- |
+| **Baseline TempRMOT (Thr: 0.4)**   | **39.896** | 24.664     | **64.502** |
+| TempRMOT + GMC-Link (Thr: 0.4)     | 29.408     | 18.591     | 46.529     |
+| **TempRMOT + GMC-Link (Thr: 0.2)** | **39.797** | **28.350** | 55.881     |
 
 Lowering the deletion threshold to `0.2` **completely recovered** the catastrophic 10% subset HOTA regression, bringing metrics cleanly back to parity with the baseline (~39.8%). Relaxing the probability floor allowed statistically-suppressed tracking links to survive, proving that GMC-Link was strictly penalized by TempRMOT's rigid `0.4` validation boundary. Ultimately, this mathematically traded Association Accuracy (-8.6%) for pure Detection Accuracy (+3.68%).
 
 > [!WARNING]
 > **Developer Insight:**
+>
 > 1. GMC-Link is a state-of-the-art plug-and-play geometric filter mathematically designed to rescue **spatially-ignorant Vision-Language frameworks** (e.g., TransRMOT).
 > 2. It **should not** be cascaded onto frameworks that independently construct recursive temporal bounding boxes natively (like TempRMOT/Refer-SORT). While unilaterally lowering the underlying model's deletion threshold computationally recovers the HOTA destruction, cascading redundant temporal tracking pipelines remains fundamentally structurally hostile.
 
