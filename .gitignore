@@ -212,3 +212,7 @@ __marimo__/
 
 # Dataset
 /refer-kitti
+/Refer-KITTI
+/NeuralSORT
+Refer-KITTI_labels.json
+/iKUN

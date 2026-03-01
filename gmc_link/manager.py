@@ -58,6 +58,7 @@ class GMCLinkManager:
         active_tracks: List[Any],
         language_embedding: torch.Tensor,
         detections: Optional[np.ndarray] = None,
+        update_state: bool = True,
     ) -> Tuple[Dict[int, float], Dict[int, np.ndarray]]:
         """
         Process a frame: compute centroid-difference velocities per tracked object,
@@ -77,21 +78,22 @@ class GMCLinkManager:
 
         # Estimate ego-motion homography and warp all historical centroids
         homography = np.eye(3, dtype=np.float32)
-        if self.prev_frame is not None:
-            homography = self.ego_engine.estimate_homography(
-                self.prev_frame, frame, self.prev_detections
-            )
-            # Warp historical centroids to current frame coordinates
-        for tid, hist in self.centroid_history.items():
-            if hist:
-                warped = warp_points(np.array(hist), homography)
-                self.centroid_history[tid] = [np.array(p) for p in warped]
+        if update_state:
+            if self.prev_frame is not None:
+                homography = self.ego_engine.estimate_homography(
+                    self.prev_frame, frame, self.prev_detections
+                )
+                # Warp historical centroids to current frame coordinates
+            for tid, hist in self.centroid_history.items():
+                if hist:
+                    warped = warp_points(np.array(hist), homography)
+                    self.centroid_history[tid] = [np.array(p) for p in warped]
 
-        self.prev_frame = frame.copy()
-        if detections is not None:
-            self.prev_detections = [tuple(d) for d in detections]
-        else:
-            self.prev_detections = None
+            self.prev_frame = frame.copy()
+            if detections is not None:
+                self.prev_detections = [tuple(d) for d in detections]
+            else:
+                self.prev_detections = None
 
         track_ids = []
         compensated_velocities = []
@@ -107,9 +109,10 @@ class GMCLinkManager:
                 self.centroid_history[tid] = []
                 self.wh_history[tid] = []
 
-            self.centroid_history[tid].append(curr_centroid)
-            if len(self.centroid_history[tid]) > self.frame_gap + 1:
-                self.centroid_history[tid].pop(0)
+            if update_state:
+                self.centroid_history[tid].append(curr_centroid)
+                if len(self.centroid_history[tid]) > self.frame_gap + 1:
+                    self.centroid_history[tid].pop(0)
 
             if hasattr(track, "bbox") and track.bbox is not None:
                 bx1, by1, bx2, by2 = track.bbox
@@ -118,9 +121,10 @@ class GMCLinkManager:
             else:
                 curr_w, curr_h = 0.0, 0.0
 
-            self.wh_history[tid].append(np.array([curr_w, curr_h], dtype=np.float64))
-            if len(self.wh_history[tid]) > self.frame_gap + 1:
-                self.wh_history[tid].pop(0)
+            if update_state:
+                self.wh_history[tid].append(np.array([curr_w, curr_h], dtype=np.float64))
+                if len(self.wh_history[tid]) > self.frame_gap + 1:
+                    self.wh_history[tid].pop(0)
 
             history = self.centroid_history[tid]
             wh_history = self.wh_history[tid]
@@ -140,7 +144,17 @@ class GMCLinkManager:
                     [norm_velocity[0], norm_velocity[1], dw_raw, dh_raw],
                     dtype=np.float32,
                 )
-                smoothed_v = self.motion_buffer.smooth(tid, full_raw_v)
+                if update_state:
+                    smoothed_v = self.motion_buffer.smooth(tid, full_raw_v)
+                else:
+                    # just apply smoothing equation without updating the state
+                    # or returning the previous state, we can just use full_raw_v directly 
+                    # for intermediate non-updating queries. 
+                    if tid in self.motion_buffer.registry:
+                        alpha = self.motion_buffer.alpha
+                        smoothed_v = (alpha * full_raw_v) + ((1 - alpha) * self.motion_buffer.registry[tid])
+                    else:
+                        smoothed_v = full_raw_v
                 dx, dy, dw, dh = (
                     smoothed_v[0],
                     smoothed_v[1],
@@ -182,16 +196,24 @@ class GMCLinkManager:
         scores_dict = {}
         velocities_dict = {}
         for i, tid in enumerate(track_ids):
-            smoothed_score = self.score_buffer.smooth(tid, float(raw_scores[i]))
+            if update_state:
+                smoothed_score = self.score_buffer.smooth(tid, float(raw_scores[i]))
+            else:
+                if tid in self.score_buffer.registry:
+                    alpha = self.score_buffer.alpha
+                    smoothed_score = alpha * float(raw_scores[i]) + (1 - alpha) * self.score_buffer.registry[tid]
+                else:
+                    smoothed_score = float(raw_scores[i])
             scores_dict[tid] = smoothed_score
             velocities_dict[tid] = compensated_velocities[i]
 
-        # Clean up dead tracks
-        active_ids = set(track_ids)
-        self.motion_buffer.clear_dead_tracks(track_ids)
-        self.score_buffer.clear_dead_tracks(track_ids)
-        dead_centroids = set(self.centroid_history.keys()) - active_ids
-        for d in dead_centroids:
-            del self.centroid_history[d]
+        if update_state:
+            # Clean up dead tracks
+            active_ids = set(track_ids)
+            self.motion_buffer.clear_dead_tracks(track_ids)
+            self.score_buffer.clear_dead_tracks(track_ids)
+            dead_centroids = set(self.centroid_history.keys()) - active_ids
+            for d in dead_centroids:
+                del self.centroid_history[d]
 
         return scores_dict, velocities_dict
