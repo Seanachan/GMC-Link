@@ -1,8 +1,8 @@
 """
 GMC-Link Training Script
 ========================
-Trains the MotionLanguageAligner using BCE loss with motion-language pairs
-from refer-kitti sequences 0015/0016/0018 (test on 0011).
+Trains the MotionLanguageAligner using Supervised InfoNCE loss with
+motion-language pairs from refer-kitti sequences (test on 0011).
 """
 
 import sys
@@ -33,7 +33,13 @@ def train_one_epoch(
     device: torch.device,
 ) -> Tuple[float, float]:
     """
-    Train the model for a single epoch.
+    Train the model for a single epoch using Supervised InfoNCE.
+
+    For each batch of N (motion, language) pairs:
+      - Project both to the shared latent space via model.encode()
+      - Stack into a (2N, D) feature matrix
+      - Build integer labels so that positive pairs share the same ID
+      - Let SupervisedInfoNCE form its own similarity matrix & contrastive loss
 
     Returns:
         Tuple of (average_loss, accuracy).
@@ -43,16 +49,42 @@ def train_one_epoch(
     correct = 0
     total = 0
 
-    for _, (motion_features, language_features, labels) in enumerate(
-        dataloader
-    ):
+    for motion_features, language_features, labels in dataloader:
+
         motion_features = motion_features.to(device)
         language_features = language_features.to(device)
         labels = labels.to(device)
 
-        # Per-pair similarity scores
-        scores = model.score_pairs(motion_features, language_features)
-        loss = loss_func(scores, labels)
+        # ── Project to shared embedding space ──
+        motion_emb, lang_emb = model.encode(motion_features, language_features)
+
+        # ── Build contrastive features & integer targets ──
+        # Positive pairs (label==1): motion_i and lang_i share the same class ID
+        # Negative pairs (label==0): get unique IDs so they contrast against all
+        batch_size = motion_emb.size(0)
+        pos_mask = labels == 1.0
+
+        # Assign class IDs: positives share ID i, negatives get unique IDs
+        next_id = batch_size  # start unique negative IDs above the positive range
+        motion_target = torch.empty(batch_size, dtype=torch.long, device=device)
+        lang_target = torch.empty(batch_size, dtype=torch.long, device=device)
+
+        for i in range(batch_size):
+            if pos_mask[i]:
+                # Matching pair → same class ID
+                motion_target[i] = i
+                lang_target[i] = i
+            else:
+                # Non-matching pair → unique IDs so they never form a positive
+                motion_target[i] = next_id
+                next_id += 1
+                lang_target[i] = next_id
+                next_id += 1
+
+        features = torch.cat([motion_emb, lang_emb], dim=0)     # (2N, D)
+        target = torch.cat([motion_target, lang_target], dim=0)  # (2N,)
+
+        loss = loss_func(features, target)
 
         optimizer.zero_grad()
         loss.backward()
@@ -60,10 +92,16 @@ def train_one_epoch(
 
         total_loss += loss.item()
 
-        # Track accuracy
-        preds = (torch.sigmoid(scores) > 0.5).float()
-        correct += (preds == labels).sum().item()
-        total += labels.size(0)
+        # ── Track retrieval accuracy (motion→language) ──
+        # For each motion embedding, check if its nearest language neighbour
+        # is the correct one (positive pair).
+        with torch.no_grad():
+            sim = torch.matmul(motion_emb, lang_emb.t())  # (N, N)
+            preds = sim.argmax(dim=1)  # nearest language for each motion
+            # A "hit" when the top match is the same index AND the pair is positive
+            hits = (preds == torch.arange(batch_size, device=device)) & pos_mask
+            correct += hits.sum().item()
+            total += pos_mask.sum().item()
 
     accuracy = correct / total if total > 0 else 0.0
     return total_loss / len(dataloader), accuracy
@@ -112,7 +150,7 @@ def setup_model_and_optimizer(
     MotionLanguageAligner, nn.Module, optim.Optimizer, optim.lr_scheduler.LRScheduler
 ]:
     """
-    Initialize the MotionLanguageAligner, BCE loss function, and AdamW optimizer.
+    Initialize the MotionLanguageAligner, InfoNCE loss, and AdamW optimizer.
     """
     model = MotionLanguageAligner(motion_dim=8, lang_dim=lang_dim, embed_dim=256).to(
         device

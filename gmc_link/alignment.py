@@ -3,6 +3,8 @@ Take stabilized velocity vector from utils.py, and align it
 with language features from the language model using a small MLP.
 """
 
+from typing import Tuple
+
 import torch
 from torch import nn
 import torch.nn.functional as F
@@ -74,6 +76,24 @@ class MotionLanguageAligner(nn.Module):
 
         return alignment_logits
 
+    def encode(
+        self, motion_feats: torch.Tensor, lang_feats: torch.Tensor
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        """
+        Project motion and language inputs into the shared latent space.
+
+        Args:
+            motion_feats: (N, 8) motion vectors.
+            lang_feats:   (N, L_dim) language embeddings.
+
+        Returns:
+            motion_latents:   (N, embed_dim) L2-normalized motion embeddings.
+            language_latents: (N, embed_dim) L2-normalized language embeddings.
+        """
+        motion_latents = F.normalize(self.motion_projector(motion_feats), p=2, dim=-1)
+        language_latents = F.normalize(self.lang_projector(lang_feats), p=2, dim=-1)
+        return motion_latents, language_latents
+
     def score_pairs(
         self, motion_feats: torch.Tensor, lang_feats: torch.Tensor
     ) -> torch.Tensor:
@@ -87,8 +107,7 @@ class MotionLanguageAligner(nn.Module):
         Returns:
             scores: (N,) Tensor of scalar similarity scores per pair.
         """
-        motion_latents = F.normalize(self.motion_projector(motion_feats), p=2, dim=-1)
-        language_latents = F.normalize(self.lang_projector(lang_feats), p=2, dim=-1)
+        motion_latents, language_latents = self.encode(motion_feats, lang_feats)
 
         # Element-wise dot product → per-pair cosine similarity
         scores = (motion_latents * language_latents).sum(dim=-1)
