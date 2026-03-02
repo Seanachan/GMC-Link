@@ -3,7 +3,6 @@ Dataset generation for GMC-Link: spatial-temporal feature extraction from Refer-
 """
 import json
 import os
-import random
 from typing import Dict, List, Tuple, Any
 
 import cv2
@@ -19,9 +18,9 @@ HOMOGRAPHY_CACHE = {}
 
 class MotionLanguageDataset(Dataset):
     """
-    PyTorch Dataset for BCE-based motion-language training.
-    Each sample: (motion_vector, language_embedding, label)
-    label = 1.0 for positive match, 0.0 for negative.
+    PyTorch Dataset for contrastive motion-language training.
+    Each sample: (motion_vector, language_embedding, expression_id)
+    expression_id is an integer — all samples from the same expression share the same ID.
     """
 
     def __init__(self, motion_data, language_data, labels):
@@ -36,12 +35,12 @@ class MotionLanguageDataset(Dataset):
     def __getitem__(self, idx):
         motion = torch.tensor(self.motion_data[idx], dtype=torch.float32)
         lang = torch.tensor(self.language_data[idx], dtype=torch.float32)
-        label = torch.tensor(self.labels[idx], dtype=torch.float32)
+        label = torch.tensor(self.labels[idx], dtype=torch.long)
         return motion, lang, label
 
 
 def collate_fn(batch):
-    """Stack into (Batch, 2) motion, (Batch, L_dim) language, and (Batch,) labels."""
+    """Stack into (Batch, 8) motion, (Batch, L_dim) language, and (Batch,) integer labels."""
     motion_batch = torch.stack([item[0] for item in batch], dim=0)
     language_batch = torch.stack([item[1] for item in batch], dim=0)
     label_batch = torch.stack([item[2] for item in batch], dim=0)
@@ -92,48 +91,6 @@ def load_labels_with_ids(labels_dir):
                 )
         labels[frame_idx] = frame_labels
     return labels
-
-
-def load_kitti_tracking_labels(label_file):
-    """
-    Load KITTI tracking labels (label_02/XXXX.txt).
-    Format: frame_id track_id type truncated occluded alpha x1 y1 x2 y2 h w l x y z ry
-    """
-    frames = {}
-    with open(label_file, "r", encoding="utf-8") as f:
-        for line in f:
-            parts = line.strip().split()
-            if len(parts) < 17:
-                continue
-
-            frame_id = int(parts[0])
-            track_id = int(parts[1])
-            obj_type = parts[2]
-
-            if obj_type == "DontCare" or track_id < 0:
-                continue
-
-            x1, y1, x2, y2 = (
-                float(parts[6]),
-                float(parts[7]),
-                float(parts[8]),
-                float(parts[9]),
-            )
-            cx = (x1 + x2) / 2.0
-            cy = (y1 + y2) / 2.0
-
-            if frame_id not in frames:
-                frames[frame_id] = {}
-            frames[frame_id][track_id] = {
-                "type": obj_type,
-                "x1": x1,
-                "y1": y1,
-                "x2": x2,
-                "y2": y2,
-                "cx": cx,
-                "cy": cy,
-            }
-    return frames
 
 
 # ── Training Data Builder ────────────────────────────────────────────
@@ -257,20 +214,21 @@ def _extract_target_centroids(
     return track_centroids
 
 
-def _generate_bce_pairs(
+def _generate_positive_pairs(
     track_centroids: Dict[int, Dict[int, Tuple[float, float, float, float]]],
-    sentence: str,
     embedding: np.ndarray,
-    all_sentences: List[str],
-    sentence_embeddings: Dict[str, np.ndarray],
+    expression_id: int,
     frame_gap: int,
     frame_shape: Tuple[int, int],
     seq: str = None,
     frame_dir: str = None,
     orb_engine: Any = None,
-) -> Tuple[List[np.ndarray], List[np.ndarray], List[float]]:
+) -> Tuple[List[np.ndarray], List[np.ndarray], List[int]]:
     """
-    Generate positive and negative (motion, language) pairs for BCE training.
+    Generate positive (motion, language) pairs for contrastive training.
+    Negatives are formed in-batch by SupervisedInfoNCE — samples with different
+    expression_id values automatically contrast against each other.
+
     Uses ORBHomographyEngine to warp centroids to absolute world velocities.
     """
     h, w = frame_shape
@@ -370,34 +328,10 @@ def _generate_bce_pairs(
                     [dx, dy, dw, dh, cx_n, cy_n, bw_n, bh_n], dtype=np.float32
                 )
 
-            # 1 Positive Match
+            # Positive pair: this motion matches this expression
             motion_data.append(motion_vec)
             language_data.append(embedding.copy())
-            labels.append(1.0)
-
-            # Hard Negative 1: Zero velocity + correct sentence
-            zero_mot = motion_vec.copy()
-            zero_mot[0:4] = 0.0
-            motion_data.append(zero_mot)
-            language_data.append(embedding.copy())
-            labels.append(0.0)
-
-            # Hard Negative 2: Inverted velocity + correct sentence
-            inv_mot = motion_vec.copy()
-            inv_mot[0:4] = -inv_mot[0:4]
-            motion_data.append(inv_mot)
-            language_data.append(embedding.copy())
-            labels.append(0.0)
-
-            # 2 Random Negatives: Same motion, wrong sentence
-            for _ in range(2):
-                wrong_sentence = random.choice(all_sentences)
-                while wrong_sentence == sentence and len(all_sentences) > 1:
-                    wrong_sentence = random.choice(all_sentences)
-
-                motion_data.append(motion_vec.copy())
-                language_data.append(sentence_embeddings[wrong_sentence].copy())
-                labels.append(0.0)
+            labels.append(expression_id)
 
     return motion_data, language_data, labels
 
@@ -408,9 +342,14 @@ def build_training_data(
     text_encoder: Any,
     frame_gap: int = 5,
     frame_shape: Tuple[int, int] = (375, 1242),
-) -> Tuple[List[np.ndarray], List[np.ndarray], List[float]]:
+) -> Tuple[List[np.ndarray], List[np.ndarray], List[int]]:
     """
-    Build (motion, language) training pairs from refer-kitti for BCE training.
+    Build (motion, language, expression_id) training triples for contrastive learning.
+
+    Each unique expression gets an integer ID. All motion vectors that correspond
+    to the same expression share that ID, so SupervisedInfoNCE treats them as
+    positives and everything else as in-batch negatives.
+
     Uses ORB Homography and centroid-difference tracking for ego-motion compensation.
     """
     all_expressions, sentence_embeddings, all_sentences = _collect_expressions(
@@ -421,8 +360,12 @@ def build_training_data(
     orb_engine = ORBHomographyEngine(max_features=1500)
 
     print(
-        "  Computing centroid-difference velocities and generating supervision pairs..."
+        "  Computing centroid-difference velocities and generating positive pairs..."
     )
+
+    # Map each unique sentence to a stable integer class ID
+    sentence_to_id = {s: i for i, s in enumerate(all_sentences)}
+
     motion_data = []
     language_data = []
     labels = []
@@ -432,6 +375,7 @@ def build_training_data(
         label_map = expr["label"]
         sentence = expr["sentence"]
         embedding = expr["embedding"]
+        expression_id = sentence_to_id[sentence]
 
         # Detect actual frame dimensions from first image
         frame_dir = os.path.join(data_root, "KITTI", "training", "image_02", seq)
@@ -447,13 +391,11 @@ def build_training_data(
             data_root, seq, label_map, frame_shape=actual_shape
         )
 
-        # Use centroid-difference velocities with ORB ego-motion compensation
-        m_data, l_data, lbls = _generate_bce_pairs(
+        # Generate only positive pairs — negatives are formed in-batch by InfoNCE
+        m_data, l_data, lbls = _generate_positive_pairs(
             track_centroids,
-            sentence,
             embedding,
-            all_sentences,
-            sentence_embeddings,
+            expression_id,
             frame_gap,
             actual_shape,
             seq=seq,
@@ -465,7 +407,6 @@ def build_training_data(
         language_data.extend(l_data)
         labels.extend(lbls)
 
-    pos_count = sum(1 for l in labels if l == 1.0)
-    neg_count = sum(1 for l in labels if l == 0.0)
-    print(f"  Positive: {pos_count} | Negative: {neg_count} | Total: {len(labels)}")
+    n_classes = len(sentence_to_id)
+    print(f"  Unique expressions: {n_classes} | Total samples: {len(labels)}")
     return motion_data, language_data, labels

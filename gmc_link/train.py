@@ -49,40 +49,20 @@ def train_one_epoch(
     correct = 0
     total = 0
 
-    for motion_features, language_features, labels in dataloader:
+    for motion_features, language_features, expr_ids in dataloader:
 
         motion_features = motion_features.to(device)
         language_features = language_features.to(device)
-        labels = labels.to(device)
+        expr_ids = expr_ids.to(device)
 
         # ── Project to shared embedding space ──
         motion_emb, lang_emb = model.encode(motion_features, language_features)
 
         # ── Build contrastive features & integer targets ──
-        # Positive pairs (label==1): motion_i and lang_i share the same class ID
-        # Negative pairs (label==0): get unique IDs so they contrast against all
-        batch_size = motion_emb.size(0)
-        pos_mask = labels == 1.0
-
-        # Assign class IDs: positives share ID i, negatives get unique IDs
-        next_id = batch_size  # start unique negative IDs above the positive range
-        motion_target = torch.empty(batch_size, dtype=torch.long, device=device)
-        lang_target = torch.empty(batch_size, dtype=torch.long, device=device)
-
-        for i in range(batch_size):
-            if pos_mask[i]:
-                # Matching pair → same class ID
-                motion_target[i] = i
-                lang_target[i] = i
-            else:
-                # Non-matching pair → unique IDs so they never form a positive
-                motion_target[i] = next_id
-                next_id += 1
-                lang_target[i] = next_id
-                next_id += 1
-
-        features = torch.cat([motion_emb, lang_emb], dim=0)     # (2N, D)
-        target = torch.cat([motion_target, lang_target], dim=0)  # (2N,)
+        # Stack motion and language embeddings: (2N, D)
+        # Duplicate expression IDs so motion_i and lang_i share the same class
+        features = torch.cat([motion_emb, lang_emb], dim=0)  # (2N, D)
+        target = torch.cat([expr_ids, expr_ids], dim=0)       # (2N,)
 
         loss = loss_func(features, target)
 
@@ -93,15 +73,15 @@ def train_one_epoch(
         total_loss += loss.item()
 
         # ── Track retrieval accuracy (motion→language) ──
-        # For each motion embedding, check if its nearest language neighbour
-        # is the correct one (positive pair).
+        # For each motion embedding, find which language embedding is closest.
+        # A "hit" when the nearest match shares the same expression ID.
+        batch_size = motion_emb.size(0)
         with torch.no_grad():
             sim = torch.matmul(motion_emb, lang_emb.t())  # (N, N)
-            preds = sim.argmax(dim=1)  # nearest language for each motion
-            # A "hit" when the top match is the same index AND the pair is positive
-            hits = (preds == torch.arange(batch_size, device=device)) & pos_mask
-            correct += hits.sum().item()
-            total += pos_mask.sum().item()
+            nearest_lang_idx = sim.argmax(dim=1)           # (N,)
+            predicted_ids = expr_ids[nearest_lang_idx]
+            correct += (predicted_ids == expr_ids).sum().item()
+            total += batch_size
 
     accuracy = correct / total if total > 0 else 0.0
     return total_loss / len(dataloader), accuracy
