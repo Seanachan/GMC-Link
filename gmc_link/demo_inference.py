@@ -614,7 +614,7 @@ def run_multi_expression(
     results_json: str = "iKUN/results.json",
     track_dir: str = "NeuralSORT",
     weights_path: str = "gmc_link_weights.pth",
-    fusion_mode: str = "or_logic",
+    fusion_mode: str = "learned",
     gmc_weight: float = 0.65,
 ) -> None:
     """Evaluate across ALL expressions for a sequence, grouped by type."""
@@ -728,8 +728,8 @@ if __name__ == "__main__":
         run_ablation()
     elif "--multi" in sys.argv:
         # Parse optional args
-        mode = "or_logic"
-        weight = 0.5
+        mode = "learned"
+        weight = 0.65
         for i, arg in enumerate(sys.argv):
             if arg == "--mode" and i + 1 < len(sys.argv):
                 mode = sys.argv[i + 1]
@@ -744,7 +744,7 @@ if __name__ == "__main__":
             results_json="iKUN/results.json",
             track_dir="NeuralSORT",
             weights_path="gmc_link_weights.pth",
-            gmc_weight=0.10,
-            fusion_mode="suppress",
+            gmc_weight=0.65,
+            fusion_mode="learned",
             visualize=False,
         )

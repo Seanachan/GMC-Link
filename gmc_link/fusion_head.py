@@ -359,7 +359,7 @@ def load_fusion_head(
     weights_path: str = "gmc_link/fusion_head_weights.pth",
 ) -> Tuple[FusionHead, float]:
     """Load trained fusion head and its threshold."""
-    state = torch.load(weights_path, map_location="cpu")
+    state = torch.load(weights_path, map_location="cpu", weights_only=False)
     model = FusionHead(input_dim=3)
     model.load_state_dict(state["model"])
     model.eval()

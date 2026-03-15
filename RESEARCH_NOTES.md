@@ -254,6 +254,19 @@ Train a `MotionLanguageAligner` to match 2D velocity vectors with natural langua
 
 ---
 
+## Recommended Approach: Stage 2 Learned Fusion Head
+
+After exhaustive experimentation across 21 experiments, **Stage 2: Learned Fusion Head** is the recommended production approach for iKUN + GMC-Link integration:
+
+- **Best Overall F1:** 0.5895 (+1.7% over iKUN baseline)
+- **Architecture:** `FusionHead([ikun_logit, gmc_score, is_motion_flag] → 32 → 16 → 1)` — a 3-input, 2-hidden-layer MLP with BatchNorm and Dropout.
+- **Weights:** `gmc_link/fusion_head_weights.pth` (threshold=0.72)
+- **Why it wins:** Operates at the decision level, combining iKUN's CLIP-based visual/language scores with GMC-Link's kinematic motion scores without corrupting either representation. Improves appearance (+4.5%) and stationary (+2.9%) categories that iKUN already handles, while trading a small motion regression (−1.3%).
+
+**What NOT to do:** Do not inject motion embeddings into iKUN's CLIP visual pipeline (Stage 3). Both BCE and contrastive embeddings cause catastrophic regression (−21.7% F1) when the gate opens. The additive injection mechanism corrupts CLIP's learned representation space. Decision-level fusion is the correct paradigm.
+
+---
+
 ## Key Bugs Fixed Along the Way
 
 | File                | Bug                                                  | Fix                                             |

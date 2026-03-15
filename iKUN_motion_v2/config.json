@@ -1,0 +1,68 @@
+{
+  "gpus": "0",
+  "seed": 1000,
+  "exp_name": "iKUN_motion_v2",
+  "save_root": "/home/seanachan/GMC-Link",
+  "save_postfix": "",
+  "img_hw": [
+    [
+      224,
+      224
+    ],
+    [
+      448,
+      448
+    ],
+    [
+      672,
+      672
+    ]
+  ],
+  "norm_mean": [
+    0.48145466,
+    0.4578275,
+    0.40821073
+  ],
+  "norm_std": [
+    0.26862954,
+    0.26130258,
+    0.27577711
+  ],
+  "num_workers": 2,
+  "clip_model": "RN50",
+  "feature_dim": 1024,
+  "truncation": 10,
+  "tg_epoch": 0,
+  "kum_mode": null,
+  "sample_frame_len": 8,
+  "sample_frame_num": 2,
+  "sample_frame_stride": 4,
+  "sample_expression_num": 1,
+  "train_bs": 2,
+  "cosine_end_lr": 0.0,
+  "weight_decay": 1e-05,
+  "warmup_epoch": 0,
+  "warmup_start_lr": 1e-05,
+  "random_crop_ratio": [
+    0.8,
+    1.0
+  ],
+  "base_lr": 0.0001,
+  "max_epoch": 140,
+  "train_print_freq": 100,
+  "eval_frequency": 999,
+  "save_frequency": 10,
+  "loss_rho": null,
+  "loss_gamma": 2.0,
+  "loss_reduction": "sum",
+  "motion_emb_dir": "/home/seanachan/GMC-Link/gmc_link/motion_embeddings",
+  "motion_emb_dim": 256,
+  "motion_lr_mult": 10.0,
+  "resume_path": "/home/seanachan/GMC-Link/iKUN.pth",
+  "test_bs": 1,
+  "test_ckpt": "iKUN.pth",
+  "similarity_calibration": false,
+  "save_dir": "/home/seanachan/GMC-Link/iKUN_motion_v2",
+  "data_root": "/home/seanachan/GMC-Link/Refer-KITTI",
+  "track_root": "/home/seanachan/GMC-Link/NeuralSORT"
+}

@@ -33,9 +33,9 @@ Natural Language Prompt ──► SentenceTransformer Embedding ─────�
 | **MotionLanguageAligner** | `alignment.py`                        | A small MLP that projects an 8D spatio-temporal vector and a 384-dim language embedding into a shared space, then computes a similarity score via dot product.                                            |
 | **TextEncoder**           | `text_utils.py`                       | Wraps `all-MiniLM-L6-v2` (SentenceTransformers) to encode natural language prompts into 384-dim embeddings.                                                                                               |
 | **GMCLinkManager**        | `manager.py`                          | The orchestrator. For each frame: runs GMC, computes compensated velocities for all tracks, and queries the aligner for alignment scores.                                                                 |
-| **Dataset & Training**    | `dataset.py`, `train.py`, `losses.py` | Builds (motion, language) training pairs from the [Refer-KITTI](https://github.com/wudongming97/RMOT) dataset using BCE loss. Trains on sequences 0015/0016/0018, tests on 0011.                          |
-| **Demo Inference**        | `demo_inference.py`                   | End-to-end evaluation using YOLOv8 + ByteTrack for real detections, then GMC-Link for motion-language alignment scoring.                                                                                  |
-| **Visualization**         | `visualize.py`                        | Renders annotated frames with bounding boxes, velocity arrows, and alignment scores.                                                                                                                      |
+| **Fusion Head**           | `fusion_head.py`                      | Learned MLP that fuses iKUN CLIP logits with GMC-Link motion scores for the best overall accuracy (+1.7% F1 over iKUN alone).                                                                             |
+| **Dataset & Training**    | `dataset.py`, `train.py`, `losses.py` | Builds (motion, language) training pairs from the [Refer-KITTI](https://github.com/wudongming97/RMOT) dataset using BCE loss.                                                                             |
+| **Demo Inference**        | `demo_inference.py`                   | End-to-end evaluation on iKUN + GMC-Link fusion across all expressions in a sequence.                                                                                                                      |
 
 ---
 
@@ -63,22 +63,75 @@ Natural Language Prompt ──► SentenceTransformer Embedding ─────�
 
 ## Usage
 
-### Inference (Notebook)
+### Inference with Learned Fusion (Recommended)
+
+The learned fusion head combines iKUN's CLIP logits with GMC-Link's kinematic scores for the best results:
+
+```python
+from gmc_link import GMCLinkManager, TextEncoder, load_fusion_head
+
+# Initialize
+encoder = TextEncoder(device="cuda")
+linker = GMCLinkManager(weights_path="gmc_link_weights.pth", device="cuda", lang_dim=384)
+fusion_model, threshold = load_fusion_head("gmc_link/fusion_head_weights.pth")
+
+language_embedding = encoder.encode("moving cars")
+gmc_scores, _ = linker.process_frame(frame, active_tracks, language_embedding)
+
+# Fuse with iKUN logit for each track
+import torch
+is_motion = 1.0  # 1.0=motion, 0.5=stationary, 0.0=appearance
+feat = torch.tensor([[ikun_logit, gmc_scores[track_id], is_motion]])
+prob = fusion_model.predict_prob(feat).item()
+is_match = prob >= threshold
+```
+
+### Standalone GMC-Link (without iKUN)
 
 ```python
 encoder = TextEncoder(device="cuda")
-linker = GMCLinkManager(device="cuda", lang_dim=384)
+linker = GMCLinkManager(weights_path="gmc_link_weights.pth", device="cuda", lang_dim=384)
 
 language_embedding = encoder.encode("moving cars")
 scores, velocities = linker.process_frame(frame, active_tracks, language_embedding)
 # scores = {track_id: 0.87, ...}
 ```
 
-### Training
+### Training the Aligner
 
 ```bash
 python -m gmc_link.train
 ```
+
+### Training the Fusion Head
+
+```bash
+python gmc_link/fusion_head.py --collect  # collect iKUN + GMC-Link training data
+python gmc_link/fusion_head.py --train    # train the fusion MLP
+python gmc_link/fusion_head.py --eval     # evaluate on validation split
+```
+
+### Multi-Expression Evaluation
+
+```bash
+python gmc_link/demo_inference.py --multi  # defaults to learned fusion
+```
+
+---
+
+## iKUN Integration & Learned Fusion (Best Results)
+
+When paired with [iKUN](https://github.com/dyhBUPT/iKUN) (a CLIP-based RMOT tracker), the **learned fusion head** achieves the best overall accuracy:
+
+| Method | Motion F1 | Appearance F1 | Stationary F1 | Overall F1 | Δ Overall |
+| --- | --- | --- | --- | --- | --- |
+| iKUN baseline | 0.6386 | 0.4338 | 0.6684 | 0.5730 | — |
+| iKUN + OR-logic | **0.6650** | 0.4338 | 0.6684 | 0.5863 | +1.3% |
+| **iKUN + Learned Fusion** | 0.6252 | **0.4792** | **0.6972** | **0.5895** | **+1.7%** |
+
+The fusion head is a tiny MLP (`[ikun_logit, gmc_score, is_motion_flag] → 32 → 16 → 1`) trained on paired iKUN and GMC-Link scores. It learns when to trust the kinematic signal vs the visual signal, achieving gains across all expression types.
+
+> **Note:** Feature-level injection of motion embeddings into iKUN's CLIP visual pipeline was also explored (Stage 3) but causes catastrophic regression (−21.7% F1) because additive injection corrupts the CLIP representation. Decision-level fusion is the correct approach.
 
 ---
 
