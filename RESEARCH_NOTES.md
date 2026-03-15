@@ -191,6 +191,44 @@ Train a `MotionLanguageAligner` to match 2D velocity vectors with natural langua
 - **Analysis:** Injecting the `min()` spatial probability constraint directly into TempRMOT caused a -6.75% HOTA regression under standard strictness! TempRMOT features deep *native* 8-frame temporal multi-head attention trackers, yielding hyper-confident bounding logic. Subjecting it to GMC-Link's independent geometry vectors artificially drops confidence below TempRMOT's absolute deletion floor (`0.4`), accidentally evaporating perfectly valid tracked entities. When the threshold floor was ablated down to `0.2` on sequence 0011, HOTA cleanly recovered from 29.4% back to parity with the baseline (~39.8%).
 - **Conclusion:** GMC-Link is mathematically sound and an exceptionally powerful plug-and-play geometry filter for *spatially-ignorant* frameworks (like TransRMOT), but is functionally redundant and actively destructive when force-coupled with models that natively wield mature temporal tracking engines.
 
+### Exp 20: iKUN + GMC-Link Motion Integration (3-Stage) ✅
+
+- **Motivation:** iKUN (CLIP-based RMOT tracker) has near-zero recall (~4.5%) on motion expressions because CLIP has no motion reasoning. GMC-Link CAN identify motion (GT mean=0.6245, non-GT mean=0.5478, 96.9% GT recall at θ=0.5). The question: can we bridge them?
+- **Baseline (iKUN-only on seq 0011, 64 expressions):** Overall F1: 0.5730 | Motion F1: 0.6386 | Appearance F1: 0.4338 | Stationary F1: 0.6684
+
+#### Stage 1: OR-Logic Fusion (No training)
+- **Approach:** Classify expressions as motion/stationary/appearance via keyword matching. Motion expressions: predict positive if `gmc_score > θ` (bypassing iKUN's blind spot). Stationary/appearance: keep iKUN-primary with suppress-mode GMC filter.
+- **Threshold sweep:** θ ∈ {0.50, 0.55, 0.60, 0.65}. Best at **θ=0.65**.
+- **Result:** Motion F1: 0.6386→**0.6650** (+2.6%, recall +10.7%) | Overall F1: 0.5730→**0.5863** (+1.3%)
+- **Key insight:** Simple OR-logic already recovers significant motion recall that iKUN completely misses.
+
+#### Stage 2: Learned Fusion Head (Lightweight MLP)
+- **Architecture:** `FusionHead([ikun_logit, gmc_score, is_motion_flag] → 32 → 16 → 1)` with BCE loss
+- **Training:** 180,352 samples from seq 0011 (70/30 frame split — only seq with iKUN results). 50 epochs, AdamW.
+- **Best val F1:** 0.6183 at threshold=0.72
+- **Result:** Appearance F1: 0.4338→**0.4792** (+4.5%) | Stationary F1: 0.6684→**0.6972** (+2.9%) | Overall F1: 0.5730→**0.5895** (+1.7%, best overall)
+- **Downside:** Motion F1 regressed to 0.6252 (-1.3%) — MLP learned conservative motion boundary.
+
+#### Stage 3: Feature-Level Injection into iKUN
+- **Approach:** Inject GMC-Link's 256D motion embeddings into iKUN's visual pipeline via gated additive:
+  - `motion_fc`: Linear(256→512→1024) projects motion emb to visual feature space
+  - `motion_gate`: nn.Parameter(init=-10.0), sigmoid gate so model starts identical to pretrained iKUN
+  - Injection point: after `st_pooling`, before L2-norm: `feat = feat + sigmoid(gate) * motion_fc(emb)`
+- **Pre-computed:** 256D motion embeddings for all 16 videos (~26K embeddings via `precompute_motion_embeddings.py`)
+- **Training:** Fine-tuned from `iKUN.pth` epoch 99 → epoch 119 (20 epochs). bs=2, lr=5e-5, cosine schedule.
+- **Result:** Motion F1: 0.6386→**0.6604** (+2.2%, recall 55.5%→61.0%) | Appearance F1: 0.4338→**0.4513** (+1.8%) | Overall F1: 0.5730→**0.5789** (+0.6%)
+- **Critical finding:** `motion_gate` remained at **-10.0** after training (sigmoid≈0.00005). The gate never opened! The +0.6% improvement came entirely from small weight adjustments in `motion_fc`/`img_fc` during fine-tuning, NOT from the motion embeddings actually being injected. Gate init was too conservative and cosine lr 5e-5→0 didn't provide enough gradient signal.
+- **Next step:** Re-train with gate init=-2.0 (sigmoid≈0.12), higher lr for gate parameters, more epochs.
+
+#### Summary Table
+
+| Method              | Motion F1 | Appearance F1 | Stationary F1 | Overall F1 | Δ Overall |
+| ------------------- | --------- | ------------- | ------------- | ---------- | --------- |
+| iKUN baseline       | 0.6386    | 0.4338        | 0.6684        | 0.5730     | —         |
+| Stage 1: OR-logic   | **0.6650**| 0.4338        | 0.6684        | 0.5863     | +1.3%     |
+| Stage 2: Learned    | 0.6252    | **0.4792**    | **0.6972**    | **0.5895** | **+1.7%** |
+| Stage 3: Injection  | 0.6604    | 0.4513        | 0.6482        | 0.5789     | +0.6%     |
+
 ---
 
 ## Key Bugs Fixed Along the Way
