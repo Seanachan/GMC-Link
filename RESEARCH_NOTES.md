@@ -229,6 +229,29 @@ Train a `MotionLanguageAligner` to match 2D velocity vectors with natural langua
 | Stage 2: Learned    | 0.6252    | **0.4792**    | **0.6972**    | **0.5895** | **+1.7%** |
 | Stage 3: Injection  | 0.6604    | 0.4513        | 0.6482        | 0.5789     | +0.6%     |
 
+### Exp 21: BCE vs Contrastive Embedding Comparison (Stage 3) ✅
+
+- **Motivation:** Exp 20 Stage 3 v1 showed +0.6% Overall F1 but the gate never opened (sigmoid≈0.00005). Re-trained with aggressive gate settings (init=0.0, lr=1e-4, lr_mult=10, cosine_end_lr=1e-4, 40 epochs). Compare BCE-trained vs contrastive-trained (InfoNCE+FNM) GMC-Link embeddings to determine which produces better motion representations for feature-level injection.
+- **Setup:** Same iKUN backbone, same training config. Only difference: source of 256D motion embeddings.
+  - **v3 (BCE):** `gmc_link_weights.pth` → `motion_embeddings/` → `iKUN_motion_v3/`. Gate: 0.0→0.5276 (sigmoid=0.629).
+  - **v4 (Contrastive):** `gmc_link_contrastive_weights.pth` → `motion_embeddings_contrastive/` → `iKUN_motion_v4/`. Gate: 0.0→0.5838 (sigmoid=0.642).
+
+#### Results (seq 0011, 64 expressions)
+
+| Model | Motion F1 | Appearance F1 | Stationary F1 | Overall F1 | Δ Overall |
+| ----- | --------- | ------------- | ------------- | ---------- | --------- |
+| iKUN baseline | 0.6386 | 0.4338 | 0.6684 | 0.5730 | — |
+| v1 (gate=-10, no injection) | 0.6604 | 0.4513 | 0.6482 | 0.5789 | +0.6% |
+| v3 BCE (gate opened, sigmoid=0.63) | 0.3444 | 0.3017 | 0.4691 | 0.3565 | **-21.6%** |
+| v4 Contrastive (gate opened, sigmoid=0.64) | 0.3532 | 0.2472 | 0.5158 | 0.3557 | **-21.7%** |
+
+- **Analysis:** Both BCE and contrastive embeddings cause catastrophic performance collapse when the gate actually opens. Overall F1 drops from 0.5730 to ~0.356 (−37.9% relative). BCE vs contrastive are functionally identical (0.3565 vs 0.3557). The contrastive variant has marginally better stationary F1 (+4.7pp) but worse appearance F1 (−5.4pp).
+- **Root cause:** The problem is NOT the loss function — it's the injection mechanism itself. The 256D GMC-Link motion embeddings, when projected via `motion_fc(256→512→1024)` and added to CLIP visual features, corrupt the visual representation. The learned motion signal overwhelms CLIP's rich spatial/appearance features because:
+  1. The motion embeddings occupy a fundamentally different semantic manifold than CLIP visual features.
+  2. Additive injection (even gated at sigmoid=0.63) still contributes ~63% of the motion projection magnitude, which is large relative to the L2-normalized visual features.
+  3. v1's +0.6% gain came entirely from fine-tuning `img_fc`/`motion_fc` weights, NOT from motion injection (gate was functionally zero).
+- **Conclusion:** Feature-level additive injection into CLIP visual space is architecturally flawed for this task. The Stage 2 learned fusion head (+1.7%) and Stage 1 OR-logic (+1.3%) remain the most effective approaches because they operate on decision-level scores rather than corrupting intermediate representations.
+
 ---
 
 ## Key Bugs Fixed Along the Way
