@@ -9,7 +9,13 @@ GMC-Link answers the question: **"Given a video and a sentence like _'moving car
 It bridges the gap between **object motion** (geometry) and **language** (semantics) by:
 
 1. **Compensating for camera motion** so that only true object movement remains.
-2. **Encoding that motion** into an 8D geometric spatio-temporal vector (`[dx, dy, dw, dh, cx, cy, w, h]`).
+2. **Encoding that motion** into an 13D geometric spatio-temporal vector (`[dx_s, dy_s, dx_m , dy_m ,dx_l , dy_l ,dw, dh, cx, cy, w, h ,snr]`).
+   The motion representation is designed to explicitly capture both kinematic behavior and spatial context:
+
+   - Multi-scale velocity (s/m/l) improves robustness under different frame gaps and noise levels  
+   - (dw, dh) captures scale changes (e.g., approaching / receding objects)  
+   - (cx, cy, w, h) provides spatial context for handling parallax  
+   - snr measures motion reliability and suppresses noisy tracks 
 3. **Aligning motion with language** using a learned neural network to produce a match score.
 
 ---
@@ -17,7 +23,7 @@ It bridges the gap between **object motion** (geometry) and **language** (semant
 ## Architecture & Pipeline
 
 ```text
-Video Frame ──► GMC (Homography) ──► Compensated Velocity ──► MLP Aligner ──► Score [0, 1]
+Video Frame ──► GMC (Homography) ──►Motion Feature Extraction(13D) ──► MLP Aligner (InfoNCE)──►Fusion with Tracker Score──► Final Association
                                                                    ▲
 Natural Language Prompt ──► SentenceTransformer Embedding ─────────┘
 ```
@@ -49,7 +55,7 @@ Natural Language Prompt ──► SentenceTransformer Embedding ─────�
 
 4. **Language Encoding**: The user's text prompt (e.g., _"moving cars"_) is encoded once into a 384-dim vector using a SentenceTransformer.
 
-5. **Alignment Scoring**: The MLP aligner projects the 8D motion/geometry vector and the 384-dim language vector into a shared 256-dim embedding space. A dot product + sigmoid produces a score in `[0, 1]` indicating how well the object's kinematics matches the description.
+5. **Alignment Scoring**: The MLP aligner projects the 13D motion/geometry vector and the 384-dim language vector into a shared 256-dim embedding space. A dot product + sigmoid produces a score in `[0, 1]` indicating how well the object's kinematics matches the description.
 
 ---
 
@@ -146,7 +152,7 @@ Here is the step-by-step data flow of how GMC-Link was injected into TransRMOT's
 
 1. **Initialize the Manager:** We instantiate `GMCLinkManager` and `TextEncoder` alongside TransRMOT's core model. We encode the text prompt (e.g., "a red car moving left") once at the start of the video.
 2. **Intercept Detections:** For every video frame, TransRMOT generates a list of associated bounding boxes. We intercept these boxes _before_ TransRMOT makes its final filtering decisions.
-3. **Generate Kinematic Scores:** We pass the intercepted boxes and the current video frame into `GMCLinkManager.process_frame()`. GMC-Link computes the ego-motion, calculates the 8D velocity vectors, and asks its MLP aligner: _"Based purely on physics, how well do these boxes match the text prompt?"_ It returns a probability score between 0 and 1 for each box.
+3. **Generate Kinematic Scores:** We pass the intercepted boxes and the current video frame into `GMCLinkManager.process_frame()`. GMC-Link computes the ego-motion, calculates the 13D velocity vectors, and asks its MLP aligner: _"Based purely on physics, how well do these boxes match the text prompt?"_ It returns a probability score between 0 and 1 for each box.
 4. **Strict Minimax Fusion:** TransRMOT initially generates a "Vision Probability" (does this _look_ like a red car?). GMC-Link generates a "Kinematic Probability" (is this object _moving_ left?). We mathematically fuse them using a strict intersection: `final_score = min(vision_prob, kinematic_prob)`.
 5. **Final Output:** If a stationary red car tricked TransRMOT's vision model, its `vision_prob` would be `0.9`. But GMC-Link's `kinematic_prob` would be `0.01` (because it's stationary). The `min()` function suppresses the score to `0.01`, instantly filtering out the hallucination.
 
