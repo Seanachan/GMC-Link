@@ -41,10 +41,19 @@ class GMCLinkManager:
         device: str = "cpu",
         lang_dim: int = 384,
         frame_gap: int = 10,  # max gap for buffer sizing
+        fx: float = 718.856,
+        cx: float = 607.1928,
+        x_range: float = 50.0,
+        z_min: float = 2.0,
+        z_max: float = 100.0,
     ) -> None:
         self.device = device
         self.frame_gap = frame_gap
-
+        self.fx = fx
+        self.cx = cx
+        self.x_range = x_range
+        self.z_min = z_min
+        self.z_max = z_max
         self.motion_buffer = MotionBuffer(alpha=0.3)
         self.score_buffer = ScoreBuffer(alpha=0.4)
         self.aligner = MotionLanguageAligner(
@@ -74,6 +83,27 @@ class GMCLinkManager:
 
         # Background residual buffer for noise floor estimation
         self.bg_residual_buffer: deque = deque(maxlen=frame_gap + 1)
+
+    @staticmethod
+    def _estimate_depth_from_bbox(bbox_h: float) -> float:
+        # Fast monocular proxy: taller box => closer object.
+        if bbox_h <= 1e-3:
+            return 30.0
+        f = 720.0
+        h_real = 1.5
+        z = (f * h_real) / bbox_h
+        return float(np.clip(z, 2.0, 100.0))
+
+    def _pixel_to_xz(self, u: float, z: float) -> Tuple[float, float]:
+        # Back-project image x into camera-centric ground-plane X using depth Z.
+        x = (u - self.cx) * z / self.fx
+        return float(x), float(z)
+
+    def _normalize_xz(self, X: float, Z: float) -> Tuple[float, float]:
+        # Clamp to stable ranges so feature scale stays training-friendly.
+        Xn = (np.clip(X, -self.x_range, self.x_range) + self.x_range) / (2.0 * self.x_range)
+        Zn = (np.clip(Z, self.z_min, self.z_max) - self.z_min) / (self.z_max - self.z_min + 1e-6)
+        return float(Xn), float(Zn)
 
     def process_frame(
         self,
@@ -177,14 +207,21 @@ class GMCLinkManager:
                 for centroid, H in zip(centroid_hist, homographies):
                     warped = warp_points(np.array([centroid]), H)
                     world_frame_centroids.append(warped[0])
+                
+                world_frame_xz = []
+                for c2d, wh2d in zip(world_frame_centroids, wh_hist):
+                    # Convert homography-compensated 2D center to pseudo-3D (X,Z).
+                    z_est = self._estimate_depth_from_bbox(float(wh2d[1]))
+                    Xw, Zw = self._pixel_to_xz(float(c2d[0]), z_est)
+                    world_frame_xz.append(np.array([Xw, Zw], dtype=np.float32))
 
                 # Multi-scale velocity: compute dx, dy at each gap
                 scale_velocities = []
                 for gap in self.FRAME_GAPS:
                     if T > gap:
-                        v_raw = world_frame_centroids[-1] - world_frame_centroids[-(gap + 1)]
-                        v_norm = normalize_velocity(v_raw, frame_shape)
-                        scale_velocities.append(v_norm)
+                        # Multi-scale world motion: delta in X/Z between two compensated times.
+                        v_raw_xz = world_frame_xz[-1] - world_frame_xz[-(gap + 1)]
+                        scale_velocities.append(v_raw_xz.astype(np.float32))
                     else:
                         scale_velocities.append(np.zeros(2, dtype=np.float32))
 
@@ -227,8 +264,9 @@ class GMCLinkManager:
             # Build 13D Multi-Scale Spatial-Motion Vector
             w_n = curr_w / float(img_w)
             h_n = curr_h / float(img_h)
-            cx_n = curr_centroid[0] / float(img_w)
-            cy_n = curr_centroid[1] / float(img_h)
+            z_curr = self._estimate_depth_from_bbox(float(curr_h))
+            X_curr, Z_curr = self._pixel_to_xz(float(curr_centroid[0]), z_curr)
+            X_n, Z_n = self._normalize_xz(X_curr, Z_curr)
 
             # SNR from mid-scale velocity
             obj_speed = np.sqrt(dx_m ** 2 + dy_m ** 2)
@@ -244,8 +282,9 @@ class GMCLinkManager:
             snr = obj_speed / (bg_magnitude + 1e-6)
 
             spatial_motion = np.array(
+                # 13D feature with world-space position cues (X_n, Z_n) instead of (cx, cy).
                 [dx_s, dy_s, dx_m, dy_m, dx_l, dy_l, dw, dh,
-                 cx_n, cy_n, w_n, h_n, snr], dtype=np.float32
+                 X_n, Z_n, w_n, h_n, snr], dtype=np.float32
             )
 
             track_ids.append(tid)

@@ -18,6 +18,36 @@ HOMOGRAPHY_CACHE = {}
 # Multi-scale frame gaps for temporal velocity features
 FRAME_GAPS = [2, 5, 10]  # short, mid, long
 
+# Projection defaults (match manager.py defaults)
+FX = 718.856
+CX = 607.1928
+X_RANGE = 50.0
+Z_MIN = 2.0
+Z_MAX = 100.0
+
+
+def _estimate_depth_from_bbox(bbox_h: float) -> float:
+    """Heuristic monocular depth from bbox height."""
+    if bbox_h <= 1e-3:
+        return 30.0
+    f = 720.0
+    h_real = 1.5
+    z = (f * h_real) / bbox_h
+    return float(np.clip(z, Z_MIN, Z_MAX))
+
+
+def _pixel_to_xz(u: float, z: float) -> Tuple[float, float]:
+    """Project image x and depth to ground-plane XZ."""
+    x = (u - CX) * z / FX
+    return float(x), float(z)
+
+
+def _normalize_xz(x: float, z: float) -> Tuple[float, float]:
+    """Normalize X/Z to stable [0,1]-like ranges."""
+    x_n = (np.clip(x, -X_RANGE, X_RANGE) + X_RANGE) / (2.0 * X_RANGE)
+    z_n = (np.clip(z, Z_MIN, Z_MAX) - Z_MIN) / (Z_MAX - Z_MIN + 1e-6)
+    return float(x_n), float(z_n)
+
 
 class MotionLanguageDataset(Dataset):
     """
@@ -43,7 +73,7 @@ class MotionLanguageDataset(Dataset):
 
 
 def collate_fn(batch):
-    """Stack into (Batch, 10) motion, (Batch, L_dim) language, and (Batch,) integer labels."""
+    """Stack into (Batch, 13) motion, (Batch, L_dim) language, and (Batch,) integer labels."""
     motion_batch = torch.stack([item[0] for item in batch], dim=0)
     language_batch = torch.stack([item[1] for item in batch], dim=0)
     label_batch = torch.stack([item[2] for item in batch], dim=0)
@@ -249,10 +279,10 @@ def _compute_velocity_at_gap(
     centroids, curr_fid, future_fid, frame_shape, seq, frame_dir, orb_engine
 ):
     """
-    Compute ego-motion-compensated (dx, dy) and bg_residual for a single frame pair.
-    Returns (dx, dy, bg_residual) or None if homography fails.
+    Compute ego-motion-compensated (dX, dZ) and bg_residual for a single frame pair.
+    Returns (dX, dZ, bg_residual_xz).
     """
-    h, w = frame_shape
+    _h, _w = frame_shape
 
     if frame_dir is not None and orb_engine is not None and seq is not None:
         cache_key = (seq, curr_fid, future_fid)
@@ -272,30 +302,45 @@ def _compute_velocity_at_gap(
                 bg_residual = np.zeros(2, dtype=np.float32)
             HOMOGRAPHY_CACHE[cache_key] = (homography, bg_residual)
 
-        cx1, cy1, _, _ = centroids[curr_fid]
-        cx2, cy2, _, _ = centroids[future_fid]
+        cx1, cy1, _, bh1 = centroids[curr_fid]
+        cx2, cy2, _, bh2 = centroids[future_fid]
 
         # Synthetic jitter (+/- 2 pixels)
         j_cx2 = cx2 + np.random.uniform(-2.0, 2.0)
-        j_cy2 = cy2 + np.random.uniform(-2.0, 2.0)
+        _j_cy2 = cy2 + np.random.uniform(-2.0, 2.0)
+
+        z1 = _estimate_depth_from_bbox(float(bh1))
+        z2 = _estimate_depth_from_bbox(float(bh2))
 
         if homography is not None:
             pts = np.array([[cx1, cy1]], dtype=np.float32)
             warped_pts = warp_points(pts, homography)
             wcx1, wcy1 = warped_pts[0]
-            dx = (j_cx2 - wcx1) / w * VELOCITY_SCALE
-            dy = (j_cy2 - wcy1) / h * VELOCITY_SCALE
-            return dx, dy, bg_residual
+            x1, z1 = _pixel_to_xz(float(wcx1), z1)
+            x2, z2 = _pixel_to_xz(float(j_cx2), z2)
+            d_x = x2 - x1
+            d_z = z2 - z1
+
+            # Convert background x residual (pixels) to approximate world-x residual (meters)
+            bg_dx_x = float(bg_residual[0]) * z1 / FX
+            bg_residual_xz = np.array([bg_dx_x, 0.0], dtype=np.float32)
+            return d_x, d_z, bg_residual_xz
         else:
-            dx = (j_cx2 - cx1) / w * VELOCITY_SCALE
-            dy = (j_cy2 - cy1) / h * VELOCITY_SCALE
-            return dx, dy, np.zeros(2, dtype=np.float32)
+            x1, z1 = _pixel_to_xz(float(cx1), z1)
+            x2, z2 = _pixel_to_xz(float(j_cx2), z2)
+            d_x = x2 - x1
+            d_z = z2 - z1
+            return d_x, d_z, np.zeros(2, dtype=np.float32)
     else:
-        cx1, cy1, _, _ = centroids[curr_fid]
-        cx2, cy2, _, _ = centroids[future_fid]
-        dx = (cx2 - cx1) / w * VELOCITY_SCALE
-        dy = (cy2 - cy1) / h * VELOCITY_SCALE
-        return dx, dy, np.zeros(2, dtype=np.float32)
+        cx1, _cy1, _, bh1 = centroids[curr_fid]
+        cx2, _cy2, _, bh2 = centroids[future_fid]
+        z1 = _estimate_depth_from_bbox(float(bh1))
+        z2 = _estimate_depth_from_bbox(float(bh2))
+        x1, z1 = _pixel_to_xz(float(cx1), z1)
+        x2, z2 = _pixel_to_xz(float(cx2), z2)
+        d_x = x2 - x1
+        d_z = z2 - z1
+        return d_x, d_z, np.zeros(2, dtype=np.float32)
 
 
 def _generate_positive_pairs(
@@ -314,7 +359,7 @@ def _generate_positive_pairs(
     For each anchor frame, computes velocity at multiple time scales (short/mid/long).
     Missing scales are zero-filled. A sample is generated if at least one scale is available.
 
-    13D vector: [dx_s, dy_s, dx_m, dy_m, dx_l, dy_l, dw, dh, cx, cy, w, h, snr]
+    13D vector: [dX_s, dZ_s, dX_m, dZ_m, dX_l, dZ_l, dw, dh, X_n, Z_n, w, h, snr]
     """
     h, w = frame_shape
     motion_data = []
@@ -341,8 +386,8 @@ def _generate_positive_pairs(
                         centroids, curr_fid, future_fid, frame_shape,
                         seq, frame_dir, orb_engine,
                     )
-                    dx, dy, bg_res = result
-                    scale_velocities.append((dx, dy))
+                    d_x, d_z, bg_res = result
+                    scale_velocities.append((d_x, d_z))
                     any_valid = True
                     # Use primary scale's bg_residual for SNR
                     if gap_idx == primary_gap_idx:
@@ -367,26 +412,25 @@ def _generate_positive_pairs(
                 dw, dh = 0.0, 0.0
                 _, _, bw1, bh1 = centroids[curr_fid]
 
-            # Spatial features from anchor frame
+            # Spatial features from anchor frame (projected X/Z)
             cx1, cy1, bw1, bh1 = centroids[curr_fid]
-            cx_n, cy_n = cx1 / w, cy1 / h
+            z1 = _estimate_depth_from_bbox(float(bh1))
+            x1, z1 = _pixel_to_xz(float(cx1), z1)
+            x_n, z_n = _normalize_xz(x1, z1)
             bw_n, bh_n = bw1 / w, bh1 / h
 
             # SNR from primary (mid) scale velocity
             mid_dx, mid_dy = scale_velocities[primary_gap_idx]
             obj_speed = np.sqrt(mid_dx ** 2 + mid_dy ** 2)
-            bg_mag = np.sqrt(
-                (best_bg_residual[0] / w * VELOCITY_SCALE) ** 2
-                + (best_bg_residual[1] / h * VELOCITY_SCALE) ** 2
-            )
+            bg_mag = np.sqrt(best_bg_residual[0] ** 2 + best_bg_residual[1] ** 2)
             snr = obj_speed / (bg_mag + 1e-6)
 
-            # 13D: [dx_s, dy_s, dx_m, dy_m, dx_l, dy_l, dw, dh, cx, cy, w, h, snr]
+            # 13D: [dX_s, dZ_s, dX_m, dZ_m, dX_l, dZ_l, dw, dh, X_n, Z_n, w, h, snr]
             motion_vec = np.array([
                 scale_velocities[0][0], scale_velocities[0][1],  # short
                 scale_velocities[1][0], scale_velocities[1][1],  # mid
                 scale_velocities[2][0], scale_velocities[2][1],  # long
-                dw, dh, cx_n, cy_n, bw_n, bh_n, snr,
+                dw, dh, x_n, z_n, bw_n, bh_n, snr,
             ], dtype=np.float32)
 
             motion_data.append(motion_vec)
