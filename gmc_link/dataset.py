@@ -151,38 +151,62 @@ def _collect_expressions(
     data_root: str, sequences: List[str], text_encoder: Any
 ) -> Tuple[List[Dict[str, Any]], Dict[str, np.ndarray], List[str]]:
     """
-    Load JSON expressions and compute language embeddings for ALL sentences.
+    Load JSON expressions and compute language embeddings using batch encoding.
     """
-    print("  Encoding all sentences...")
-    all_expressions = []
-    sentence_embeddings = {}
 
+    print("Encoding all sentences (batch mode)...")
+
+    all_expressions = []
+    raw_data = []
+    sentence_set = set()
+
+    # Step 1: Collect all sentences and metadata
     for seq in sequences:
         expression_dir = os.path.join(data_root, "expression", seq)
         if not os.path.exists(expression_dir):
-            print(f"  Skipping {seq}: no expression dir")
+            print(f"Skipping {seq}: no expression dir")
             continue
 
         exprs = load_refer_kitti_expressions(expression_dir)
         for expr in exprs:
             sentence = expr["sentence"]
 
-            if sentence not in sentence_embeddings:
-                emb = text_encoder.encode(sentence).squeeze(0).cpu().numpy()
-                sentence_embeddings[sentence] = emb
+            raw_data.append({
+                "sentence": sentence,
+                "label": expr["label"],
+                "seq": seq,
+            })
 
-            all_expressions.append(
-                {
-                    "sentence": sentence,
-                    "embedding": sentence_embeddings[sentence],
-                    "label": expr["label"],
-                    "seq": seq,
-                }
-            )
+            sentence_set.add(sentence)
 
-    print(f"  Unique sentences: {len(sentence_embeddings)}")
-    print(f"  Total expressions: {len(all_expressions)}")
-    all_sentences = list(sentence_embeddings.keys())
+    # Step 2: Create a deterministic list of unique sentences
+    all_sentences = sorted(sentence_set)
+    print(f"Unique sentences: {len(all_sentences)}")
+
+    # Step 3: Batch encode all sentences
+    embeddings = text_encoder.encode(
+        all_sentences,
+        batch_size=64,
+        convert_to_tensor=True,
+        show_progress_bar=True
+    )
+
+    # Step 4: Build sentence-to-embedding mapping
+    sentence_embeddings = {
+        s: embeddings[i].cpu().numpy()
+        for i, s in enumerate(all_sentences)
+    }
+
+    # Step 5: Assign embeddings back to each expression
+    for item in raw_data:
+        all_expressions.append({
+            "sentence": item["sentence"],
+            "embedding": sentence_embeddings[item["sentence"]],
+            "label": item["label"],
+            "seq": item["seq"],
+        })
+
+    print(f"Total expressions: {len(all_expressions)}")
 
     return all_expressions, sentence_embeddings, all_sentences
 

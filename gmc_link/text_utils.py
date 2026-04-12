@@ -16,18 +16,38 @@ class TextEncoder:
         self.model = SentenceTransformer(model_name).to(device)
         self.device = device
 
-    def encode(self, text):
+    def encode(
+        self,
+        texts,
+        batch_size=32,
+        convert_to_tensor=True,
+        show_progress_bar=False,
+    ):
         """
-        Encode a single text prompt into an embedding.
-        Args:
-            text: A string containing the natural language description 
-                  (e.g., "The car on the right is moving fast").
-        Returns:
-            A tensor of shape (1, L_dim) representing the encoded language features.
-        """
-        with torch.no_grad():
-            embedding = self.model.encode(text, convert_to_tensor=True)
+        Encode text(s) into embeddings.
 
-        if embedding.ndim == 1:
-            embedding = embedding.unsqueeze(0)  # Ensure shape is (1, L_dim)
-        return embedding.to(self.device)
+        Args:
+            texts: str or List[str]
+            batch_size: batch size for encoding
+            convert_to_tensor: whether to return torch tensor
+            show_progress_bar: whether to show progress bar
+
+        Returns:
+            Tensor of shape (N, L_dim) if batch input
+            Tensor of shape (1, L_dim) if single input
+        """
+
+        with torch.no_grad():
+            embeddings = self.model.encode(
+                texts,
+                batch_size=batch_size,
+                convert_to_tensor=convert_to_tensor,
+                show_progress_bar=show_progress_bar,
+            )
+
+        # Ensure output shape consistency
+        if isinstance(texts, str):
+            if embeddings.ndim == 1:
+                embeddings = embeddings.unsqueeze(0)
+
+        return embeddings.to(self.device)
