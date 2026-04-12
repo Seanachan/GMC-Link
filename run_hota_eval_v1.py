@@ -45,6 +45,7 @@ IKUN_RESULTS_PATH = "iKUN/ikun_results_v1.json"
 
 TRACKEVAL_SCRIPT = "/home/seanachan/TempRMOT/TrackEval/scripts/run_mot_challenge.py"
 OUTPUT_ROOT      = "hota_eval_v1"
+MOTION_ONLY      = False  # set via --motion-only flag
 
 # V1 split
 TRAIN_SEQS = ["0011"]
@@ -225,8 +226,23 @@ def generate_predictions(method: str):
         frame_files = sorted(f for f in os.listdir(frame_dir) if f.endswith(".png"))
 
         expr_dir_v1 = os.path.join(DATA_ROOT, "expression", sequence)
-        expressions = sorted(f.replace(".json", "") for f in os.listdir(expr_dir_v1)
-                             if f.endswith(".json"))
+        all_expressions = sorted(f.replace(".json", "") for f in os.listdir(expr_dir_v1)
+                                 if f.endswith(".json"))
+
+        # Optionally filter to motion-only expressions
+        if MOTION_ONLY:
+            expressions = []
+            for expr in all_expressions:
+                sent = expr.replace("-", " ")
+                ejson = os.path.join(expr_dir_v1, f"{expr}.json")
+                if os.path.exists(ejson):
+                    with open(ejson) as _f:
+                        sent = json.load(_f)["sentence"]
+                if classify_expression(sent) in ("motion", "stationary"):
+                    expressions.append(expr)
+            print(f"  Motion-only filter: {len(expressions)}/{len(all_expressions)} expressions")
+        else:
+            expressions = all_expressions
         print(f"  {len(expressions)} expressions, {len(frame_files)} frames")
 
         gt_template_seq = os.path.join(GT_TEMPLATE, sequence)
@@ -362,11 +378,19 @@ def run_trackeval(method: str, seqmap_path: str, results_dir: str):
 # ── Main ─────────────────────────────────────────────────────────────────
 
 def main():
+    global OUTPUT_ROOT, MOTION_ONLY
     parser = argparse.ArgumentParser()
     parser.add_argument("--method", choices=["baseline", "fusion", "both"], default="both")
     parser.add_argument("--skip-ikun", action="store_true",
                         help="Skip iKUN inference (use existing ikun_results_v1.json)")
+    parser.add_argument("--motion-only", action="store_true",
+                        help="Evaluate only motion/stationary expressions (filter appearance-only)")
     args = parser.parse_args()
+
+    if args.motion_only:
+        MOTION_ONLY = True
+        OUTPUT_ROOT = "hota_eval_v1_motion"
+        print("Motion-only mode: filtering appearance-only expressions")
 
     if not args.skip_ikun:
         run_ikun_inference()
