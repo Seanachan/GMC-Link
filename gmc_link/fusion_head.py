@@ -68,7 +68,7 @@ class FusionHead(nn.Module):
 
 
 def collect_training_data(
-    sequence: str = "0011",
+    sequences: list = None,
     data_root: str = "refer-kitti",
     results_json: str = "iKUN/results.json",
     track_dir: str = "NeuralSORT",
@@ -77,98 +77,120 @@ def collect_training_data(
 ) -> None:
     """
     Collect (ikun_logit, gmc_score, is_motion, label, frame_idx) for all expressions.
+    Supports multiple sequences — frame_idx is made globally unique across sequences.
     """
+    if sequences is None:
+        sequences = ["0011"]
+
     device = "cuda" if torch.cuda.is_available() else "cpu"
-
-    # Load shared resources
     encoder = TextEncoder(device=device)
-    track_path = os.path.join(track_dir, sequence, "car", "predict.txt")
-    ns_tracks = load_neuralsort_tracks(track_path)
 
-    labels_dir = os.path.join(data_root, "KITTI", "labels_with_ids", "image_02", sequence)
-    gt_labels = load_labels_with_ids(labels_dir)
-    img_h, img_w = 375, 1242
+    all_samples = []  # (ikun_logit, gmc_score, is_motion, label, global_frame_idx)
+    global_frame_offset = 0
 
-    frame_dir = os.path.join(data_root, "KITTI", "training", "image_02", sequence)
-    frame_files = sorted(f for f in os.listdir(frame_dir) if f.endswith((".png", ".jpg")))
-    total_frames = len(frame_files)
+    for sequence in sequences:
+        print(f"\n── Sequence {sequence} ──")
 
-    expr_dir = os.path.join(data_root, "expression", sequence)
-    expr_files = sorted(glob.glob(os.path.join(expr_dir, "*.json")))
+        # Load NeuralSORT tracks (merge car + pedestrian)
+        car_path = os.path.join(track_dir, sequence, "car", "predict.txt")
+        ped_path = os.path.join(track_dir, sequence, "pedestrian", "predict.txt")
+        ns_tracks = load_neuralsort_tracks(car_path)
 
-    all_samples = []  # (ikun_logit, gmc_score, is_motion, label, frame_0idx)
+        # Merge pedestrian tracks with offset IDs
+        max_car_id = 0
+        for dets in ns_tracks.values():
+            for oid, *_ in dets:
+                max_car_id = max(max_car_id, oid)
+        if os.path.exists(ped_path):
+            ped_data = np.loadtxt(ped_path, delimiter=",")
+            if ped_data.ndim == 1 and ped_data.size > 0:
+                ped_data = ped_data[np.newaxis]
+            if ped_data.ndim == 2 and ped_data.size > 0:
+                for row in ped_data:
+                    fid = int(row[0])
+                    ns_tracks[fid].append((int(row[1]) + max_car_id, row[2], row[3], row[4], row[5]))
 
-    for expr_file in expr_files:
-        expr_name = os.path.splitext(os.path.basename(expr_file))[0]
+        labels_dir = os.path.join(data_root, "KITTI", "labels_with_ids", "image_02", sequence)
+        gt_labels = load_labels_with_ids(labels_dir)
+        img_h, img_w = 375, 1242
 
-        # Load expression
-        with open(expr_file, "r") as f:
-            expr_json = json.load(f)
-        sentence = expr_json["sentence"]
-        gt_label_map = expr_json["label"]
-        expr_type = classify_expression(sentence)
-        is_motion = 1.0 if expr_type == "motion" else (0.5 if expr_type == "stationary" else 0.0)
+        frame_dir = os.path.join(data_root, "KITTI", "training", "image_02", sequence)
+        frame_files = sorted(f for f in os.listdir(frame_dir) if f.endswith((".png", ".jpg")))
+        total_frames = len(frame_files)
 
-        # Load iKUN scores
-        ikun_scores = load_ikun_scores(results_json, sequence, expr_name)
+        expr_dir = os.path.join(data_root, "expression", sequence)
+        expr_files = sorted(glob.glob(os.path.join(expr_dir, "*.json")))
 
-        # Initialize fresh GMC-Link per expression (needs fresh state)
-        linker = GMCLinkManager(weights_path=weights_path, device=device, lang_dim=384)
-        lang_emb = encoder.encode(sentence)
+        for expr_file in expr_files:
+            expr_name = os.path.splitext(os.path.basename(expr_file))[0]
 
-        print(f"  Collecting: {expr_name} [{expr_type}]")
+            with open(expr_file, "r") as f:
+                expr_json = json.load(f)
+            sentence = expr_json["sentence"]
+            gt_label_map = expr_json["label"]
+            expr_type = classify_expression(sentence)
+            is_motion = 1.0 if expr_type == "motion" else (0.5 if expr_type == "stationary" else 0.0)
 
-        for frame_0idx in range(total_frames):
-            frame_1idx = frame_0idx + 1
-            frame_id_str = str(frame_0idx)
+            ikun_scores = load_ikun_scores(results_json, sequence, expr_name)
 
-            if frame_1idx not in ns_tracks:
-                continue
+            linker = GMCLinkManager(weights_path=weights_path, device=device, lang_dim=384)
+            lang_emb = encoder.encode(sentence)
 
-            frame_path = os.path.join(frame_dir, frame_files[frame_0idx])
-            frame_img = cv2.imread(frame_path)
-            if frame_img is None:
-                continue
+            print(f"  Collecting: {expr_name} [{expr_type}]")
 
-            detections = ns_tracks[frame_1idx]
-            active_tracks = []
-            track_boxes_xyxy: Dict[int, List[float]] = {}
+            for frame_0idx in range(total_frames):
+                frame_1idx = frame_0idx + 1
+                frame_id_str = str(frame_0idx)
 
-            for obj_id, x, y, w, h in detections:
-                active_tracks.append(DummyTrack(obj_id, x, y, w, h))
-                track_boxes_xyxy[obj_id] = [x, y, x + w, y + h]
-
-            det_array = (
-                np.array([[x, y, x + w, y + h] for _, x, y, w, h in detections])
-                if detections else None
-            )
-
-            gmc_scores, _ = linker.process_frame(
-                frame_img, active_tracks, lang_emb, detections=det_array
-            )
-
-            # GT matching
-            gt_track_ids = gt_label_map.get(frame_id_str, [])
-            if gt_track_ids and frame_0idx in gt_labels:
-                gt_bboxes = []
-                for det in gt_labels[frame_0idx]:
-                    if det["track_id"] in gt_track_ids:
-                        bbox = normalized_to_pixel(
-                            det["x1_n"], det["y1_n"], det["w_n"], det["h_n"], img_w, img_h
-                        )
-                        gt_bboxes.append(bbox)
-                matched_ids = match_tracks_to_gt(track_boxes_xyxy, gt_bboxes, iou_threshold=0.3)
-            else:
-                matched_ids = set()
-
-            for obj_id in track_boxes_xyxy:
-                ikun_logit = ikun_scores.get(frame_1idx, {}).get(obj_id, None)
-                if ikun_logit is None:
+                if frame_1idx not in ns_tracks:
                     continue
-                gmc_prob = gmc_scores.get(obj_id, 0.0)
-                label = 1.0 if obj_id in matched_ids else 0.0
 
-                all_samples.append((ikun_logit, gmc_prob, is_motion, label, frame_0idx))
+                frame_path = os.path.join(frame_dir, frame_files[frame_0idx])
+                frame_img = cv2.imread(frame_path)
+                if frame_img is None:
+                    continue
+
+                detections = ns_tracks[frame_1idx]
+                active_tracks = []
+                track_boxes_xyxy: Dict[int, List[float]] = {}
+
+                for obj_id, x, y, w, h in detections:
+                    active_tracks.append(DummyTrack(obj_id, x, y, w, h))
+                    track_boxes_xyxy[obj_id] = [x, y, x + w, y + h]
+
+                det_array = (
+                    np.array([[x, y, x + w, y + h] for _, x, y, w, h in detections])
+                    if detections else None
+                )
+
+                gmc_scores, _ = linker.process_frame(
+                    frame_img, active_tracks, lang_emb, detections=det_array
+                )
+
+                gt_track_ids = gt_label_map.get(frame_id_str, [])
+                if gt_track_ids and frame_0idx in gt_labels:
+                    gt_bboxes = []
+                    for det in gt_labels[frame_0idx]:
+                        if det["track_id"] in gt_track_ids:
+                            bbox = normalized_to_pixel(
+                                det["x1_n"], det["y1_n"], det["w_n"], det["h_n"], img_w, img_h
+                            )
+                            gt_bboxes.append(bbox)
+                    matched_ids = match_tracks_to_gt(track_boxes_xyxy, gt_bboxes, iou_threshold=0.3)
+                else:
+                    matched_ids = set()
+
+                for obj_id in track_boxes_xyxy:
+                    ikun_logit = ikun_scores.get(frame_1idx, {}).get(obj_id, None)
+                    if ikun_logit is None:
+                        continue
+                    gmc_prob = gmc_scores.get(obj_id, 0.0)
+                    label = 1.0 if obj_id in matched_ids else 0.0
+
+                    all_samples.append((ikun_logit, gmc_prob, is_motion, label,
+                                        global_frame_offset + frame_0idx))
+
+        global_frame_offset += total_frames
 
     samples = np.array(all_samples, dtype=np.float32)
     np.savez_compressed(output_path, samples=samples)
@@ -367,21 +389,46 @@ def load_fusion_head(
 
 
 if __name__ == "__main__":
+    v1_mode = "--v1" in sys.argv
+
+    if v1_mode:
+        # V1 clean split: train on 0005+0013, evaluate on 0011
+        data_path = "gmc_link/fusion_train_data_v1.npz"
+        weights_out = "gmc_link/fusion_head_weights_v1.pth"
+        collect_kwargs = dict(
+            sequences=["0005", "0013"],
+            data_root="refer-kitti",
+            results_json="iKUN/ikun_results_v1.json",
+            track_dir="NeuralSORT",
+            weights_path="gmc_link_weights_v1train.pth",
+            output_path=data_path,
+        )
+        print("[V1 mode] Train on 0005+0013, eval on 0011")
+    else:
+        data_path = "gmc_link/fusion_train_data.npz"
+        weights_out = "gmc_link/fusion_head_weights.pth"
+        collect_kwargs = dict(
+            sequences=["0011"],
+            data_root="refer-kitti",
+            results_json="iKUN/results.json",
+            output_path=data_path,
+        )
+
     if "--collect" in sys.argv:
         print("Collecting training data...")
-        collect_training_data()
+        collect_training_data(**collect_kwargs)
     elif "--train" in sys.argv:
         print("Training fusion head...")
-        train_fusion_head()
+        train_fusion_head(data_path=data_path, output_path=weights_out)
     elif "--eval" in sys.argv:
         print("Evaluating fusion head...")
-        data = np.load("gmc_link/fusion_train_data.npz")["samples"]
+        data = np.load(data_path)["samples"]
         total_frames = int(data[:, 4].max()) + 1
         split_frame = int(total_frames * 0.7)
         val_data = data[data[:, 4] >= split_frame]
-        state = torch.load("gmc_link/fusion_head_weights.pth", map_location="cpu")
+        state = torch.load(weights_out, map_location="cpu")
         model = FusionHead(input_dim=3)
         model.load_state_dict(state["model"])
         _evaluate_model(model, val_data, state["threshold"])
     else:
-        print("Usage: python gmc_link/fusion_head.py --collect|--train|--eval")
+        print("Usage: python gmc_link/fusion_head.py [--v1] --collect|--train|--eval")

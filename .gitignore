@@ -224,3 +224,8 @@ eval_*.txt
 train_log*.txt
 final_eval.txt
 test_mtime.txt
+/hota_eval*/
+/iKUN_baseline_results/
+
+# Generated data
+*.npz
