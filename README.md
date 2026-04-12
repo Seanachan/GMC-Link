@@ -12,10 +12,10 @@ It bridges the gap between **object motion** (geometry) and **language** (semant
 2. **Encoding that motion** into an 13D geometric spatio-temporal vector (`[dx_s, dy_s, dx_m , dy_m ,dx_l , dy_l ,dw, dh, cx, cy, w, h ,snr]`).
    The motion representation is designed to explicitly capture both kinematic behavior and spatial context:
 
-   - Multi-scale velocity (s/m/l) improves robustness under different frame gaps and noise levels  
-   - (dw, dh) captures scale changes (e.g., approaching / receding objects)  
-   - (cx, cy, w, h) provides spatial context for handling parallax  
-   - snr measures motion reliability and suppresses noisy tracks 
+   - Multi-scale velocity (s/m/l) improves robustness under different frame gaps and noise levels
+   - (dw, dh) captures scale changes (e.g., approaching / receding objects)
+   - (cx, cy, w, h) provides spatial context for handling parallax
+   - snr measures motion reliability and suppresses noisy tracks
 3. **Aligning motion with language** using a learned neural network to produce a match score.
 
 ---
@@ -34,28 +34,30 @@ Natural Language Prompt ──► SentenceTransformer Embedding ─────�
 
 | Module                    | File                                  | Role                                                                                                                                                                                                      |
 | ------------------------- | ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **GlobalMotion**          | `core.py`                             | Detects camera movement via ORB feature matching and RANSAC homography estimation. Return the Homography matrix for warping frames.                                                 |
+| **GlobalMotion**          | `core.py`                             | Detects camera movement via ORB feature matching and RANSAC homography estimation. Returns the homography matrix and background warp residual.                                                 |
 | **Utilities**             | `utils.py`                            | `warp_points()` transforms previous positions into the current frame's coordinate system. `normalize_velocity()` makes velocities scale-invariant. `MotionBuffer` applies EMA smoothing to reduce jitter. |
-| **MotionLanguageAligner** | `alignment.py`                        | A small MLP that projects an 8D spatio-temporal vector and a 384-dim language embedding into a shared space, then computes a similarity score via dot product.                                            |
+| **MotionLanguageAligner** | `alignment.py`                        | A dual MLP that projects a 13D spatio-temporal vector and a 384-dim language embedding into a shared 256D space, then computes cosine similarity.                                            |
 | **TextEncoder**           | `text_utils.py`                       | Wraps `all-MiniLM-L6-v2` (SentenceTransformers) to encode natural language prompts into 384-dim embeddings.                                                                                               |
-| **GMCLinkManager**        | `manager.py`                          | The orchestrator. For each frame: runs GMC, computes compensated velocities for all tracks, and queries the aligner for alignment scores.                                                                 |
+| **GMCLinkManager**        | `manager.py`                          | The orchestrator. Maintains cumulative homographies, computes multi-scale ego-compensated residual velocities, and queries the aligner for alignment scores.                                                                 |
 | **Fusion Head**           | `fusion_head.py`                      | Learned MLP that fuses iKUN CLIP logits with GMC-Link motion scores for the best overall accuracy (+8.4% F1 over iKUN alone).                                                                             |
-| **Dataset & Training**    | `dataset.py`, `train.py`, `losses.py` | Builds (motion, language) training pairs from the [Refer-KITTI](https://github.com/wudongming97/RMOT) dataset using InfoNCE loss with False-Negative Masking.                                              |
+| **Dataset & Training**    | `dataset.py`, `train.py`, `losses.py` | Builds (motion, language) training pairs from [Refer-KITTI V2](https://github.com/wudongming97/RMOT) using symmetric InfoNCE loss.                                              |
 | **Demo Inference**        | `demo_inference.py`                   | End-to-end evaluation on iKUN + GMC-Link fusion across all expressions in a sequence.                                                                                                                      |
 
 ---
 
 ## How It Works (Step by Step)
 
-1. **Feature-based GMC**: Between consecutive frames, ORB/SIFT keypoints are matched on the _background_ (tracked objects are masked out). A homography matrix is estimated via RANSAC to represent pure camera motion.
+1. **Feature-based GMC**: Between consecutive frames, ORB keypoints are matched on the _background_ (tracked objects are masked out). A homography matrix `H` is estimated via RANSAC to represent pure camera motion.
 
-2. **Motion Compensation**: Each track's previous centroid is warped through the homography into the current frame's coordinate system. The difference `current_pos - warped_prev_pos` yields **world velocity** — the object's true motion with camera movement canceled out.
+2. **Cumulative Homography**: Homographies are composed cumulatively (`H[t-k→t] = H[t-1→t] @ ... @ H[t-k→t-k+1]`). Original centroid coordinates are stored unmodified and warped once when computing velocity — more numerically stable than iterative warping.
 
-3. **Normalization & Smoothing**: Velocities are normalized by frame dimensions (scale-invariance) and smoothed with an exponential moving average (temporal stability).
+3. **Residual Velocity**: For each tracked object, `residual_v = raw_v - ego_v` where `ego_v = warp(old_centroid, H) - old_centroid`. This subtracts camera motion, isolating true object movement. Computed at three temporal scales (gap=2, 5, 10 frames) to capture different motion patterns.
 
-4. **Language Encoding**: The user's text prompt (e.g., _"moving cars"_) is encoded once into a 384-dim vector using a SentenceTransformer.
+4. **13D Motion Vector**: `[res_dx_s, res_dy_s, res_dx_m, res_dy_m, res_dx_l, res_dy_l, dw, dh, cx, cy, w, h, snr]` — multi-scale residual velocity (6D), bbox changes (2D), spatial position (4D), and signal-to-noise ratio (1D).
 
-5. **Alignment Scoring**: The MLP aligner projects the 13D motion/geometry vector and the 384-dim language vector into a shared 256-dim embedding space. A dot product + sigmoid produces a score in `[0, 1]` indicating how well the object's kinematics matches the description.
+5. **Language Encoding**: The user's text prompt (e.g., _"moving cars"_) is encoded once into a 384-dim vector using a SentenceTransformer.
+
+6. **Alignment Scoring**: The dual MLP aligner projects the 13D motion vector and the 384-dim language vector into a shared 256-dim embedding space. Cosine similarity + sigmoid produces a score in `[0, 1]` indicating how well the object's kinematics matches the description.
 
 ---
 
@@ -125,6 +127,26 @@ python gmc_link/demo_inference.py --multi  # defaults to learned fusion
 
 ---
 
+## Ablation Study: Motion Vector Design
+
+Progressive feature addition evaluated on seq 0011, expr "moving-cars" (score separation = GT avg − NonGT avg). 3 runs each for statistical reliability.
+
+| Config | Dim | Features | Mean Sep | Std |
+|--------|-----|----------|----------|-----|
+| A: 8D no-ego | 8 | `[raw_dx, raw_dy, dw, dh, cx, cy, w, h]` | +0.344 | ±0.012 |
+| B: 8D ego | 8 | `[res_dx, res_dy, dw, dh, cx, cy, w, h]` | +0.354 | ±0.031 |
+| C: 12D multi-scale | 12 | `[res_dx×3scales, dw, dh, cx, cy, w, h]` | **+0.401** | ±0.010 |
+| **D: 13D full** | **13** | **`[..., snr]`** | **+0.395** | **±0.007** |
+| E: 10D raw+ego | 10 | `[raw_dx, raw_dy, ego_dx, ego_dy, dw, dh, cx, cy, w, h]` | +0.351 | ±0.029 |
+
+**Key findings:**
+- **Multi-scale temporal (B→C, +0.047)** is the dominant improvement — short/mid/long windows capture different motion patterns.
+- **Ego compensation (A→B, +0.010)** provides a small improvement but high variance.
+- **SNR (C→D)** doesn't improve mean separation but **reduces variance** (±0.010 → ±0.007), stabilizing predictions.
+- **13D** is chosen as the final config for its best stability.
+
+---
+
 ## iKUN Integration & Learned Fusion (Best Results)
 
 When paired with [iKUN](https://github.com/dyhBUPT/iKUN) (a CLIP-based RMOT tracker), the **InfoNCE-trained aligner + learned fusion head** achieves the best overall accuracy:
@@ -136,9 +158,33 @@ When paired with [iKUN](https://github.com/dyhBUPT/iKUN) (a CLIP-based RMOT trac
 | iKUN + BCE Fusion | 0.6252 | 0.4792 | 0.6972 | 0.5895 | +1.7% |
 | **iKUN + InfoNCE Fusion** | **0.7328** | **0.5578** | **0.7134** | **0.6569** | **+8.4%** |
 
-The fusion head is a tiny MLP (`[ikun_logit, gmc_score, is_motion_flag] → 32 → 16 → 1`). The key breakthrough is training the GMC-Link aligner with InfoNCE+FNM instead of BCE — the structured contrastive embedding space produces far more discriminative motion scores, enabling +8.4% Overall F1 improvement over iKUN alone.
+### HOTA Evaluation (Refer-KITTI V1, seq 0011)
+
+| Metric | iKUN Baseline | iKUN + GMC-Link Fusion | Delta |
+|--------|--------------|------------------------|-------|
+| **HOTA** | 41.29 | **44.29** | **+3.00** |
+| **DetA** | 29.60 | **33.59** | **+3.99** |
+| **AssA** | 57.71 | **58.57** | +0.86 |
+| **MOTA** | 21.59 | **29.38** | **+7.79** |
+| **IDF1** | 52.18 | **57.07** | **+4.89** |
+
+The fusion head is a tiny MLP (`[ikun_logit, gmc_score, is_motion_flag] → 32 → 16 → 1`). The key breakthrough is training the GMC-Link aligner with InfoNCE instead of BCE — the structured contrastive embedding space produces far more discriminative motion scores, enabling +8.4% Overall F1 improvement over iKUN alone.
 
 > **Note:** Feature-level injection of motion embeddings into iKUN's CLIP visual pipeline was also explored (Stage 3) but causes catastrophic regression (−21.7% F1) because additive injection corrupts the CLIP representation. Decision-level fusion is the correct approach.
+
+### HOTA Evaluation (Refer-KITTI V2, Motion Expressions, Oracle Tracking)
+
+Standalone GMC-Link evaluation on the V2 test set (sequences 0016–0020), using GT tracks as oracle detections to isolate motion reasoning from tracker errors. Only motion-related expressions (793 out of 2180) are evaluated.
+
+| Metric | Baseline (all positive) | GMC-Link (τ=0.5) | Delta |
+|--------|------------------------|-------------------|-------|
+| **HOTA** | 45.04 | 38.04 | -7.00 |
+| **MOTA** | -244.46 | **-40.87** | **+203.6** |
+| **Recall** | 100.00 | 39.90 | -60.10 |
+| **Precision** | 22.50 | **33.07** | **+10.6** |
+| **IDF1** | 36.73 | 36.16 | -0.57 |
+
+The baseline naively predicts all tracked objects as positive (100% recall, terrible precision). GMC-Link acts as a motion discriminator, improving MOTA by +203 points and precision by +10.6pp by filtering non-matching objects. The lower recall (39.9%) is expected — GMC-Link is designed to be fused with a vision model (iKUN) that provides appearance-based recall, while GMC-Link adds motion discrimination.
 
 ---
 

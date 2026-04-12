@@ -175,7 +175,14 @@ def train_loop(
 def main() -> None:
     """
     Main training execution block.
+
+    Set TRAIN_SPLIT env var to choose dataset:
+      TRAIN_SPLIT=v2  (default) — Refer-KITTI V2 seqs 0000-0015 → gmc_link_weights.pth
+      TRAIN_SPLIT=v1            — Refer-KITTI V1 seq 0011 only   → gmc_link_weights_v1train.pth
     """
+    import os as _os
+    train_split = _os.environ.get("TRAIN_SPLIT", "v2").lower()
+
     # --- Configuration ---
     device = torch.device(
         "cuda"
@@ -185,31 +192,33 @@ def main() -> None:
     print(f"Device: {device}")
 
     learning_rate = 1e-3
-    batch_size = 512  # Balanced: enough in-batch negatives without diluting unique classes
     epochs = 100
     lang_dim = 384
 
-    # Refer-KITTI V2 data path and official train/test split
-    # Train: seqs 0000-0015 | Test: seqs 0016-0020
-    data_root = "/home/seanachan/data/Dataset/refer-kitti-v2"
-    sequences = [
-        "0000",
-        "0001",
-        "0002",
-        "0003",
-        "0004",
-        "0005",
-        "0006",
-        "0007",
-        "0008",
-        "0009",
-        "0010",
-        "0011",
-        "0012",
-        "0013",
-        "0014",
-        "0015",
-    ]
+    if train_split == "v1":
+        # Refer-KITTI V1: train on official train split, eval on val (0005, 0011, 0013)
+        # Mirrors iKUN's VIDEOS['train'] — excludes 0005, 0011, 0013 (val/test seqs)
+        data_root = "/home/seanachan/data/Dataset/refer-kitti"
+        sequences = [
+            "0001", "0002", "0003", "0004", "0006",
+            "0007", "0008", "0009", "0010", "0012",
+            "0014", "0015", "0016", "0018", "0020",
+        ]
+        batch_size = 256
+        save_path = "gmc_link_weights_v1train.pth"
+        print("Training on Refer-KITTI V1 train split → " + save_path)
+    else:
+        # Refer-KITTI V2 data path and official train/test split
+        # Train: seqs 0000-0015 | Test: seqs 0016-0020
+        data_root = "/home/seanachan/data/Dataset/refer-kitti-v2"
+        sequences = [
+            "0000", "0001", "0002", "0003", "0004", "0005",
+            "0006", "0007", "0008", "0009", "0010", "0011",
+            "0012", "0013", "0014", "0015",
+        ]
+        batch_size = 512  # Balanced: enough in-batch negatives without diluting unique classes
+        save_path = "gmc_link_weights.pth"
+        print("Training on Refer-KITTI V2, seqs 0000-0015 → " + save_path)
 
     # --- Pipeline ---
     dataloader = setup_data(device, data_root, sequences, batch_size)
@@ -221,7 +230,8 @@ def main() -> None:
         device, lang_dim, learning_rate, epochs
     )
 
-    train_loop(model, dataloader, optimizer, scheduler, criterion, device, epochs)
+    train_loop(model, dataloader, optimizer, scheduler, criterion, device, epochs,
+               save_path=save_path)
 
 
 if __name__ == "__main__":
