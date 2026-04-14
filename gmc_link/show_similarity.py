@@ -20,8 +20,8 @@ import os
 import sys
 import json
 from typing import Dict, List, Tuple, Any
-
 import cv2
+from PIL import Image
 import torch
 import numpy as np
 
@@ -36,7 +36,7 @@ from gmc_link.text_utils import TextEncoder
 # =========================
 TRACK_PATH = "/home/jkaiwang/Desktop/GMC-Link/NeuralSORT/0011/car/predict.txt"
 IMAGE_DIR = "/home/jkaiwang/Desktop/GMC-Link/refer-kitti/KITTI/training/image_02/0011"
-GT_DIR = "/home/jkaiwang/Desktop/GMC-Link/refer-kitti/KITTI/training/image_02/0011"
+GT_DIR = "/home/jkaiwang/Desktop/GMC-Link/refer-kitti/gt_template/0011"
 WEIGHTS_PATH = "gmc_link_weights.pth"
 
 EXPRESSIONS = [
@@ -58,6 +58,34 @@ def safe_mean(values: List[float]) -> float:
 
 def safe_std(values: List[float]) -> float:
     return float(np.std(values)) if values else 0.0
+
+def compute_iou(boxA, boxB):
+    xA = max(boxA[0], boxB[0])
+    yA = max(boxA[1], boxB[1])
+    xB = min(boxA[2], boxB[2])
+    yB = min(boxA[3], boxB[3])
+
+    inter = max(0, xB - xA) * max(0, yB - yA)
+    if inter == 0:
+        return 0.0
+
+    areaA = (boxA[2]-boxA[0]) * (boxA[3]-boxA[1])
+    areaB = (boxB[2]-boxB[0]) * (boxB[3]-boxB[1])
+
+    return inter / (areaA + areaB - inter)
+
+def read_image(image_path: str) -> np.ndarray:
+    image = cv2.imread(image_path)
+    if image is None:
+        raise FileNotFoundError(f"Image not found: {image_path}")
+    return image
+
+    with Image.open(image_path) as img:
+        return np.array(img.convert("RGB"), dtype=np.uint8)
+
+    raise ImportError(
+        "No image backend available. Install opencv-python or Pillow to read images."
+    )
 
 
 def load_neuralsort_tracks(track_path: str) -> Dict[int, List[Tuple[int, float, float, float, float]]]:
@@ -88,33 +116,36 @@ def load_neuralsort_tracks(track_path: str) -> Dict[int, List[Tuple[int, float, 
     return tracks_by_frame
 
 
-def load_gt_labels(expressions: List[str], gt_dir: str) -> Dict[str, Dict[str, List[int]]]:
-    """
-    Load GT json for each expression.
-
-    Expected structure:
-        {
-            expr: {
-                "0": [1, 2],
-                "5": [4],
-                ...
-            }
-        }
-    """
-    gt_labels_dict: Dict[str, Dict[str, List[int]]] = {}
+def load_gt_labels(gt_dir: str, expressions: List[str]):
+    gt_labels_dict = {}
 
     for expr in expressions:
-        gt_path = os.path.join(gt_dir, f"{expr}.json")
+        gt_path = os.path.join(gt_dir, expr, "gt.txt")
+
         if not os.path.exists(gt_path):
-            raise FileNotFoundError(f"GT file not found: {gt_path}")
+            raise FileNotFoundError(f"{gt_path} not found")
 
-        with open(gt_path, "r") as f:
-            data = json.load(f)
+        data = np.loadtxt(gt_path, delimiter=",")
 
-        if "label" not in data:
-            raise KeyError(f"'label' key missing in {gt_path}")
+        if data.ndim == 1:
+            data = np.expand_dims(data, axis=0)
 
-        gt_labels_dict[expr] = data["label"]
+        frame_dict = {}
+
+        for row in data:
+            frame_id = int(row[0]) - 1   # ⚠️ 對齊 tracking
+            obj_id = int(row[1])
+
+            x, y, w, h = row[2], row[3], row[4], row[5]
+
+            bbox = [x, y, x + w, y + h]
+
+            frame_dict.setdefault(frame_id, []).append({
+                "id": obj_id,
+                "bbox": bbox
+            })
+
+        gt_labels_dict[expr] = frame_dict
 
     return gt_labels_dict
 
@@ -144,7 +175,7 @@ def evaluate_similarity():
     manager = GMCLinkManager(weights_path=WEIGHTS_PATH, device=device)
 
     tracks_by_frame = load_neuralsort_tracks(TRACK_PATH)
-    gt_labels_dict = load_gt_labels(EXPRESSIONS, GT_DIR)
+    gt_labels_dict = load_gt_labels(GT_DIR, EXPRESSIONS)
 
     # Pre-encode all expressions once
     expr_embeddings: Dict[str, torch.Tensor] = {}
@@ -165,10 +196,16 @@ def evaluate_similarity():
         print(f"Processing frame {frame_id} ({idx + 1}/{total_frames})...")
 
         image_path = os.path.join(IMAGE_DIR, f"{frame_id:06d}.png")
-        frame = cv2.imread(image_path)
-        if frame is None:
+        try:
+            frame = read_image(image_path)
+        except FileNotFoundError:
             print(f"  Skipping frame {frame_id}: image not found")
             continue
+        except ImportError as exc:
+            raise RuntimeError(
+                "Unable to load images because neither OpenCV nor Pillow is installed. "
+                "Install opencv-python or Pillow and rerun."
+            ) from exc
 
         raw_tracks = tracks_by_frame.get(frame_id, [])
         if not raw_tracks:
@@ -193,8 +230,24 @@ def evaluate_similarity():
                 update_state=update_state,
             )
 
-            gt_ids = set(gt_labels_dict[expr].get(str(frame_id), []))
-            valid_gt_ids = gt_ids.intersection(track_ids_in_frame)
+            gt_items = gt_labels_dict[expr].get(frame_id, [])
+            matched_ids = set()
+
+            for gt in gt_items:
+                gt_box = gt["bbox"]
+                best_iou = 0
+                best_id = None
+
+                for t in active_tracks:
+                    iou = compute_iou(gt_box, t.bbox)
+                    if iou > best_iou:
+                        best_iou = iou
+                        best_id = t.id
+
+                if best_iou > 0.5:
+                    matched_ids.add(best_id)
+
+            valid_gt_ids = matched_ids
 
             if DEBUG_PRINT_IDS:
                 print(f"  [{expr}] track_ids={sorted(track_ids_in_frame)}")
