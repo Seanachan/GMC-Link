@@ -18,6 +18,9 @@ import torch
 from torch import optim
 from torch import nn
 from torch.utils.data import DataLoader
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
 
 from gmc_link.losses import AlignmentLoss
 from gmc_link.alignment import MotionLanguageAligner
@@ -136,6 +139,43 @@ def setup_model_and_optimizer(
     return model, criterion, optimizer, scheduler
 
 
+def save_training_curves(
+    loss_history: list,
+    accuracy_history: list,
+    lr_history: list,
+    save_path: str,
+) -> None:
+    """Save loss, accuracy, and LR curves to a PNG alongside the weights."""
+    plot_path = save_path.replace(".pth", "_curves.png")
+
+    fig, axes = plt.subplots(1, 3, figsize=(15, 4.5))
+    fig.suptitle(f"Training Curves — {os.path.basename(save_path)}", fontsize=12, fontweight="bold")
+    epochs = range(1, len(loss_history) + 1)
+
+    axes[0].plot(epochs, loss_history, color="#e74c3c", linewidth=1.5)
+    axes[0].set_xlabel("Epoch")
+    axes[0].set_ylabel("InfoNCE Loss")
+    axes[0].set_title("Loss")
+    axes[0].grid(True, alpha=0.3)
+
+    axes[1].plot(epochs, [a * 100 for a in accuracy_history], color="#27ae60", linewidth=1.5)
+    axes[1].set_xlabel("Epoch")
+    axes[1].set_ylabel("Accuracy (%)")
+    axes[1].set_title("Retrieval Accuracy (M→L)")
+    axes[1].grid(True, alpha=0.3)
+
+    axes[2].plot(epochs, lr_history, color="#3498db", linewidth=1.5)
+    axes[2].set_xlabel("Epoch")
+    axes[2].set_ylabel("Learning Rate")
+    axes[2].set_title("LR Schedule")
+    axes[2].grid(True, alpha=0.3)
+
+    plt.tight_layout()
+    plt.savefig(plot_path, dpi=150, bbox_inches="tight")
+    plt.close(fig)
+    print(f"Training curves saved to {plot_path}")
+
+
 def train_loop(
     model: MotionLanguageAligner,
     dataloader: DataLoader,
@@ -150,11 +190,19 @@ def train_loop(
     Execute the main training loop across all epochs and save the final weights.
     """
     print(f"Starting training on {device} | {len(dataloader)} batches/epoch...")
+    loss_history = []
+    accuracy_history = []
+    lr_history = []
+
     for epoch in tqdm(range(epochs)):
         avg_loss, accuracy = train_one_epoch(
             model, dataloader, optimizer, criterion, device
         )
         scheduler.step()
+
+        loss_history.append(avg_loss)
+        accuracy_history.append(accuracy)
+        lr_history.append(scheduler.get_last_lr()[0])
 
         if (epoch + 1) % 20 == 0:
             current_lr = scheduler.get_last_lr()[0]
@@ -171,17 +219,45 @@ def train_loop(
     torch.save(save_dict, save_path)
     print(f"Training complete. Weights saved to {save_path} (τ={criterion.temperature:.4f})")
 
+    # Save training curves
+    save_training_curves(loss_history, accuracy_history, lr_history, save_path)
+
+
+# ── Split definitions (sequences only, no paths) ─────────────────────
+V1_TRAIN_SEQS = [
+    "0001", "0002", "0003", "0004", "0006",
+    "0007", "0008", "0009", "0010", "0012",
+    "0014", "0015", "0016", "0018", "0020",
+]
+V2_TRAIN_SEQS = [
+    "0000", "0001", "0002", "0003", "0004", "0005",
+    "0006", "0007", "0008", "0009", "0010", "0011",
+    "0012", "0013", "0014", "0015",
+]
+
 
 def main() -> None:
     """
-    Main training execution block.
+    Main training execution block. All paths configurable via CLI args.
 
-    Set TRAIN_SPLIT env var to choose dataset:
-      TRAIN_SPLIT=v2  (default) — Refer-KITTI V2 seqs 0000-0015 → gmc_link_weights.pth
-      TRAIN_SPLIT=v1            — Refer-KITTI V1 seq 0011 only   → gmc_link_weights_v1train.pth
+    Usage:
+        python -m gmc_link.train --split v1 --data-root refer-kitti
+        python -m gmc_link.train --split v2 --data-root refer-kitti-v2
     """
-    import os as _os
-    train_split = _os.environ.get("TRAIN_SPLIT", "v2").lower()
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Train GMC-Link MotionLanguageAligner")
+    parser.add_argument("--split", default=os.environ.get("TRAIN_SPLIT", "v2").lower(),
+                        choices=["v1", "v2"], help="Dataset split (default: v2, or TRAIN_SPLIT env)")
+    parser.add_argument("--data-root", default=None,
+                        help="Path to Refer-KITTI dataset (default: refer-kitti for v1, refer-kitti-v2 for v2)")
+    parser.add_argument("--save-path", default=None,
+                        help="Output weights path (default: gmc_link_weights_v1train.pth / gmc_link_weights.pth)")
+    parser.add_argument("--batch-size", type=int, default=None,
+                        help="Batch size (default: 256 for v1, 512 for v2)")
+    parser.add_argument("--epochs", type=int, default=100)
+    parser.add_argument("--lr", type=float, default=1e-3, help="Learning rate")
+    args = parser.parse_args()
 
     # --- Configuration ---
     device = torch.device(
@@ -191,34 +267,22 @@ def main() -> None:
     )
     print(f"Device: {device}")
 
-    learning_rate = 1e-3
-    epochs = 100
     lang_dim = 384
 
-    if train_split == "v1":
-        # Refer-KITTI V1: train on official train split, eval on val (0005, 0011, 0013)
-        # Mirrors iKUN's VIDEOS['train'] — excludes 0005, 0011, 0013 (val/test seqs)
-        data_root = "/home/seanachan/data/Dataset/refer-kitti"
-        sequences = [
-            "0001", "0002", "0003", "0004", "0006",
-            "0007", "0008", "0009", "0010", "0012",
-            "0014", "0015", "0016", "0018", "0020",
-        ]
-        batch_size = 256
-        save_path = "gmc_link_weights_v1train.pth"
-        print("Training on Refer-KITTI V1 train split → " + save_path)
+    if args.split == "v1":
+        data_root = args.data_root or "refer-kitti"
+        sequences = V1_TRAIN_SEQS
+        batch_size = args.batch_size or 256
+        save_path = args.save_path or "gmc_link_weights_v1train.pth"
+        print(f"Training on Refer-KITTI V1 train split → {save_path}")
     else:
-        # Refer-KITTI V2 data path and official train/test split
-        # Train: seqs 0000-0015 | Test: seqs 0016-0020
-        data_root = "/home/seanachan/data/Dataset/refer-kitti-v2"
-        sequences = [
-            "0000", "0001", "0002", "0003", "0004", "0005",
-            "0006", "0007", "0008", "0009", "0010", "0011",
-            "0012", "0013", "0014", "0015",
-        ]
-        batch_size = 512  # Balanced: enough in-batch negatives without diluting unique classes
-        save_path = "gmc_link_weights.pth"
-        print("Training on Refer-KITTI V2, seqs 0000-0015 → " + save_path)
+        data_root = args.data_root or "refer-kitti-v2"
+        sequences = V2_TRAIN_SEQS
+        batch_size = args.batch_size or 512
+        save_path = args.save_path or "gmc_link_weights.pth"
+        print(f"Training on Refer-KITTI V2, seqs 0000-0015 → {save_path}")
+
+    print(f"  data_root={data_root}  batch_size={batch_size}  epochs={args.epochs}  lr={args.lr}")
 
     # --- Pipeline ---
     dataloader = setup_data(device, data_root, sequences, batch_size)
@@ -227,10 +291,10 @@ def main() -> None:
         return
 
     model, criterion, optimizer, scheduler = setup_model_and_optimizer(
-        device, lang_dim, learning_rate, epochs
+        device, lang_dim, args.lr, args.epochs
     )
 
-    train_loop(model, dataloader, optimizer, scheduler, criterion, device, epochs,
+    train_loop(model, dataloader, optimizer, scheduler, criterion, device, args.epochs,
                save_path=save_path)
 
 

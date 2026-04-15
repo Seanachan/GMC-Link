@@ -94,6 +94,11 @@ class GMCLinkManager:
             language_embedding: (1, L_dim) Tensor representing the language prompt.
             detections: (N, 4) array of bounding boxes for ego-motion masking.
             update_state: Whether to update internal state (for multiple evaluations per frame)
+
+        Returns:
+            scores_dict: {track_id: smoothed alignment score} (sigmoid, EMA-smoothed)
+            velocities_dict: {track_id: 13D motion vector}
+            cosine_dict: {track_id: EMA-smoothed cosine similarity} (raw cosine, asymmetric EMA)
         """
         if not active_tracks:
             return {}, {}, {}
