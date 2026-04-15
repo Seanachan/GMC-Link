@@ -233,3 +233,11 @@ test_mtime.txt
 
 # TensorBoard
 events.out.tfevents.*
+
+# cached 
+cache/
+cache.*
+
+# image 
+gmc_link_weights_v1train_curves_original.png
+gmc_link_weights_v1train_curves.png

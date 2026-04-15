@@ -13,7 +13,7 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 from typing import Tuple, Optional
 from tqdm import tqdm
-
+import os
 import torch
 from torch import optim
 from torch import nn
@@ -26,7 +26,6 @@ from gmc_link.losses import AlignmentLoss
 from gmc_link.alignment import MotionLanguageAligner
 from gmc_link.dataset import MotionLanguageDataset, collate_fn, build_training_data
 from gmc_link.text_utils import TextEncoder
-
 
 def train_one_epoch(
     model: MotionLanguageAligner,
@@ -91,13 +90,37 @@ def setup_data(
     """
     print("Loading text encoder...")
     encoder = TextEncoder(device=str(device))
+    split_name = os.path.basename(data_root)
+    if "v2" in data_root:
+        split_name = "v2"
+    else:
+        split_name = "v1"
+    print(f"split_name : {split_name}")
+    CACHE_PATH = f"cache/train_data_{split_name}.pt"
+    if os.path.exists(CACHE_PATH):
+        print("Loafing cached training data ...")
+        cache = torch.load(CACHE_PATH , weights_only = False)
 
-    print("Building training data...")
-    all_motions, all_languages, all_labels = build_training_data(
-        data_root=data_root,
-        sequences=sequences,
-        text_encoder=encoder,
-    )
+        all_motions = cache["motions"]
+        all_languages = cache["languages"]
+        all_labels = cache["labels"]
+    else:
+        print("Building training data...")
+
+        all_motions , all_languages , all_labels = build_training_data(
+            data_root  =data_root,
+            sequences = sequences,
+            text_encoder = encoder,
+        )
+        print("Saving cache ...")
+        os.makedirs("cache" , exist_ok=True)
+
+        torch.save({
+            "motions" : all_motions,
+            "languages": all_languages,
+            "labels" : all_labels,
+        } , CACHE_PATH)
+
 
     print(f"Total training samples: {len(all_motions)}")
     if len(all_motions) == 0:

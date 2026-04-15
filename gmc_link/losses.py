@@ -8,36 +8,67 @@ import torch.nn.functional as F
 
 class AlignmentLoss(nn.Module):
     """
-    Symmetric InfoNCE loss with fixed temperature.
-
-    Standard CLIP-style cross-modal contrastive loss:
-      L = CE(sim / τ, targets)  where targets = [0, 1, ..., B-1] (diagonal)
-    Applied symmetrically: motion→language + language→motion.
+    SupInfoNCE (multi-positive + false-negative masking)
+    symmetric: motion ↔ language
     """
 
     def __init__(self, temperature: float = 0.07):
         super().__init__()
         self.temperature = temperature
 
-    def forward(self, sim_matrix, sentence_ids=None):
-        """
-        Args:
-            sim_matrix:   (B, B) cosine similarity matrix from model.forward()
-            sentence_ids: unused, kept for API compatibility
-
-        Returns:
-            Scalar loss (mean of motion→language and language→motion directions)
-        """
+    def forward(self, sim_matrix, sentence_ids):
         B = sim_matrix.size(0)
-        device = sim_matrix.device
 
+        # ---------------------------
+        # normalize
+        # ---------------------------
         logits = sim_matrix / self.temperature
 
-        # Targets: diagonal pairs are positives
-        targets = torch.arange(B, device=device)
+        # ---------------------------
+        # build masks
+        # ---------------------------
+        sentence_ids = sentence_ids.view(-1, 1)
 
-        # Symmetric cross-entropy
-        m2l_loss = F.cross_entropy(logits, targets)
-        l2m_loss = F.cross_entropy(logits.t(), targets)
+        # positives: same sentence
+        pos_mask = (sentence_ids == sentence_ids.T).float()
 
-        return (m2l_loss + l2m_loss) / 2.0
+        # ❗ remove self-pair
+        pos_mask.fill_diagonal_(0)
+
+        # ❗ false-negative masking
+        # only true negatives in denominator
+        neg_mask = (sentence_ids != sentence_ids.T).float()
+
+        # ---------------------------
+        # motion → language
+        # ---------------------------
+        logits_max, _ = logits.max(dim=1, keepdim=True)
+        logits_stable = logits - logits_max.detach()
+
+        exp_logits = torch.exp(logits_stable) * neg_mask
+        log_prob = logits_stable - torch.log(
+            exp_logits.sum(dim=1, keepdim=True) + 1e-8
+        )
+
+        pos_count = pos_mask.sum(dim=1).clamp(min=1)
+
+        loss_m2l = -(pos_mask * log_prob).sum(dim=1) / pos_count
+
+        # ---------------------------
+        # language → motion
+        # ---------------------------
+        logits_t = logits.t()
+
+        logits_max_t, _ = logits_t.max(dim=1, keepdim=True)
+        logits_t = logits_t - logits_max_t.detach()
+
+        exp_logits_t = torch.exp(logits_t) * neg_mask.t()
+        log_prob_t = logits_t - torch.log(
+            exp_logits_t.sum(dim=1, keepdim=True) + 1e-8
+        )
+
+        pos_count_t = pos_mask.t().sum(dim=1).clamp(min=1)
+
+        loss_l2m = -(pos_mask.t() * log_prob_t).sum(dim=1) / pos_count_t
+
+        return (loss_m2l.mean() + loss_l2m.mean()) / 2
