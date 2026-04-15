@@ -47,6 +47,7 @@ class GMCLinkManager:
 
         self.motion_buffer = MotionBuffer(alpha=0.3)
         self.score_buffer = ScoreBuffer(alpha=0.4)
+        self.cosine_buffer = ScoreBuffer(alpha=0.4)
         self.aligner = MotionLanguageAligner(
             motion_dim=13, lang_dim=lang_dim, embed_dim=256
         ).to(device)
@@ -217,11 +218,7 @@ class GMCLinkManager:
                 if update_state:
                     smoothed_v = self.motion_buffer.smooth(tid, full_raw_v)
                 else:
-                    if tid in self.motion_buffer.registry:
-                        alpha = self.motion_buffer.alpha
-                        smoothed_v = (alpha * full_raw_v) + ((1 - alpha) * self.motion_buffer.registry[tid])
-                    else:
-                        smoothed_v = full_raw_v
+                    smoothed_v = self.motion_buffer.peek(tid, full_raw_v)
                 dx_s, dy_s = smoothed_v[0], smoothed_v[1]
                 dx_m, dy_m = smoothed_v[2], smoothed_v[3]
                 dx_l, dy_l = smoothed_v[4], smoothed_v[5]
@@ -277,23 +274,24 @@ class GMCLinkManager:
         velocities_dict = {}
         cosine_dict = {}
         for i, tid in enumerate(track_ids):
+            raw_score = float(raw_scores[i])
+            raw_cosine = float(cosine_sim_np[i])
             if update_state:
-                smoothed_score = self.score_buffer.smooth(tid, float(raw_scores[i]))
+                smoothed_score = self.score_buffer.smooth(tid, raw_score)
+                smoothed_cosine = self.cosine_buffer.smooth(tid, raw_cosine)
             else:
-                if tid in self.score_buffer.registry:
-                    alpha = self.score_buffer.alpha
-                    smoothed_score = alpha * float(raw_scores[i]) + (1 - alpha) * self.score_buffer.registry[tid]
-                else:
-                    smoothed_score = float(raw_scores[i])
+                smoothed_score = self.score_buffer.peek(tid, raw_score)
+                smoothed_cosine = self.cosine_buffer.peek(tid, raw_cosine)
             scores_dict[tid] = smoothed_score
             velocities_dict[tid] = compensated_velocities[i]
-            cosine_dict[tid] = float(cosine_sim_np[i])
+            cosine_dict[tid] = smoothed_cosine
 
         if update_state:
             # Clean up dead tracks
             active_ids = set(track_ids)
             self.motion_buffer.clear_dead_tracks(track_ids)
             self.score_buffer.clear_dead_tracks(track_ids)
+            self.cosine_buffer.clear_dead_tracks(track_ids)
             dead_centroids = set(self.centroid_history.keys()) - active_ids
             for d in dead_centroids:
                 del self.centroid_history[d]

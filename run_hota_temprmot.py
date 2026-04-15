@@ -40,7 +40,7 @@ IMAGE_ROOT = "/home/seanachan/data/Dataset/refer-kitti-v2/KITTI/training/image_0
 EXPR_ROOT = "/home/seanachan/GMC-Link/refer-kitti/expression"  # v1 expressions
 
 WEIGHTS_PATH = "gmc_link_weights.pth"
-TRACKEVAL_DIR = "/home/seanachan/TempRMOT/TrackEval"
+TRACKEVAL_DIR = "/home/seanachan/TrackEval"
 TRACKEVAL_SCRIPT = os.path.join(TRACKEVAL_DIR, "scripts", "run_mot_challenge.py")
 
 OUTPUT_ROOT = "hota_eval/temprmot_gmclink"

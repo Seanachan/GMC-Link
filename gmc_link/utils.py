@@ -82,6 +82,12 @@ class MotionBuffer:
         self.registry[track_id] = v_smoothed
         return v_smoothed
 
+    def peek(self, track_id: int, v_new: np.ndarray) -> np.ndarray:
+        """Compute smoothed value without updating state."""
+        if track_id not in self.registry:
+            return v_new
+        return (self.alpha * v_new) + ((1 - self.alpha) * self.registry[track_id])
+
     def clear_dead_tracks(self, active_track_ids: List[int]) -> None:
         """
         Remove tracks from the registry that are no longer active to prevent memory bloat.
@@ -119,6 +125,14 @@ class ScoreBuffer:
         smoothed = a * raw_score + (1 - a) * old
         self.registry[track_id] = smoothed
         return smoothed
+
+    def peek(self, track_id: int, raw_score: float) -> float:
+        """Compute smoothed value without updating state (respects asymmetric alpha)."""
+        if track_id not in self.registry:
+            return raw_score
+        old = self.registry[track_id]
+        a = self.alpha_up if raw_score >= old else self.alpha_down
+        return a * raw_score + (1 - a) * old
 
     def clear_dead_tracks(self, active_track_ids: List[int]) -> None:
         """

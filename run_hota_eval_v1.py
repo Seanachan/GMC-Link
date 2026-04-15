@@ -393,7 +393,7 @@ def run_trackeval(method: str, seqmap_path: str, results_dir: str):
 # ── Main ─────────────────────────────────────────────────────────────────
 
 def main():
-    global OUTPUT_ROOT, MOTION_ONLY, FUSION_MODE, ALPHA
+    global OUTPUT_ROOT, MOTION_ONLY, FUSION_MODE, ALPHA, WEIGHTS_PATH
     parser = argparse.ArgumentParser()
     parser.add_argument("--method", choices=["baseline", "fusion", "both"], default="both")
     parser.add_argument("--skip-ikun", action="store_true",
@@ -404,11 +404,15 @@ def main():
                         help="Fusion strategy: additive logit (default) or learned MLP")
     parser.add_argument("--alpha", type=float, default=None,
                         help="GMC logit weight for additive fusion (overrides ALPHA)")
+    parser.add_argument("--weights", type=str, default=None,
+                        help="GMC-Link aligner weights path (overrides WEIGHTS_PATH)")
     args = parser.parse_args()
 
     FUSION_MODE = args.fusion_mode
     if args.alpha is not None:
         ALPHA = args.alpha
+    if args.weights is not None:
+        WEIGHTS_PATH = args.weights
 
     if args.motion_only:
         MOTION_ONLY = True
