@@ -7,7 +7,7 @@ motion-language pairs from refer-kitti sequences (test on 0011).
 
 import sys
 import os
-
+import matplotlib.pyplot as plt
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
@@ -18,6 +18,7 @@ import torch
 from torch import optim
 from torch import nn
 from torch.utils.data import DataLoader
+
 
 from gmc_link.losses import AlignmentLoss
 from gmc_link.alignment import MotionLanguageAligner
@@ -148,20 +149,31 @@ def train_loop(
 ) -> None:
     """
     Execute the main training loop across all epochs and save the final weights.
+    Also record loss/accuracy history and plot curves.
     """
     print(f"Starting training on {device} | {len(dataloader)} batches/epoch...")
+    loss_history = []
+    accuracy_history = []
+    lr_history = []
     for epoch in tqdm(range(epochs)):
         avg_loss, accuracy = train_one_epoch(
             model, dataloader, optimizer, criterion, device
         )
+        loss_history.append(avg_loss)
+        accuracy_history.append(accuracy)
+        lr_history.append(scheduler.get_last_lr()[0])
         scheduler.step()
-
-        if (epoch + 1) % 20 == 0:
-            current_lr = scheduler.get_last_lr()[0]
-            print(
-                f"Epoch [{epoch+1}/{epochs}] | Loss: {avg_loss:.4f} | "
-                f"Acc: {accuracy:.2%} | LR: {current_lr:.6f}"
-            )
+        current_lr = scheduler.get_last_lr()[0]
+        print(
+            f"Epoch [{epoch+1}/{epochs}] | Loss: {avg_loss:.4f} | "
+            f"Acc: {accuracy:.2%} | LR: {current_lr:.6f}"
+        )
+        # if (epoch + 1) % 20 == 0:
+        #     current_lr = scheduler.get_last_lr()[0]
+        #     print(
+        #         f"Epoch [{epoch+1}/{epochs}] | Loss: {avg_loss:.4f} | "
+        #         f"Acc: {accuracy:.2%} | LR: {current_lr:.6f}"
+        #    )
 
     # Save model weights + temperature
     save_dict = {
@@ -171,6 +183,29 @@ def train_loop(
     torch.save(save_dict, save_path)
     print(f"Training complete. Weights saved to {save_path} (τ={criterion.temperature:.4f})")
 
+    # Plot loss curve
+    plt.figure(figsize=(8, 5))
+    plt.plot(range(1 , epochs + 1), loss_history, label="Training Loss")
+    plt.xlabel("Epoch")
+    plt.ylabel("Loss")
+    plt.title("Training Loss Curve")
+    plt.legend()
+    plt.grid(True)
+    plt.tight_layout()
+    plt.savefig("training_loss_curve.png")
+    plt.show()
+
+    # plot accurarcy curve
+    plt.figure(figsize=(8, 5))
+    plt.plot(range(1, epochs + 1), accuracy_history, label="Training Accuracy")
+    plt.xlabel("Epoch")
+    plt.ylabel("Accuracy")
+    plt.title("Training Accuracy Curve")
+    plt.legend()
+    plt.grid(True)
+    plt.tight_layout()
+    plt.savefig("training_accuracy_curve.png")
+    plt.show()
 
 def main() -> None:
     """
@@ -181,7 +216,7 @@ def main() -> None:
       TRAIN_SPLIT=v1            — Refer-KITTI V1 seq 0011 only   → gmc_link_weights_v1train.pth
     """
     import os as _os
-    train_split = _os.environ.get("TRAIN_SPLIT", "v2").lower()
+    train_split = _os.environ.get("TRAIN_SPLIT", "v1").lower()
 
     # --- Configuration ---
     device = torch.device(
@@ -198,19 +233,22 @@ def main() -> None:
     if train_split == "v1":
         # Refer-KITTI V1: train on official train split, eval on val (0005, 0011, 0013)
         # Mirrors iKUN's VIDEOS['train'] — excludes 0005, 0011, 0013 (val/test seqs)
-        data_root = "/home/seanachan/data/Dataset/refer-kitti"
+        # data_root = "/home/seanachan/data/Dataset/refer-kitti"
+        data_root = "refer-kitti"
         sequences = [
             "0001", "0002", "0003", "0004", "0006",
             "0007", "0008", "0009", "0010", "0012",
             "0014", "0015", "0016", "0018", "0020",
         ]
         batch_size = 256
-        save_path = "gmc_link_weights_v1train.pth"
+        # save_path = "gmc_link_weights_v1train.pth"
+        save_path = "gmc_link_weights.pth"
         print("Training on Refer-KITTI V1 train split → " + save_path)
     else:
         # Refer-KITTI V2 data path and official train/test split
         # Train: seqs 0000-0015 | Test: seqs 0016-0020
-        data_root = "/home/seanachan/data/Dataset/refer-kitti-v2"
+        # data_root = "/home/seanachan/data/Dataset/refer-kitti-v2"
+        data_root = "refer-kitti"
         sequences = [
             "0000", "0001", "0002", "0003", "0004", "0005",
             "0006", "0007", "0008", "0009", "0010", "0011",

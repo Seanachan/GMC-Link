@@ -233,3 +233,8 @@ test_mtime.txt
 
 # TensorBoard
 events.out.tfevents.*
+
+
+#plot 
+training_accuracy_curve.png
+training_loss_curve.png
