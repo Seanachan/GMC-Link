@@ -53,11 +53,13 @@ class GMCLinkManager:
         ).to(device)
 
         self.temperature = 1.0  # default (no scaling)
+        self.feature_stats = None  # z-score normalization stats from training
         if weights_path:
             checkpoint = torch.load(weights_path, map_location=device)
             if isinstance(checkpoint, dict) and "model" in checkpoint:
                 self.aligner.load_state_dict(checkpoint["model"])
                 self.temperature = checkpoint.get("temperature", 1.0)
+                self.feature_stats = checkpoint.get("feature_stats", None)
             else:
                 self.aligner.load_state_dict(checkpoint)
         self.aligner.eval()
@@ -257,10 +259,14 @@ class GMCLinkManager:
         if not compensated_velocities:
             return {}, {}, {}
 
+        # Apply same feature normalization as training (clamp + z-score)
+        motion_array = np.array(compensated_velocities, dtype=np.float32)
+        if self.feature_stats is not None:
+            motion_array = np.clip(motion_array, self.feature_stats["lo"], self.feature_stats["hi"])
+            motion_array = (motion_array - self.feature_stats["mean"]) / self.feature_stats["std"]
+
         # Align motion with language via cosine similarity
-        motion_tensor = torch.tensor(
-            np.array(compensated_velocities), dtype=torch.float32
-        ).to(self.device)
+        motion_tensor = torch.tensor(motion_array, dtype=torch.float32).to(self.device)
 
         with torch.no_grad():
             motion_emb, lang_emb = self.aligner.encode(

@@ -147,6 +147,59 @@ def is_motion_expression(sentence):
     return any(kw in lower for kw in MOTION_KEYWORDS)
 
 
+# ── Motion-type grouping ────────────────────────────────────────────
+# Maps 82 fine-grained expressions → ~6 motion-type groups that the 13D
+# features can actually distinguish.  Priority order matters: "moving
+# turning cars" → TURNING (more specific), not MOVING.
+
+MOTION_TYPE_GROUPS = {
+    "braking": 0,      # decelerating
+    "slower": 0,        # relative deceleration
+    "turning": 1,       # lateral motion change
+    "parking": 2,       # near-stationary / stopping
+    "counter direction": 3,  # oncoming
+    "contrary direction": 3,
+    "reverse direction": 3,
+    "opposite direction": 3,
+    "horizon direction": 4,  # approaching from distance
+    "in front of": 4,        # similar to approaching
+    "same direction": 5,     # co-moving
+    "moving": 5,             # generic forward motion
+    "in motion": 5,
+    "driving": 5,
+    "following": 5,
+    "approaching": 5,
+    "travelling": 5,
+    "traveling": 5,
+    "overtaking": 5,
+    "accelerat": 5,
+    "faster": 5,
+    "speedier": 5,
+}
+
+MOTION_TYPE_NAMES = {
+    0: "braking",
+    1: "turning",
+    2: "parking",
+    3: "counter_dir",
+    4: "approaching",
+    5: "moving",
+}
+
+
+def motion_type_group(sentence):
+    """
+    Map a sentence to its motion-type group ID.
+    Returns group ID (int) or None if no motion keyword matches.
+    Priority: more specific keywords checked first (braking > turning > parking > ...).
+    """
+    lower = sentence.lower()
+    for keyword, group_id in MOTION_TYPE_GROUPS.items():
+        if keyword in lower:
+            return group_id
+    return None
+
+
 def _collect_expressions(
     data_root: str, sequences: List[str], text_encoder: Any
 ) -> Tuple[List[Dict[str, Any]], Dict[str, np.ndarray], List[str]]:
@@ -443,9 +496,6 @@ def build_training_data(
         "  Computing centroid-difference velocities and generating positive pairs..."
     )
 
-    # Map each unique sentence to a stable integer class ID
-    sentence_to_id = {s: i for i, s in enumerate(all_sentences)}
-
     motion_data = []
     language_data = []
     labels = []
@@ -455,12 +505,26 @@ def build_training_data(
     motion_expressions = [e for e in all_expressions if is_motion_expression(e["sentence"])]
     print(f"  Motion-filtered: {len(motion_expressions)}/{len(all_expressions)} expressions")
 
+    # Use motion-type group IDs for contrastive labels.
+    # 82 fine-grained expressions → 6 motion-type groups that the 13D features
+    # can actually distinguish. This eliminates contradictory gradients between
+    # classes that share identical motion vectors (e.g., "moving cars" vs
+    # "left moving vehicles").
+    group_counts = {}
+    for expr in motion_expressions:
+        gid = motion_type_group(expr["sentence"])
+        group_counts[gid] = group_counts.get(gid, 0) + 1
+    print(f"  Motion-type groups: {len(group_counts)} — "
+          + ", ".join(f"{MOTION_TYPE_NAMES.get(g, '?')}={n}" for g, n in sorted(group_counts.items())))
+
     for expr in motion_expressions:
         seq = expr["seq"]
         label_map = expr["label"]
         sentence = expr["sentence"]
         embedding = expr["embedding"]
-        expression_id = sentence_to_id[sentence]
+        expression_id = motion_type_group(sentence)
+        if expression_id is None:
+            continue  # shouldn't happen after motion filter
 
         # Detect actual frame dimensions from first image
         frame_dir = os.path.join(data_root, "KITTI", "training", "image_02", seq)
@@ -492,6 +556,25 @@ def build_training_data(
         language_data.extend(l_data)
         labels.extend(lbls)
 
-    n_classes = len(sentence_to_id)
-    print(f"  Unique expressions: {n_classes} | Total samples: {len(labels)}")
-    return motion_data, language_data, labels
+    n_groups = len(set(labels))
+    print(f"  Motion-type groups used: {n_groups} | Total samples: {len(labels)}")
+
+    # Clamp outliers and z-score normalize for stable training.
+    # Statistics are saved with the checkpoint and applied at inference
+    # to bridge the train-inference distribution gap.
+    feature_stats = None
+    if motion_data:
+        motion_arr = np.array(motion_data, dtype=np.float32)
+        lo = np.percentile(motion_arr, 1, axis=0)
+        hi = np.percentile(motion_arr, 99, axis=0)
+        motion_arr = np.clip(motion_arr, lo, hi)
+
+        feat_mean = motion_arr.mean(axis=0)
+        feat_std = motion_arr.std(axis=0) + 1e-8  # avoid div by zero
+        motion_arr = (motion_arr - feat_mean) / feat_std
+
+        motion_data = [motion_arr[i] for i in range(len(motion_arr))]
+        feature_stats = {"mean": feat_mean, "std": feat_std, "lo": lo, "hi": hi}
+        print(f"  Clamped to [1st, 99th] percentile, z-score normalized (13D)")
+
+    return motion_data, language_data, labels, feature_stats
