@@ -21,10 +21,9 @@ import sys
 import json
 from typing import Dict, List, Tuple, Any
 import cv2
-from PIL import Image
 import torch
 import numpy as np
-
+import argparse
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from gmc_link.manager import GMCLinkManager
@@ -34,9 +33,9 @@ from gmc_link.text_utils import TextEncoder
 # =========================
 # Config
 # =========================
-TRACK_PATH = "/home/jkaiwang/Desktop/GMC-Link/NeuralSORT/0011/car/predict.txt"
-IMAGE_DIR = "/home/jkaiwang/Desktop/GMC-Link/refer-kitti/KITTI/training/image_02/0011"
-GT_DIR = "/home/jkaiwang/Desktop/GMC-Link/refer-kitti/gt_template/0011"
+TRACK_PATH = "NeuralSORT/0011/car/predict.txt"
+IMAGE_DIR = "refer-kitti/KITTI/training/image_02/0011"
+GT_DIR = "refer-kitti/gt_template/0011"
 WEIGHTS_PATH = "gmc_link_weights.pth"
 
 EXPRESSIONS = [
@@ -47,7 +46,6 @@ EXPRESSIONS = [
 
 FRAME_STRIDE = 5
 DEBUG_PRINT_IDS = False
-
 
 # =========================
 # Utilities
@@ -79,13 +77,6 @@ def read_image(image_path: str) -> np.ndarray:
     if image is None:
         raise FileNotFoundError(f"Image not found: {image_path}")
     return image
-
-    with Image.open(image_path) as img:
-        return np.array(img.convert("RGB"), dtype=np.uint8)
-
-    raise ImportError(
-        "No image backend available. Install opencv-python or Pillow to read images."
-    )
 
 
 def load_neuralsort_tracks(track_path: str) -> Dict[int, List[Tuple[int, float, float, float, float]]]:
@@ -215,22 +206,33 @@ def evaluate_similarity():
         active_tracks = [DummyTrack(obj_id, x, y, w, h) for obj_id, x, y, w, h in raw_tracks]
         track_ids_in_frame = {t.id for t in active_tracks}
 
-        # IMPORTANT:
-        # Use update_state=True only ONCE for the first expression of this frame.
-        # Then use update_state=False for the rest, so we don't corrupt history/state.
-        for expr_idx, expr in enumerate(EXPRESSIONS):
+        # First update GMC/history state once for this frame
+        bootstrap_expr = EXPRESSIONS[0]
+        bootstrap_emb = expr_embeddings[bootstrap_expr]
+
+        manager.process_frame(
+            frame=frame,
+            active_tracks=active_tracks,
+            language_embedding=bootstrap_emb,
+            detections=None,
+            update_state=True,
+        )
+
+        # Then evaluate all expressions on the same frozen frame state
+        for expr in EXPRESSIONS:
             lang_emb = expr_embeddings[expr]
-            update_state = (expr_idx == 0)
 
             scores_dict, velocities_dict, cosine_dict = manager.process_frame(
                 frame=frame,
                 active_tracks=active_tracks,
                 language_embedding=lang_emb,
                 detections=None,
-                update_state=update_state,
+                update_state=False,
             )
 
             gt_items = gt_labels_dict[expr].get(frame_id, [])
+            gt_ids = [gt["id"] for gt in gt_items]
+
             matched_ids = set()
 
             for gt in gt_items:
@@ -257,7 +259,6 @@ def evaluate_similarity():
             if not cosine_dict:
                 continue
 
-            # collect cosine stats
             for tid, cos in cosine_dict.items():
                 all_cosines[expr].append(float(cos))
                 if tid in valid_gt_ids:
@@ -265,13 +266,11 @@ def evaluate_similarity():
                 else:
                     nongt_cosines[expr].append(float(cos))
 
-            # Top-1 eval only if this frame has valid GT
             if valid_gt_ids:
                 best_tid = max(cosine_dict, key=cosine_dict.get)
                 top1_total[expr] += 1
                 if best_tid in valid_gt_ids:
                     top1_correct[expr] += 1
-
     # =========================
     # Summary table
     # =========================
@@ -341,4 +340,14 @@ def main():
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--track_path", default=TRACK_PATH)
+    parser.add_argument("--image_dir", default=IMAGE_DIR)
+    parser.add_argument("--gt_dir", default=GT_DIR)
+
+    args = parser.parse_args()
+
+    TRACK_PATH = args.track_path
+    IMAGE_DIR = args.image_dir
+    GT_DIR = args.gt_dir
     main()
