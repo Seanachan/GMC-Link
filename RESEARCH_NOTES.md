@@ -437,6 +437,215 @@ After 22 experiments, **InfoNCE-trained aligner + Stage 2 Learned Fusion Head** 
 - **Key insight:** The optimal α on training data (0.4) is ~6× too large for generalization. The additive approach works because it preserves iKUN's calibrated decision boundary (logit > 0) and only nudges scores, rather than learning a new threshold that may not transfer.
 - **Files changed:** `run_hota_eval_v1.py` (added `--alpha`, `--fusion-mode`), new `run_alpha_search.py`
 
+### Exp 28: Contrastive Learning Diagnosis — FNM, Motion-Type Grouping, Z-Score Normalization
+
+**Commit:** `fe035db` (applied), `38e43d2` (reverted)
+**Motivation:** Cosine similarity scores showed near-zero discrimination between matching and non-matching motion-expression pairs. Investigated root causes and applied three cumulative fixes.
+
+**Diagnosis (pre-fix):**
+- Linear probe on raw 13D features: **9.29% accuracy** across 82 expression classes
+- Fisher criterion: 1.17 (weak separation)
+- 74% of class pairs have cosine similarity > 0.95 in 13D space — most classes indistinguishable
+- Layer 4 diagnostic: SNR train σ=231 vs inference σ=16.3 (ratio 0.070) — 14x mismatch from EMA smoothing
+- Layer 1 diagnostic: positive vs negative cosine separation only 0.036
+
+**Fix 1 — False-Negative Masking (losses.py):**
+- Mask same-class off-diagonal logits to −inf before softmax in InfoNCE
+- Effect: Loss 4.23→4.12, accuracy unchanged at 15%
+- **Verdict: negligible.** Only ~3 FN collisions per batch with 82 classes — FNM can't help when the real bottleneck is class separability
+
+**Fix 2 — Motion-Type Grouping (dataset.py):**
+- Collapsed 82 expressions → 6 motion-type groups: braking(0), turning(1), parking(2), counter_dir(3), approaching(4), moving(5)
+- Keyword priority matching (more specific first: "braking" > "turning" > "moving")
+- Effect: Loss 4.23→2.85, training accuracy 15%→67%
+- **But inference AUC unchanged at 0.403** — distribution gap masked the improvement
+- Verdict: necessary but not sufficient
+
+**Fix 3 — Z-Score Feature Normalization (dataset.py, train.py, manager.py):**
+- Clamp each of 13 dimensions to [1st, 99th] percentile, then normalize to zero mean / unit variance
+- Save stats (mean, std, lo, hi) in checkpoint; apply same transform at inference in manager.py
+- Effect: Training accuracy 67%→69%, inference AUC 0.403→**0.475**
+- 14/18 expressions above chance
+
+**Cumulative results:**
+
+| Round | Config | Loss | Train Acc | Inference AUC |
+|-------|--------|------|-----------|---------------|
+| Baseline | 82 classes, no FNM | 4.23 | 15% | 0.403 |
+| R1 | + FNM | 4.12 | 15% | — |
+| R2 | + outlier clamp | 4.11 | 15% | — |
+| R3 | + 6 motion groups | 2.85 | 67% | 0.403 |
+| R4 | + z-score norm | 2.64 | 69% | **0.475** |
+
+**Per-expression live inference (Layer 5, seq 0011, best model):**
+
+| Expression | AUC | Separation | Verdict |
+|-----------|-----|-----------|---------|
+| same direction cars | 0.586 | +0.103 | above chance |
+| counter direction cars | 0.565 | +0.050 | above chance |
+| left counter direction | 0.551 | +0.033 | above chance |
+| left parking | 0.543 | +0.041 | above chance |
+| parking cars | 0.519 | +0.020 | marginal |
+| **moving cars** | **0.312** | **−0.180** | **inverted** |
+| **horizon direction** | **0.125** | **−0.181** | **inverted** |
+
+**Known issues:**
+- "Moving cars" inversion (AUC 0.312): ego-motion compensation makes co-moving objects appear stationary — residual velocity ≈ 0
+- "Horizon direction" inversion (AUC 0.125): distant objects have minimal apparent motion
+- Untested ablation: 82 classes + z-norm (no grouping) — would isolate grouping's contribution to inference
+
+**Status:** All three fixes reverted (`38e43d2`). Training curve PNGs and diagnostic .npz files preserved in repo.
+
+### Exp 29: Training Process Improvements — Ablation Study
+
+**Branch:** `exp/training-improvements`
+**Motivation:** With 82 expression classes and simple symmetric InfoNCE, investigate whether training dynamics improvements can boost embedding quality. The baseline already achieves AUC 0.759 on Layer 3 GT cosine diagnostic (seq 0011) — test whether this ceiling is from under-training or from feature separability limits.
+
+**Code changes (committed to branch):**
+- `gmc_link/losses.py`: Added `learnable` parameter to `AlignmentLoss` — stores `log(1/τ)` as `nn.Parameter`, keeps τ positive via exp
+- `gmc_link/train.py`: Added CLI args `--warmup-epochs`, `--learnable-temp`, `--grad-clip`; linear warmup scales LR from 0→base over warmup epochs; grad clipping via `clip_grad_norm_`
+
+**Tests (each isolated against baseline, V1 train split, seq 0011 eval):**
+
+| Test | Config | Final Loss | Final Acc | τ | Mean Sep | **Mean AUC** | Δ AUC |
+|------|--------|-----------|-----------|---|----------|----------|-------|
+| **Baseline** | 100ep, AdamW, CosineAnnealing, τ=0.07 | ~4.26 | ~15% | 0.070 | +0.182 | **0.759** | — |
+| A | 200 epochs | 4.186 | 15.78% | 0.070 | +0.178 | 0.746 | −0.013 |
+| B | 10ep linear LR warmup + 100ep | 4.220 | 15.10% | 0.070 | +0.173 | 0.742 | −0.017 |
+| C | Learnable temperature | 4.240 | 14.83% | 0.042 | +0.124 | **0.765** | +0.006 |
+| D | Gradient clipping (max_norm=1.0) | 4.237 | 14.89% | 0.070 | +0.183 | 0.761 | +0.002 |
+
+**AUC evaluation:** Layer 3 GT cosine diagnostic — computes cosine similarity using GT centroids for all 23 motion expressions on seq 0011. AUC via Mann-Whitney U (GT vs non-GT tracks).
+
+**Key observations:**
+1. **No meaningful improvement from any variant** — all AUC within ±0.017 of baseline (0.759)
+2. **More epochs don't help** — Test A's loss drops lower (4.186 vs 4.26) but AUC slightly decreases, suggesting mild overfitting to training distribution
+3. **Learnable τ converges to 0.042** (from init 0.07) — the model prefers a softer temperature, yielding the best AUC (+0.006) but lower mean separation (+0.124 vs +0.182)
+4. **Training accuracy plateaus at ~15%** across all variants — confirms the 82-class separability ceiling in 13D feature space
+5. **Training loss ≠ AUC** — Test A has the lowest loss (4.186) but lowest AUC (0.746); Test C has the highest loss (4.240) but highest AUC (0.765)
+
+**Conclusion:** The bottleneck is **feature separability**, not training dynamics. The 13D motion vector cannot reliably distinguish 82 expression classes — improvements must come from richer features, architectural changes, or expression grouping. Training process tuning gives diminishing returns at this scale.
+
+**Bonus finding:** `gmc_link_weights_v1train.pth` was verified as identical to `_znorm_persent.pth` (MD5 match) — this Exp 28 model achieves only AUC 0.599, confirming that per-sentence z-score normalization hurt generalization vs the clean baseline (0.759).
+
+**Weight files:** `gmc_link_weights_v1train_test{A,B,C,D}_*.pth` + `*_curves.png`
+
+### Exp 30: Staged Curriculum Training (Diffusion-Inspired Coarse→Fine)
+
+**Branch:** `exp/training-improvements`
+**Motivation:** Inspired by diffusion models' coarse-to-fine denoising, train in two stages: first learn coarse motion-type group boundaries (6 classes), then refine to full expressions (82 classes). Exp 29 showed training dynamics can't break through the 0.759 AUC ceiling — test whether a better initialization via curriculum learning can.
+
+**Design:**
+- Stage 1: 82 expressions → 6 motion-type groups (braking, turning, parking, counter_dir, approaching, moving) via keyword priority matching. 100 epochs, lr=1e-3
+- Stage 2: Load Stage 1 weights, switch to 82 per-sentence labels, 50 epochs, lr=1e-4 (0.1×)
+- Language embeddings remain per-sentence in both stages (not averaged per group)
+- No z-score normalization, no FNM
+
+**Code changes:**
+- `gmc_link/dataset.py`: Added `MOTION_TYPE_GROUPS`, `motion_type_group()`, `use_group_labels` param in `build_training_data()`
+- `gmc_link/train.py`: Added `--stage` (1/2/curriculum) and `--resume` CLI args. `--stage curriculum` runs both stages back-to-back automatically
+
+**Training results:**
+
+| Stage | Config | Loss | Acc | τ |
+|-------|--------|------|-----|---|
+| Stage 1 | 6 groups, 100ep, lr=1e-3 | 4.232 | **54.49%** | 0.070 |
+| Stage 2 | 82 classes, 50ep, lr=1e-4, from Stage 1 | 4.241 | 14.77% | 0.070 |
+
+**Layer 3 GT cosine diagnostic (seq 0011):**
+
+| Model | Mean Sep | **Mean AUC** | Δ vs Baseline |
+|-------|----------|----------|---------------|
+| Baseline (82 classes) | +0.182 | 0.759 | — |
+| **Stage 1 only** (6 groups) | +0.195 | **0.779** | **+0.020** |
+| Curriculum (Stage 1→2) | +0.194 | 0.777 | +0.018 |
+
+**Key findings:**
+1. **Group-level training is the best single improvement found so far** — AUC 0.779 (+0.020) vs all Exp 29 variants (±0.017 at best)
+2. **Stage 2 doesn't help** — fine-tuning on 82 classes slightly degrades the group-level model (0.779→0.777), confirming the 13D features cannot separate 82 classes
+3. **Training accuracy tracks groups, not features** — 54% on 6 groups vs 15% on 82 classes, both with same features, proves the bottleneck is class count not optimization
+4. **The Stage 1 model is the production model** — simpler, better, no need for the curriculum handoff
+
+**Recommendation:** Use Stage 1 (group-level) training as the default. The `--stage 1` flag or `--stage curriculum` (stopping after Stage 1) is the way forward.
+
+**Weight files:** `gmc_link_weights_v1train_stage1.pth`, `gmc_link_weights_v1train_curriculum.pth` + `*_curves.png`
+
+### Exp 31: Motion Vector Feature Ablation — 9 Candidate Features
+
+**Branch:** `exp/training-improvements`
+**Motivation:** Stage 1 group-level model (Exp 30) achieved AUC 0.779 with 13D features, but cosine separation (+0.195) is modest. Test whether enriching the motion vector with derived or relational features can push past the ~0.79 AUC ceiling. Each feature tested individually against baseline to isolate its contribution.
+
+**Design:** (see `docs/superpowers/specs/2026-04-16-feature-ablation-design.md`)
+- 9 candidate features in two phases: Phase 1 (F1-F4) per-track derived, Phase 2 (F5-F9) relational
+- All use Stage 1 group-level training (100 epochs, lr=1e-3, batch_size=256, V1 split)
+- Evaluation: Layer 3 GT cosine diagnostic, Mean AUC on seq 0011
+- Success criterion: AUC > 0.800 (Δ > +0.021 over baseline 0.779)
+
+**Code changes:**
+- `gmc_link/dataset.py`: Added `EXTRA_FEATURE_DIMS` registry, `compute_extra_dims()`, `compute_per_track_extras()` (F1-F4), `compute_relational_extras()` (F5-F9), `_extract_all_track_centroids()`, `_precompute_frame_track_data()`. Modified `_generate_positive_pairs` and `build_training_data` with `extra_features` param and per-sequence all-track neighbor pre-computation
+- `gmc_link/train.py`: Added `--extra-features` CLI arg, pass through to data/model setup
+- `diagnostics/diag_gt_cosine_distributions.py`: Auto-detect `motion_dim`/`extra_features` from checkpoint, support relational features via two-pass neighbor context
+
+**Results:**
+
+| ID | Feature | Dims | Train Acc | Mean Sep | **Mean AUC** | **Δ AUC** |
+|----|---------|------|-----------|----------|-------------|-----------|
+| — | **Baseline (13D)** | 13 | ~54% | +0.195 | **0.779** | — |
+| F1 | speed_m | +1 (14D) | 54.34% | +0.188 | 0.774 | -0.005 |
+| F2 | heading_m | +1 (14D) | 54.58% | +0.181 | 0.765 | -0.014 |
+| F3 | accel | +2 (15D) | 54.59% | +0.202 | **0.788** | **+0.009** |
+| F4 | ego_motion | +2 (15D) | 55.96% | +0.177 | 0.750 | -0.029 |
+| F5 | neighbor_mean_vel | +2 (15D) | **56.41%** | +0.181 | 0.754 | -0.025 |
+| F6 | velocity_rank | +1 (14D) | 55.01% | +0.183 | 0.776 | -0.003 |
+| F7 | heading_diff | +1 (14D) | 55.13% | +0.202 | **0.787** | **+0.008** |
+| F8 | nn_dist | +1 (14D) | 55.61% | +0.176 | 0.764 | -0.015 |
+| F9 | track_density | +1 (14D) | 55.51% | +0.187 | 0.772 | -0.007 |
+
+**Key findings:**
+1. **No feature meets the >0.800 success criterion.** Best is F3 (acceleration) at 0.788 (+0.009)
+2. **Training accuracy is not predictive of eval AUC.** F5 (neighbor_mean_vel) had highest training accuracy (56.41%) but AUC 0.754 (-0.025). F4 (ego_motion) showed the same pattern (55.96% train, 0.750 AUC). High train + low eval = overfitting
+3. **Only F3 and F7 improve over baseline** — both capture *differential* information: F3 (acceleration = velocity change over time), F7 (heading deviation from neighbor flow). The MLP can already represent absolute velocities; adding redundant transforms (F1 speed, F2 heading) or overly specific context (F4 ego, F5 neighbor vel) hurts
+4. **The 13D feature space has a hard ceiling around AUC ~0.79.** Adding 1-2 dimensions doesn't fundamentally change what the embedding can separate. The bottleneck is likely the limited temporal context (single-frame snapshot) or the inherent ambiguity of 2D projected motion for 3D descriptions
+5. **Relational features provide richer training signal but don't generalize.** Phase 2 features uniformly achieved higher training accuracy than Phase 1, yet only F7 improved eval AUC — the neighbor context helps the optimizer during training but the learned representations don't transfer to unseen sequences
+
+**Conclusion:** The 13D motion vector with Stage 1 group-level training (AUC 0.779) remains the production model. Feature enrichment yields diminishing returns. Future improvements should focus on other axes: longer temporal windows, attention-based aggregation, or multi-sequence evaluation.
+
+**Weight files:** `gmc_link_weights_v1train_F{1-9}_*.pth` + `*_curves.png`
+
+### Exp 32: Temporal Transformer Motion Encoder
+
+**Date:** 2026-04-17
+**Branch:** `exp/temporal-transformer` (off `exp/training-improvements`)
+**Motivation:** Exp 30/31 hit a ~0.79 AUC ceiling with the single-frame 13D MLP projector. Exp 31 proved that enriching the feature vector doesn't break the ceiling (best +0.009). Test the hypothesis that the bottleneck is *missing temporal context*: replace the MLP with a transformer encoder over T=10 consecutive frames, aggregating via a learnable [CLS] token.
+
+**Design:** (see `docs/superpowers/specs/2026-04-16-temporal-transformer-design.md`)
+- `TemporalMotionEncoder`: Linear(13→64) → [CLS] prepend → pos encoding → 1× TransformerEncoderLayer (d_model=64, n_head=4, dim_ff=128) → take [CLS] out → Linear(64→256) + LayerNorm
+- Sliding-window sequence generation (T=10, stride=1) with left-padding and PyTorch-convention `src_key_padding_mask` (True=pad, False=valid)
+- Input `nn.LayerNorm(13)` added after discovering SNR outliers (max 8M) caused NaN training divergence at step 8
+- Same training protocol as Exp 30: Stage 1 group-level, V1 split, 100 epochs, lr=1e-3, batch=256, cosine annealing
+- ~52K new transformer parameters (lightweight vs MLP's ~200K)
+
+**Results:**
+
+| Metric | MLP Baseline (Exp 30) | Transformer (Exp 32) | Δ |
+|--------|----------------------|---------------------|---|
+| Train Acc (final) | ~54% | 53.18% | -0.8% |
+| Mean separation | **+0.195** | +0.168 | **-0.027** |
+| Mean AUC | **0.779** | 0.770 | **-0.009** |
+
+**Per-expression highlights (transformer):** counter-direction cars 0.937 AUC, parking side-specific 0.92, moving vehicles 0.834, "moving pedestrian" collapses to 0.360, "parking cars" (no side) 0.524.
+
+**Key findings:**
+1. **Temporal transformer failed to break the 0.79 ceiling.** Mean AUC dropped from 0.779 → 0.770. Per the spec's falsification clause: "If it doesn't improve: the temporal signal is not the bottleneck."
+2. **Training underfit, did not overfit.** Loss plateaued at 4.33 with final acc 53%, slightly *below* MLP's 54%. The transformer can't match MLP capacity on this task with current data volume
+3. **Sliding window did not multiply samples as predicted.** Expected 400-600K sequences; got 147,212 — identical to the per-frame sample count. `_vectors_to_sequences` produces one sequence per source vector (left-padded for short history), not N-T+1 per track. Effectively trains on the same sample count with a harder-to-optimize model
+4. **Strong expressions benefit, weak ones degrade.** AUC variance widened (std 0.180). The [CLS]-token aggregation appears to average out fine-grained distinctions: "moving pedestrian" and "parking cars" lose discrimination
+5. **SNR feature is an outlier hazard.** Raw SNR = obj_speed / (bg_mag + 1e-6) can hit 8M when ego-motion ≈ 0. MLP's ReLU + Dropout + LayerNorm chain absorbed it; the transformer's bare `Linear → attention softmax` produced NaN gradients at epoch 0. Input LayerNorm fixed the NaN but the underlying instability suggests SNR clipping is worth revisiting
+
+**Conclusion:** Temporal context (at least via a small transformer with [CLS] aggregation) is **not** the bottleneck. The single-frame MLP (Exp 30, AUC 0.779) remains the production model. The 0.79 ceiling appears to be driven by **label ambiguity in 2D projected motion**, not by insufficient feature dimensionality or temporal context. Future directions should prioritize: (a) multi-sequence evaluation to reduce seq 0011 variance, (b) loss function changes (triplet, ArcFace), (c) language-side changes (prompt engineering, CLIP text encoder), or (d) architectural changes that don't add capacity (e.g., hard negative mining).
+
+**Weight files:** `gmc_link_weights_v1train_temporal.pth` + `*_curves.png`
+
 ---
 
 ## Open Questions
