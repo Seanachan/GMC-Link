@@ -151,20 +151,24 @@ def setup_model_and_optimizer(
     device: torch.device, lang_dim: int, learning_rate: float, epochs: int,
     learnable_temp: bool = False, motion_dim: int = 13,
     architecture: str = "mlp", seq_len: int = 10,
+    loss_name: str = "infonce", beta: float = 1.0,
 ) -> Tuple[
     MotionLanguageAligner, nn.Module, optim.Optimizer, optim.lr_scheduler.LRScheduler
 ]:
-    """
-    Initialize the MotionLanguageAligner, InfoNCE loss, and AdamW optimizer.
-    """
+    """Initialize model, loss, and AdamW optimizer."""
     model = MotionLanguageAligner(
         motion_dim=motion_dim, lang_dim=lang_dim, embed_dim=256,
         architecture=architecture, seq_len=seq_len,
     ).to(device)
 
-    criterion = AlignmentLoss(temperature=0.07, learnable=learnable_temp)
+    if loss_name == "hninfo":
+        from gmc_link.losses import HardNegativeInfoNCE
+        if learnable_temp:
+            raise ValueError("--learnable-temp is not supported with --loss hninfo")
+        criterion = HardNegativeInfoNCE(temperature=0.07, beta=beta, fnm=True)
+    else:
+        criterion = AlignmentLoss(temperature=0.07, learnable=learnable_temp)
 
-    # Include temperature param in optimizer if learnable
     params = list(model.parameters())
     if learnable_temp:
         params += list(criterion.parameters())
@@ -173,7 +177,6 @@ def setup_model_and_optimizer(
     scheduler = optim.lr_scheduler.CosineAnnealingLR(
         optimizer, T_max=epochs, eta_min=1e-5
     )
-
     return model, criterion, optimizer, scheduler
 
 
@@ -308,8 +311,16 @@ def _run_single_stage(
     extra_features: list = None,
     architecture: str = "mlp",
     seq_len: int = 10,
+    loss_name: str = "infonce",
+    beta: float = 1.0,
 ) -> None:
-    """Run a single training stage (used by both standalone and curriculum modes)."""
+    """Run a single training stage."""
+    if loss_name == "hninfo" and use_group_labels:
+        raise ValueError(
+            "--loss hninfo requires sentence-level labels; "
+            "not compatible with --stage 1 (group labels)"
+        )
+
     dataloader = setup_data(device, data_root, sequences, batch_size,
                             use_group_labels=use_group_labels,
                             extra_features=extra_features,
@@ -323,6 +334,7 @@ def _run_single_stage(
         device, lang_dim, lr, epochs, learnable_temp=learnable_temp,
         motion_dim=motion_dim,
         architecture=architecture, seq_len=seq_len,
+        loss_name=loss_name, beta=beta,
     )
 
     if resume_path is not None:
@@ -336,12 +348,13 @@ def _run_single_stage(
     train_loop(model, dataloader, optimizer, scheduler, criterion, device, epochs,
                save_path=save_path, warmup_epochs=warmup_epochs, grad_clip=grad_clip)
 
-    # Append metadata to checkpoint
     checkpoint = torch.load(save_path, map_location=device, weights_only=False)
     checkpoint["motion_dim"] = motion_dim
     checkpoint["extra_features"] = extra_features
     checkpoint["architecture"] = architecture
     checkpoint["seq_len"] = seq_len if architecture == "temporal_transformer" else None
+    checkpoint["loss_name"] = loss_name
+    checkpoint["beta"] = beta if loss_name == "hninfo" else None
     torch.save(checkpoint, save_path)
 
 
@@ -369,6 +382,10 @@ def main() -> None:
     parser.add_argument("--warmup-epochs", type=int, default=0, help="Linear LR warmup epochs")
     parser.add_argument("--learnable-temp", action="store_true", help="Make temperature a learnable parameter")
     parser.add_argument("--grad-clip", type=float, default=0.0, help="Gradient clipping max_norm (0=disabled)")
+    parser.add_argument("--loss", default="infonce", choices=["infonce", "hninfo"],
+                        help="Contrastive loss (default: infonce; hninfo = hard-negative InfoNCE with FNM)")
+    parser.add_argument("--beta", type=float, default=1.0,
+                        help="Hard-negative concentration (only used when --loss hninfo; 0=uniform, 1.0 typical)")
     parser.add_argument("--stage", default=None, choices=["1", "2", "curriculum"],
                         help="Curriculum stage: 1=group-level, 2=fine-tune, curriculum=both")
     parser.add_argument("--resume", default=None, help="Path to pretrained weights (for stage 2)")
@@ -464,6 +481,7 @@ def main() -> None:
         warmup_epochs=args.warmup_epochs, learnable_temp=args.learnable_temp,
         grad_clip=args.grad_clip, extra_features=extra_features,
         architecture=args.architecture, seq_len=args.seq_len,
+        loss_name=args.loss, beta=args.beta,
     )
 
 
