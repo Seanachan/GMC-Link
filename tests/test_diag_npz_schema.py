@@ -1,15 +1,27 @@
-"""Verify the diagnostic persists raw cosine arrays in addition to summary results."""
+"""Verify the diagnostic persists raw cosine arrays in addition to summary results.
+
+This is an integration test: it inspects a real .npz produced by the diagnostic
+script. It is skipped on a clean checkout where no diagnostic has been run yet.
+"""
 import numpy as np
+import pytest
 from pathlib import Path
 
 
+_CANDIDATE_NPZ_PATHS = [
+    Path("diagnostics/results/layer3_gt_cosine_0011.npz"),
+    Path("diagnostics/results/multiseq/layer3_0011_v1train_stage1.npz"),
+]
+
+
 def test_npz_contains_raw_cosines():
-    npz_path = Path("diagnostics/results/layer3_gt_cosine_0011.npz")
-    assert npz_path.exists(), (
-        f"{npz_path} not found. Run the diagnostic first: "
-        f"~/miniconda/envs/RMOT/bin/python diagnostics/diag_gt_cosine_distributions.py "
-        f"--weights gmc_link_weights_v1train_stage1.pth --seq 0011"
-    )
+    npz_path = next((p for p in _CANDIDATE_NPZ_PATHS if p.exists()), None)
+    if npz_path is None:
+        pytest.skip(
+            "No diagnostic .npz on disk. Run the diagnostic first, e.g.: "
+            "~/miniconda/envs/RMOT/bin/python diagnostics/diag_gt_cosine_distributions.py "
+            "--weights gmc_link_weights_v1train_stage1.pth --seq 0011"
+        )
     d = np.load(npz_path, allow_pickle=True)
 
     # Existing key still present
