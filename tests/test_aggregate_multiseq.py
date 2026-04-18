@@ -288,3 +288,37 @@ def test_write_weight_boxplot_creates_file(
     write_weight_boxplot(rec, out)
     assert out.exists()
     assert out.stat().st_size > 1000, "PNG should not be trivially small"
+
+
+def test_comparison_report_ranks_models_and_includes_max_gap(
+    tmp_path: Path, synthetic_npz_dir: Path,
+):
+    from diagnostics.aggregate_multiseq import (
+        build_weight_record, write_comparison_markdown,
+    )
+    rec_a = build_weight_record(
+        results_dir=synthetic_npz_dir, model_tag="model_A",
+        weights_path="a.pth", seqs=["0005", "0011", "0013"],
+    )
+    rec_b = build_weight_record(
+        results_dir=synthetic_npz_dir, model_tag="model_B",
+        weights_path="b.pth", seqs=["0005", "0011", "0013"],
+    )
+    out = tmp_path / "layer3_multiseq_comparison.md"
+    write_comparison_markdown([rec_a, rec_b], out, seqs=["0005", "0011", "0013"])
+    text = out.read_text()
+    # AUC gloss baked in
+    assert "AUC =" in text
+    # Column headers
+    for col in ["model_tag", "mean_auc_micro", "mean_auc_macro",
+                "best_seq", "worst_seq", "max_gap"]:
+        assert col in text
+    # Rows ordered by micro descending: model_A should appear before model_B
+    a_idx = text.index("model_A")
+    b_idx = text.index("model_B")
+    assert a_idx < b_idx, "model_A has higher AUC so it should be listed first"
+    # best_seq formatted as "{seq}: {auc:.3f}"
+    import re
+    assert re.search(r"\d{4}: 0\.\d{3}", text), (
+        "best_seq / worst_seq should be formatted as '{seq}: {auc:.3f}'"
+    )

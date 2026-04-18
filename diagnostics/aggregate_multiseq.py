@@ -307,5 +307,91 @@ def write_weight_boxplot(record: dict, out_path: Path) -> None:
     plt.close(fig)
 
 
+def _per_seq_mean_auc(record: dict) -> dict[str, float | None]:
+    """For each seq, mean across expressions of its per-seq AUC."""
+    out: dict[str, list[float]] = {s: [] for s in record["sequences"]}
+    for agg in record["per_expression"].values():
+        for s, v in agg["auc_per_seq"].items():
+            if v is not None:
+                out[s].append(v)
+    return {
+        s: (float(np.mean(vs)) if vs else None) for s, vs in out.items()
+    }
+
+
+def write_comparison_markdown(
+    records: list[dict],
+    out_path: Path,
+    seqs: Iterable[str],
+) -> None:
+    """Write the cross-weight comparison report, ordered by micro AUC desc."""
+    out_path = Path(out_path)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    seqs = list(seqs)
+
+    rows = []
+    for rec in records:
+        hl = rec["headline"]
+        per_seq_mean = _per_seq_mean_auc(rec)
+        valid = {s: v for s, v in per_seq_mean.items() if v is not None}
+        if valid:
+            best_s = max(valid, key=valid.get)
+            worst_s = min(valid, key=valid.get)
+            max_gap = valid[best_s] - valid[worst_s]
+            best_str = f"{best_s}: {valid[best_s]:.3f}"
+            worst_str = f"{worst_s}: {valid[worst_s]:.3f}"
+        else:
+            best_str = worst_str = "—"
+            max_gap = None
+        rows.append({
+            "model_tag": rec["model_tag"],
+            "mean_auc_micro": hl["mean_auc_micro"],
+            "mean_auc_macro": hl["mean_auc_macro"],
+            "std_across_seqs": hl["std_across_seqs"],
+            "best_seq": best_str,
+            "worst_seq": worst_str,
+            "max_gap": max_gap,
+        })
+
+    rows.sort(
+        key=lambda r: (
+            -r["mean_auc_micro"] if r["mean_auc_micro"] is not None else 1.0,
+            r["model_tag"],
+        )
+    )
+
+    lines: list[str] = []
+    lines.append("# Multi-Sequence Eval: Comparison Across Weights")
+    lines.append("")
+    lines.append("## What AUC means here")
+    lines.append(_AUC_GLOSS)
+    lines.append("")
+    lines.append(f"**Held-out sequences:** {', '.join(seqs)}")
+    lines.append("")
+    lines.append(
+        "| model_tag | mean_auc_micro | mean_auc_macro ± std | best_seq | worst_seq | max_gap |"
+    )
+    lines.append("|---|---|---|---|---|---|")
+    for r in rows:
+        macro_cell = (
+            f"{_fmt(r['mean_auc_macro'])} ± {_fmt(r['std_across_seqs'])}"
+        )
+        lines.append(
+            "| "
+            + " | ".join(
+                [
+                    r["model_tag"],
+                    _fmt(r["mean_auc_micro"]),
+                    macro_cell,
+                    r["best_seq"],
+                    r["worst_seq"],
+                    _fmt(r["max_gap"]),
+                ]
+            )
+            + " |"
+        )
+    out_path.write_text("\n".join(lines) + "\n")
+
+
 if __name__ == "__main__":  # pragma: no cover — filled in Task 8
     raise SystemExit("CLI entrypoint not yet implemented; see Task 8 of the plan.")
