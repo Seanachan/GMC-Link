@@ -123,3 +123,16 @@ def test_beta_amplifies_l2m_direction_with_asymmetric_sim():
         f"β=2.0 should amplify l2m hard/easy ratio more than β=0.5; "
         f"got r_small={r_small:.3f}, r_large={r_large:.3f}"
     )
+
+
+def test_fully_masked_row_is_finite():
+    """When FNM masks an entire row's negatives (all same sentence), loss and
+    gradients must stay finite rather than NaN."""
+    sim = torch.randn(3, 3, requires_grad=True)
+    sids = torch.tensor([7, 7, 7])  # all same sentence → every off-diagonal is a "false negative"
+    loss = HardNegativeInfoNCE(temperature=0.07, beta=2.0, fnm=True)(sim, sids)
+    assert torch.isfinite(loss).item(), f"loss not finite: {loss.item()}"
+    loss.backward()
+    assert torch.isfinite(sim.grad).all().item(), f"non-finite grad: {sim.grad}"
+    # With all rows fully masked, there's no contrastive signal, so loss should be ~0.
+    assert loss.item() < 1e-4, f"loss should be ~0 when no negatives; got {loss.item()}"

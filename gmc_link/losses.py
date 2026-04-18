@@ -88,6 +88,9 @@ class HardNegativeInfoNCE(nn.Module):
             log_w_norm = log_w_raw - torch.logsumexp(log_w_raw, dim=1, keepdim=True)
             n_neg = nm.sum(dim=1, keepdim=True).clamp_min(1).to(lg.dtype)
             log_w = log_w_norm + torch.log(n_neg)  # rescale so Σw = N_neg
+            # Fully-masked rows produce NaN from (-inf) - (-inf); clear them so
+            # they contribute -inf to the logsumexp below (i.e., no negatives).
+            log_w = log_w.masked_fill(~nm, float("-inf"))
 
             # Weighted logsumexp: logsumexp_j( log(w[i,j]) + logits[i,j] ) over negatives
             masked_logits = lg.masked_fill(~nm, float("-inf"))
