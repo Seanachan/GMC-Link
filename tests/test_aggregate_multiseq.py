@@ -240,3 +240,35 @@ def test_write_weight_json_roundtrip(tmp_path: Path, synthetic_npz_dir: Path):
     loaded = json.loads(out.read_text())
     assert loaded["model_tag"] == "model_A"
     assert loaded["per_expression"]["moving cars"]["auc_per_seq"]["0005"] is not None
+
+
+def test_write_weight_markdown_has_expected_sections(
+    tmp_path: Path, synthetic_npz_dir: Path,
+):
+    from diagnostics.aggregate_multiseq import (
+        build_weight_record, write_weight_markdown,
+    )
+    rec = build_weight_record(
+        results_dir=synthetic_npz_dir, model_tag="model_A",
+        weights_path="fake.pth", seqs=["0005", "0011", "0013"],
+    )
+    out = tmp_path / "layer3_multiseq_model_A.md"
+    # legacy_seq_0011 is a plain number (the legacy single-seq AUC for
+    # continuity with Exp 30-32). Passed in by the CLI; for test purposes
+    # we pass a sentinel.
+    write_weight_markdown(rec, out, legacy_seq_0011_auc=0.779)
+    text = out.read_text()
+    assert "# Multi-Sequence Eval: model_A" in text
+    assert "## What this measures" in text
+    assert "AUC = probability" in text  # interpretive gloss baked in
+    assert "0.50 = chance" in text
+    assert "## Headline" in text
+    assert "Mean AUC (micro" in text
+    assert "Mean AUC (macro" in text
+    assert "Seq-0011 only (legacy" in text
+    assert "0.779" in text  # legacy number
+    assert "## Per-expression breakdown" in text
+    # Table headers
+    assert "| Expression | 0005 | 0011 | 0013 | macro μ ± σ | micro | GT counts |" in text
+    # Row for one of the expressions
+    assert "moving cars" in text

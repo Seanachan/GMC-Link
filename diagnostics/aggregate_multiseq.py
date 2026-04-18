@@ -180,5 +180,81 @@ def write_weight_json(record: dict, out_path: Path) -> None:
     out_path.write_text(json.dumps(record, indent=2, sort_keys=True) + "\n")
 
 
+_AUC_GLOSS = (
+    "AUC = probability that a randomly chosen GT-matching track gets a higher "
+    "cosine score than a randomly chosen non-matching track, for a given "
+    "expression. 0.50 = chance, 1.00 = perfect. < 0.50 means inverted."
+)
+
+
+def _fmt(x: float | None, digits: int = 3) -> str:
+    if x is None:
+        return "—"
+    return f"{x:.{digits}f}"
+
+
+def write_weight_markdown(
+    record: dict,
+    out_path: Path,
+    legacy_seq_0011_auc: float | None,
+) -> None:
+    """Write the human-readable per-weight Markdown report."""
+    out_path = Path(out_path)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+
+    tag = record["model_tag"]
+    seqs = record["sequences"]
+    hl = record["headline"]
+    per_expr = record["per_expression"]
+
+    lines: list[str] = []
+    lines.append(f"# Multi-Sequence Eval: {tag}")
+    lines.append("")
+    lines.append("## What this measures")
+    lines.append(_AUC_GLOSS)
+    lines.append("")
+    lines.append("## Headline")
+    lines.append(
+        f"- Mean AUC (micro, pooled across {len(seqs)} seqs): "
+        f"**{_fmt(hl['mean_auc_micro'])}** "
+        f"(over {hl['n_expressions']} expressions)"
+    )
+    macro_str = _fmt(hl["mean_auc_macro"])
+    std_str = _fmt(hl["std_across_seqs"])
+    lines.append(
+        f"- Mean AUC (macro, per-seq averaged):     "
+        f"**{macro_str}** ± {std_str} "
+        f"(over {hl['n_expressions_macro']} expressions in ≥2 seqs)"
+    )
+    lines.append(
+        f"- Seq-0011 only (legacy, for continuity): **{_fmt(legacy_seq_0011_auc)}**"
+    )
+    lines.append("")
+    lines.append("## Per-expression breakdown")
+    header = "| Expression | " + " | ".join(seqs) + " | macro μ ± σ | micro | GT counts |"
+    lines.append(header)
+    sep = "|" + "|".join(["---"] * (len(seqs) + 4)) + "|"
+    lines.append(sep)
+
+    def _sort_key(kv):
+        sent, agg = kv
+        v = agg["auc_micro"]
+        return (-v if v is not None else 1.0, sent)
+
+    for sent, agg in sorted(per_expr.items(), key=_sort_key):
+        cells = [sent]
+        for s in seqs:
+            cells.append(_fmt(agg["auc_per_seq"].get(s), digits=3))
+        cells.append(
+            f"{_fmt(agg['auc_macro_mean'])} ± {_fmt(agg['auc_macro_std'])}"
+        )
+        cells.append(_fmt(agg["auc_micro"]))
+        gt_counts = "/".join(str(agg["gt_count_per_seq"].get(s, 0)) for s in seqs)
+        cells.append(gt_counts)
+        lines.append("| " + " | ".join(cells) + " |")
+
+    out_path.write_text("\n".join(lines) + "\n")
+
+
 if __name__ == "__main__":  # pragma: no cover — filled in Task 8
     raise SystemExit("CLI entrypoint not yet implemented; see Task 8 of the plan.")
