@@ -154,3 +154,25 @@ def test_weight_normalization_invariant():
             f"β={beta}: weights don't sum to N_neg; "
             f"got sums={w.sum(dim=1)}, expected={n_neg}"
         )
+
+
+def test_sentence_ids_passed_through_training_contract():
+    """Verify AlignmentLoss and HardNegativeInfoNCE both accept (sim, ids)
+    so train_one_epoch's call site `loss_func(sim_matrix, expr_ids)` works
+    for either loss with no branching at the call site.
+    """
+    import inspect
+    from gmc_link.losses import AlignmentLoss, HardNegativeInfoNCE
+
+    align_params = inspect.signature(AlignmentLoss.forward).parameters
+    hn_params    = inspect.signature(HardNegativeInfoNCE.forward).parameters
+
+    # Both must accept at least (self, sim_matrix, <ids-like arg>)
+    assert len(align_params) >= 3, "AlignmentLoss.forward must accept sentence_ids"
+    assert len(hn_params) >= 3, "HardNegativeInfoNCE.forward must accept sentence_ids"
+
+    # Smoke: can call each without TypeError
+    sim = torch.randn(4, 4)
+    ids = torch.tensor([0, 1, 2, 3])
+    _ = AlignmentLoss(temperature=0.07)(sim, ids)
+    _ = HardNegativeInfoNCE(temperature=0.07, beta=0.0, fnm=False)(sim, ids)
