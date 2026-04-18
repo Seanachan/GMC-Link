@@ -125,5 +125,60 @@ def aggregate_expression(
     }
 
 
+def build_weight_record(
+    results_dir: Path,
+    model_tag: str,
+    weights_path: str,
+    seqs: Iterable[str],
+) -> dict:
+    """Compute the full per-weight record (matches spec's JSON schema)."""
+    seqs = list(seqs)
+    data = load_per_seq_expressions(results_dir, model_tag, seqs)
+
+    per_expression: dict[str, dict] = {}
+    for sent, per_seq in data.items():
+        per_expression[sent] = aggregate_expression(per_seq, seqs)
+
+    # Headline: mean over expressions. Macro headline uses only expressions
+    # defined in >=2 seqs (std is otherwise meaningless).
+    micro_values = [
+        v["auc_micro"] for v in per_expression.values() if v["auc_micro"] is not None
+    ]
+    macro_values_full = []
+    for v in per_expression.values():
+        n_seqs_with_data = sum(
+            1 for a in v["auc_per_seq"].values() if a is not None
+        )
+        if n_seqs_with_data >= 2 and v["auc_macro_mean"] is not None:
+            macro_values_full.append(v["auc_macro_mean"])
+
+    headline = {
+        "mean_auc_micro": float(np.mean(micro_values)) if micro_values else None,
+        "mean_auc_macro": (
+            float(np.mean(macro_values_full)) if macro_values_full else None
+        ),
+        "std_across_seqs": (
+            float(np.std(macro_values_full)) if len(macro_values_full) >= 2 else None
+        ),
+        "n_expressions": len(micro_values),
+        "n_expressions_macro": len(macro_values_full),
+    }
+
+    return {
+        "model_tag": model_tag,
+        "weights_path": weights_path,
+        "sequences": seqs,
+        "per_expression": per_expression,
+        "headline": headline,
+    }
+
+
+def write_weight_json(record: dict, out_path: Path) -> None:
+    """Write the per-weight record to disk as pretty JSON."""
+    out_path = Path(out_path)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(json.dumps(record, indent=2, sort_keys=True) + "\n")
+
+
 if __name__ == "__main__":  # pragma: no cover — filled in Task 8
     raise SystemExit("CLI entrypoint not yet implemented; see Task 8 of the plan.")

@@ -158,3 +158,85 @@ def test_expression_missing_from_seq_is_skipped_in_macro(tmp_path: Path):
     # macro computed over 0005 + 0013 only
     valid_aucs = [agg["auc_per_seq"][s] for s in ["0005", "0013"]]
     np.testing.assert_allclose(agg["auc_macro_mean"], np.mean(valid_aucs), rtol=1e-6)
+
+
+def test_build_weight_record_structure(synthetic_npz_dir: Path):
+    from diagnostics.aggregate_multiseq import build_weight_record
+    rec = build_weight_record(
+        results_dir=synthetic_npz_dir,
+        model_tag="model_A",
+        weights_path="fake.pth",
+        seqs=["0005", "0011", "0013"],
+    )
+    assert rec["model_tag"] == "model_A"
+    assert rec["weights_path"] == "fake.pth"
+    assert rec["sequences"] == ["0005", "0011", "0013"]
+    # All three synthetic expressions present
+    assert set(rec["per_expression"].keys()) == {
+        "moving cars", "parking cars", "cars in left",
+    }
+    # Headline: micro mean >= macro mean only if distributions match; both
+    # should be > 0.85 for the clean model.
+    assert rec["headline"]["mean_auc_micro"] > 0.85
+    assert rec["headline"]["mean_auc_macro"] > 0.85
+    assert rec["headline"]["n_expressions"] == 3
+    assert rec["headline"]["std_across_seqs"] is not None
+
+
+def test_headline_excludes_single_seq_expressions_from_macro(tmp_path: Path):
+    """An expression that exists in only 1 seq has no macro std; exclude it from macro headline."""
+    from diagnostics.aggregate_multiseq import build_weight_record
+    rng = np.random.default_rng(1)
+    out_dir = tmp_path / "multiseq"
+    out_dir.mkdir()
+    # Seq 0005 has both expressions; 0011 and 0013 have only "common".
+    for s in ["0005", "0011", "0013"]:
+        results = []
+        gt_list, nongt_list = [], []
+        sentences = ["common", "only_in_0005"] if s == "0005" else ["common"]
+        for sent in sentences:
+            gt = rng.normal(0.3, 0.1, 20).astype(np.float32)
+            nongt = rng.normal(0.1, 0.1, 80).astype(np.float32)
+            results.append({
+                "sentence": sent,
+                "n_gt": 20, "n_nongt": 80,
+                "gt_mean": float(gt.mean()), "gt_std": float(gt.std()),
+                "nongt_mean": float(nongt.mean()), "nongt_std": float(nongt.std()),
+                "separation": float(gt.mean() - nongt.mean()), "auc": 0.0,
+            })
+            gt_list.append(gt)
+            nongt_list.append(nongt)
+        np.savez(
+            out_dir / f"layer3_{s}_partial.npz",
+            results=results,
+            gt_cosines_by_expr=np.array(gt_list, dtype=object),
+            nongt_cosines_by_expr=np.array(nongt_list, dtype=object),
+        )
+
+    rec = build_weight_record(
+        results_dir=out_dir, model_tag="partial", weights_path="p.pth",
+        seqs=["0005", "0011", "0013"],
+    )
+    # "only_in_0005" is excluded from macro headline (<2 seqs) but present
+    # in per_expression map; and in micro.
+    assert "only_in_0005" in rec["per_expression"]
+    # macro headline should be computed over 1 expression only ("common")
+    assert rec["headline"]["n_expressions_macro"] == 1
+    # micro includes both
+    assert rec["headline"]["n_expressions"] == 2
+
+
+def test_write_weight_json_roundtrip(tmp_path: Path, synthetic_npz_dir: Path):
+    from diagnostics.aggregate_multiseq import (
+        build_weight_record, write_weight_json,
+    )
+    rec = build_weight_record(
+        results_dir=synthetic_npz_dir, model_tag="model_A",
+        weights_path="fake.pth", seqs=["0005", "0011", "0013"],
+    )
+    out = tmp_path / "layer3_multiseq_model_A.json"
+    write_weight_json(rec, out)
+    assert out.exists()
+    loaded = json.loads(out.read_text())
+    assert loaded["model_tag"] == "model_A"
+    assert loaded["per_expression"]["moving cars"]["auc_per_seq"]["0005"] is not None
