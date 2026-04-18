@@ -62,6 +62,31 @@ class HardNegativeInfoNCE(nn.Module):
         self.beta = beta
         self.fnm = fnm
 
+    def compute_negative_weights(self, sim_matrix, sentence_ids):
+        """Return (w, n_neg) for inspection.
+
+        w: (B, B) tensor of normalized negative weights (positives are 0).
+        n_neg: (B,) tensor of negative counts per anchor.
+
+        Invariant: w.sum(dim=1) == n_neg for all rows with n_neg > 0.
+        """
+        B = sim_matrix.size(0)
+        device = sim_matrix.device
+        diag = torch.eye(B, dtype=torch.bool, device=device)
+        if self.fnm:
+            same_sentence = sentence_ids[:, None] == sentence_ids[None, :]
+        else:
+            same_sentence = diag
+        negative_mask = (~same_sentence) & ~diag
+
+        log_w_raw = (self.beta * sim_matrix).masked_fill(~negative_mask, float("-inf"))
+        log_w_norm = log_w_raw - torch.logsumexp(log_w_raw, dim=1, keepdim=True)
+        n_neg = negative_mask.sum(dim=1).to(sim_matrix.dtype)
+        # log_w = log_w_norm + log(N_neg). Convert to linear scale, zero out masked.
+        log_w = log_w_norm + torch.log(n_neg.clamp_min(1)).unsqueeze(1)
+        w = log_w.exp().masked_fill(~negative_mask, 0.0)
+        return w, n_neg.long()
+
     def forward(self, sim_matrix, sentence_ids=None):
         if self.fnm and sentence_ids is None:
             raise ValueError("sentence_ids is required when fnm=True")

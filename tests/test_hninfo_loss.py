@@ -136,3 +136,21 @@ def test_fully_masked_row_is_finite():
     assert torch.isfinite(sim.grad).all().item(), f"non-finite grad: {sim.grad}"
     # With all rows fully masked, there's no contrastive signal, so loss should be ~0.
     assert loss.item() < 1e-4, f"loss should be ~0 when no negatives; got {loss.item()}"
+
+
+def test_weight_normalization_invariant():
+    """For any β, the per-anchor negative weights must sum to N_neg[i]."""
+    torch.manual_seed(1)
+    B = 8
+    sim = torch.randn(B, B)
+    # 3 groups of duplicate sentences → N_neg varies per anchor
+    sentence_ids = torch.tensor([0, 0, 1, 1, 1, 2, 3, 4])
+
+    for beta in [0.0, 0.5, 1.0, 2.0]:
+        loss_fn = HardNegativeInfoNCE(temperature=0.07, beta=beta, fnm=True)
+        w, n_neg = loss_fn.compute_negative_weights(sim, sentence_ids)
+        # w shape: (B, B); n_neg shape: (B,)
+        assert torch.allclose(w.sum(dim=1), n_neg.to(w.dtype), atol=1e-4), (
+            f"β={beta}: weights don't sum to N_neg; "
+            f"got sums={w.sum(dim=1)}, expected={n_neg}"
+        )
