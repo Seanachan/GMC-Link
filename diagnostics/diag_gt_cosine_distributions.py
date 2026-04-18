@@ -390,6 +390,8 @@ def main():
     print(f"Motion expressions: {len(motion_exprs)}/{len(expressions)}")
 
     per_expr_results = []
+    gt_cosines_by_expr = []
+    nongt_cosines_by_expr = []
 
     for ei, expr in enumerate(motion_exprs):
         sentence = expr["sentence"]
@@ -440,6 +442,8 @@ def main():
                 "separation": float(separation),
                 "auc": float(auc),
             })
+            gt_cosines_by_expr.append(gt_arr.astype(np.float32))
+            nongt_cosines_by_expr.append(nongt_arr.astype(np.float32))
 
         if (ei + 1) % 10 == 0:
             print(f"  Processed {ei + 1}/{len(motion_exprs)} expressions")
@@ -486,7 +490,12 @@ def main():
     # ── Save results ──────────────────────────────────────────────────
     os.makedirs(RESULTS_DIR, exist_ok=True)
     save_path = os.path.join(RESULTS_DIR, f"layer3_gt_cosine_{args.seq}.npz")
-    np.savez(save_path, results=per_expr_results)
+    np.savez(
+        save_path,
+        results=per_expr_results,
+        gt_cosines_by_expr=np.array(gt_cosines_by_expr, dtype=object),
+        nongt_cosines_by_expr=np.array(nongt_cosines_by_expr, dtype=object),
+    )
     print(f"\n  Saved: {save_path}")
 
     # ── Visualization ─────────────────────────────────────────────────
