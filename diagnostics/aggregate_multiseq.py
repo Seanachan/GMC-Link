@@ -256,5 +256,55 @@ def write_weight_markdown(
     out_path.write_text("\n".join(lines) + "\n")
 
 
+def write_weight_boxplot(record: dict, out_path: Path) -> None:
+    """Render one box per expression, showing per-seq AUC spread.
+
+    Tall boxes = seq-dependent expressions; short boxes = stable findings.
+    """
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    out_path = Path(out_path)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+
+    seqs = record["sequences"]
+    per_expr = record["per_expression"]
+
+    # Sort expressions by micro AUC descending (matches Markdown order).
+    def _sort_key(kv):
+        v = kv[1]["auc_micro"]
+        return (-v if v is not None else 1.0, kv[0])
+
+    items = sorted(per_expr.items(), key=_sort_key)
+    labels = [sent for sent, _ in items]
+    aucs_per_expr = [
+        [agg["auc_per_seq"].get(s) for s in seqs if agg["auc_per_seq"].get(s) is not None]
+        for _, agg in items
+    ]
+    # Empty lists break boxplot — filter expressions that have no data at all.
+    labels = [l for l, d in zip(labels, aucs_per_expr) if len(d) > 0]
+    aucs_per_expr = [d for d in aucs_per_expr if len(d) > 0]
+
+    fig, ax = plt.subplots(figsize=(8, max(3, 0.35 * len(labels))))
+    ax.boxplot(
+        aucs_per_expr, vert=False, labels=labels, widths=0.6,
+        showmeans=True, meanline=True,
+    )
+    ax.axvline(0.5, color="red", linestyle="--", alpha=0.4, label="chance")
+    ax.axvline(0.8, color="green", linestyle=":", alpha=0.4, label="0.80 target")
+    ax.set_xlabel("Ranking AUC (0.5 = chance, 1.0 = perfect)")
+    ax.set_title(
+        f"Multi-seq AUC spread: {record['model_tag']} "
+        f"({len(seqs)} held-out seqs: {', '.join(seqs)})"
+    )
+    ax.set_xlim(0, 1)
+    ax.legend(loc="lower right", fontsize=8)
+    ax.invert_yaxis()
+    plt.tight_layout()
+    plt.savefig(out_path, dpi=120, bbox_inches="tight")
+    plt.close(fig)
+
+
 if __name__ == "__main__":  # pragma: no cover — filled in Task 8
     raise SystemExit("CLI entrypoint not yet implemented; see Task 8 of the plan.")

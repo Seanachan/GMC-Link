@@ -272,3 +272,19 @@ def test_write_weight_markdown_has_expected_sections(
     assert "| Expression | 0005 | 0011 | 0013 | macro μ ± σ | micro | GT counts |" in text
     # Row for one of the expressions
     assert "moving cars" in text
+
+
+def test_write_weight_boxplot_creates_file(
+    tmp_path: Path, synthetic_npz_dir: Path,
+):
+    from diagnostics.aggregate_multiseq import (
+        build_weight_record, write_weight_boxplot,
+    )
+    rec = build_weight_record(
+        results_dir=synthetic_npz_dir, model_tag="model_A",
+        weights_path="fake.pth", seqs=["0005", "0011", "0013"],
+    )
+    out = tmp_path / "layer3_multiseq_model_A.png"
+    write_weight_boxplot(rec, out)
+    assert out.exists()
+    assert out.stat().st_size > 1000, "PNG should not be trivially small"
