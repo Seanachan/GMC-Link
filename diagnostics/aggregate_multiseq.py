@@ -450,6 +450,10 @@ def _parse_legacy_arg(raw: list[str]) -> dict[str, float]:
     """Each entry: 'tag=0.779'."""
     out: dict[str, float] = {}
     for entry in raw:
+        if "=" not in entry:
+            raise argparse.ArgumentTypeError(
+                f"--legacy-seq-0011 entry must be 'tag=auc', got: {entry!r}"
+            )
         tag, val = entry.split("=", 1)
         out[tag] = float(val)
     return out
