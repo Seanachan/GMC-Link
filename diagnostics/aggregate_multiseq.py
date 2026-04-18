@@ -287,6 +287,7 @@ def write_weight_boxplot(record: dict, out_path: Path) -> None:
     aucs_per_expr = [d for d in aucs_per_expr if len(d) > 0]
 
     fig, ax = plt.subplots(figsize=(8, max(3, 0.35 * len(labels))))
+    # `labels=` renamed to `tick_labels=` in matplotlib>=3.9; rename before 3.11.
     ax.boxplot(
         aucs_per_expr, vert=False, labels=labels, widths=0.6,
         showmeans=True, meanline=True,
