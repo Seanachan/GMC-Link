@@ -230,6 +230,7 @@ test_mtime.txt
 
 # Generated data
 *.npz
+*_curves.png
 
 # TensorBoard
 events.out.tfevents.*
