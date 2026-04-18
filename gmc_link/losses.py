@@ -69,10 +69,40 @@ class HardNegativeInfoNCE(nn.Module):
         device = sim_matrix.device
         logits = sim_matrix / self.temperature
 
-        # Task 1 scaffold: β and fnm are stored but unused. Weighting and FNM
-        # are wired in Tasks 2-3. At this stage the forward pass is a straight-
-        # through InfoNCE, matching AlignmentLoss.
-        targets = torch.arange(B, device=device)
-        m2l_loss = F.cross_entropy(logits, targets)
-        l2m_loss = F.cross_entropy(logits.t(), targets)
-        return (m2l_loss + l2m_loss) / 2.0
+        # Masks
+        diag = torch.eye(B, dtype=torch.bool, device=device)
+        if self.fnm:
+            same_sentence = sentence_ids[:, None] == sentence_ids[None, :]
+        else:
+            same_sentence = diag  # only the diagonal is a "positive"
+        positive_mask = same_sentence            # (B, B) bool
+        negative_mask = (~positive_mask) & ~diag  # exclude self-pair and same-sentence
+
+        # Weighted logsumexp: denominator = exp(logits_pos_i) + Σ_j w[i,j] * exp(logits[i,j])
+        # For β=0 (no mining), weights are uniform = 1 over the negative set.
+        # Implemented as masked logsumexp — mask negatives we want to skip
+        # by adding -inf to their logits before logsumexp.
+        neg_logits = logits.masked_fill(~negative_mask, float("-inf"))
+
+        # Positive logit: diagonal (motion_i vs its own caption_i)
+        pos_logits = logits.diagonal()  # (B,)
+
+        # m2l: anchor = motion, candidates = language (columns)
+        # logsumexp over each row's unmasked negatives, plus the positive
+        neg_lse_m2l = torch.logsumexp(neg_logits, dim=1)
+        # Combine positive + negative denominator
+        den_m2l = torch.logsumexp(
+            torch.stack([pos_logits, neg_lse_m2l], dim=1), dim=1
+        )
+        l_m2l = (den_m2l - pos_logits).mean()
+
+        # l2m: anchor = language (transpose logits)
+        logits_t = logits.t()
+        neg_logits_t = logits_t.masked_fill(~negative_mask.t(), float("-inf"))
+        neg_lse_l2m = torch.logsumexp(neg_logits_t, dim=1)
+        den_l2m = torch.logsumexp(
+            torch.stack([pos_logits, neg_lse_l2m], dim=1), dim=1
+        )
+        l_l2m = (den_l2m - pos_logits).mean()
+
+        return (l_m2l + l_l2m) / 2.0
