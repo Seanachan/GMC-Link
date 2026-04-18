@@ -648,6 +648,48 @@ After 22 experiments, **InfoNCE-trained aligner + Stage 2 Learned Fusion Head** 
 
 ---
 
+## Exp 33: Multi-Sequence Re-Evaluation of Exp 30–32
+
+**Date:** 2026-04-18
+**Motivation:** Exps 30–32 reported a ~0.79 AUC ceiling from seq 0011 alone. This run aggregates the same weights across all 3 V1 held-out seqs (0005, 0011, 0013) to separate the ceiling's signal from seq-0011 variance.
+**Spec:** `docs/superpowers/specs/2026-04-18-multi-sequence-eval-design.md`
+**Plan:** `docs/superpowers/plans/2026-04-18-multi-sequence-eval.md`
+**Comparison artifact:** `diagnostics/results/multiseq/layer3_multiseq_comparison.md`
+
+### Findings against the spec's interpretive thresholds
+
+1. **Is seq 0011 representative? YES (9/11 weights pass).** For each weight, an expression "passes" if its seq-0011 AUC lies within ±1σ of the cross-seq macro mean; a weight passes if ≥70 % of its multi-seq expressions pass. Result: 9/11 ≥ 8/11 threshold → seq 0011 was representative. Only F6_velrank (58.3 %) and temporal (66.7 %) fail. **However**, seq 0011 is the *worst* seq for all 11 weights (worst_seq column in comparison MD is "0011: …" in every row), so it is a systematically pessimistic but statistically representative sample — not a random outlier. Exp 30–32 conclusions do not need revisiting for variance-driven reasons.
+
+2. **Is feature enrichment truly dead (Exp 31)? MIXED.** On micro AUC, no F1–F9 weight exceeds 0.800 (best is F9_density at 0.781). On per-seq means, **every** F1–F9 weight crosses 0.800 on at least one seq, mostly on seq 0013: F8_nndist on 0013 hits 0.835, F5_nbrmean on 0013 hits 0.825, F9_density on 0005 hits 0.823. **Caveat:** seq 0013 has only 2 expressions, so these per-seq means are noise-limited (n=2). The micro-AUC verdict is the load-bearing one — feature enrichment remains dead in the pooled-sample test.
+
+3. **Is Exp 32 a genuine regression? YES.** Stage1 micro M30 = 0.779, Temporal micro M32 = 0.747, gap = **0.032 ≥ 0.010 threshold** → genuine regression. Multi-seq aggregation strengthened rather than weakened the negative result — the gap widened from the seq-0011-only ~0.009 to 0.032 when pooled across 3 seqs.
+
+### Headline numbers (full table in comparison MD)
+
+| Model | Mean micro AUC | Mean macro AUC ± σ | Best seq | Worst seq | Max gap |
+|---|---|---|---|---|---|
+| v1train_F9_density | 0.781 | 0.828 ± 0.067 | 0005: 0.823 | 0011: 0.772 | 0.051 |
+| v1train_F3_accel | 0.779 | 0.830 ± 0.060 | 0005: 0.805 | 0011: 0.788 | 0.017 |
+| v1train_stage1 | 0.779 | 0.838 ± 0.064 | 0005: 0.821 | 0011: 0.779 | 0.042 |
+| v1train_F8_nndist | 0.771 | 0.819 ± 0.071 | 0013: 0.835 | 0011: 0.764 | 0.071 |
+| v1train_F4_ego | 0.757 | 0.810 ± 0.074 | 0013: 0.810 | 0011: 0.750 | 0.061 |
+| v1train_F5_nbrmean | 0.756 | 0.809 ± 0.060 | 0013: 0.825 | 0011: 0.754 | 0.071 |
+| v1train_temporal | 0.747 | 0.828 ± 0.077 | 0013: 0.810 | 0011: 0.770 | 0.039 |
+
+### Methodological notes
+
+- **Seq 0013 data thinness:** Only 2 expressions with GT tracks in seq 0013 (two pedestrian-direction queries). Its per-seq AUCs are n=2 averages and contribute only 2 / 33 expression-seq pairs to the micro pool. Any per-seq-0013 finding should be flagged as tentative.
+- **Micro ≈ seq 0011:** Stage1 micro (0.779) equals legacy seq-0011 AUC to three decimals because seq 0011 dominates the non-GT sample pool (~85 % of samples). Micro is not an independent aggregate — it is roughly "seq-0011 weighted by sample density."
+- **Macro sparsity:** Only 12 of 33 total expressions appear in ≥2 seqs, so macro mean is computed on a ~⅓ subset. Std is computed only where ≥2 per-seq AUCs exist.
+
+### Protocol change
+
+Per the spec, the **next 3 experiments** report both legacy seq-0011 AUC *and* multi-seq micro AUC. After that transition window, multi-seq micro becomes canonical and legacy seq-0011 reporting is dropped.
+
+**Takeaway for future work:** The ~0.78 ceiling is a *real* ceiling on this model family, not a seq-0011 artifact. Multi-seq confirms Exp 30 remains the production model, Exp 31 feature enrichment is dead in the pooled test, and Exp 32 temporal transformer regression is real and larger than initially reported.
+
+---
+
 ## Open Questions
 
 1. Why does IoU matching only find ~20 GT matches? (YOLO boxes vs GT boxes misalignment?)
