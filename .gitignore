@@ -233,3 +233,7 @@ test_mtime.txt
 
 # TensorBoard
 events.out.tfevents.*
+
+# Multi-sequence evaluation results
+diagnostics/results/multiseq/*.npz
+diagnostics/results/multiseq/*.png
