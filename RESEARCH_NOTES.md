@@ -690,6 +690,59 @@ Per the spec, the **next 3 experiments** report both legacy seq-0011 AUC *and* m
 
 ---
 
+## Exp 34: Hard-Negative Mining Finetune (HN-InfoNCE)
+
+**Date:** 2026-04-19
+**Motivation:** Exp 33 confirmed a 0.779 micro-AUC ceiling across all 11 baseline weights on the 3-seq held-out pool. This experiment finetunes V1 Stage-1 weights with HN-InfoNCE (Robinson et al. 2021) + FNM at β∈{0.5, 1.0, 2.0}, to discriminate whether the ceiling is **loss-bound** (contrastive weighting is suboptimal) or **representation-bound** (13D motion features + MLP are at capacity).
+**Spec:** `docs/superpowers/specs/2026-04-18-hard-negative-mining-stage1-design.md`
+**Plan:** `docs/superpowers/plans/2026-04-18-hard-negative-mining-stage1.md`
+**Driver:** `run_hn_finetune.sh`
+**Comparison artifact:** `diagnostics/results/multiseq/layer3_multiseq_comparison.md`
+
+### Decision rule (pre-registered)
+
+- **Loss-bound:** any β yields micro AUC **≥ 0.795** → HN mining breaks the ceiling; invest in further loss engineering.
+- **Inconclusive:** all β in **[0.764, 0.794]** (i.e. 0.779 ± 0.015) → noise-limited; retry with longer schedule or different β grid.
+- **Representation-bound:** all β **< 0.764** → ceiling is inherent to feature/architecture; further loss work has negative expected value.
+
+### Headline numbers
+
+| Model | Mean micro AUC | Mean macro AUC ± σ | Best seq | Worst seq |
+|---|---|---|---|---|
+| v1train_stage1 (baseline) | **0.779** | 0.838 ± 0.064 | 0005: 0.821 | 0011: 0.779 |
+| v1train_hninfo_beta0.5 | 0.753 | 0.818 ± 0.064 | 0005: 0.806 | 0013: 0.748 |
+| v1train_hninfo_beta1.0 | 0.746 | 0.810 ± 0.063 | 0005: 0.801 | 0011: 0.740 |
+| v1train_hninfo_beta2.0 | 0.733 | 0.802 ± 0.064 | 0005: 0.798 | 0011: 0.722 |
+
+### Verdict: **REPRESENTATION-BOUND**
+
+All three β values land strictly **below 0.764**, the pre-registered lower threshold. HN-InfoNCE finetuning on top of Stage-1 did not merely fail to break the ceiling — it **actively degraded** performance, and more hardness (higher β) produced monotonically worse results:
+
+- β=0.5 → 0.753 (Δ = −0.026 vs stage1)
+- β=1.0 → 0.746 (Δ = −0.033)
+- β=2.0 → 0.733 (Δ = −0.046)
+
+**Interpretation.** Upweighting hard negatives does not reveal missing signal — it amplifies noise. Once the motion encoder is saturated at its 13D/MLP capacity, the "hardest" negatives are those where the motion embedding genuinely cannot separate classes (e.g., "parking cars" vs "cars in counter direction of ours" on seq 0011). Pushing those pairs apart forces the model to memorize sentence-token artifacts rather than learn motion structure, hurting generalization across the pool. The monotonic degradation with β rules out "β too low" or "β too high" as explanations — the loss itself is not the bottleneck.
+
+### Implications for future work
+
+- **Stop iterating on contrastive-loss variants for this architecture.** ArcFace, supervised contrastive with harder margins, curriculum-over-β, etc. are all predicted to degrade by the same mechanism.
+- **Representation-side changes are the only remaining lever.** Candidates with positive expected value:
+  - *Richer motion features:* beyond the 13D residual-velocity vector — track-local acceleration statistics, scene-relative motion (other tracks as context), or multi-frame attention.
+  - *Language-side upgrades:* swap MiniLM for a stronger text encoder, or prompt-tune expressions to surface motion structure ("the vehicle is decelerating" vs "cars which are braking").
+  - *Architectural capacity on motion side:* the current MLP is small (13→256); a wider or deeper motion head (with appropriate regularization) may unlock latent signal.
+- **Fusion-head upgrades remain orthogonal.** The ceiling is on the alignment model itself; a smarter fusion with iKUN can still help at the F1 metric even if alignment AUC is stuck.
+
+### Methodological notes
+
+- **Cache loader bug discovered & fixed.** `_try_load_cache` in `gmc_link/dataset.py` was materializing `data[key][i]` N times inside a list comprehension — each call decompressed the full `NpzFile` array, and each returned view kept its 226 MB parent alive. For V1's 147,212-sample dataset, this OOM-killed the process at 27 GB RSS. Fix: hoist `data[key]` out of the comprehension so all views share one decompression. Post-fix: cache-hit load is 0.2 s @ ~500 MB peak.
+- **Training cost:** 3 finetunes × 30 epochs × batch 256 completed in under 10 min on RTX 3060 Ti. Total driver run (train + 9 diagnostics + aggregate) ≈ 12 min.
+- **HN-InfoNCE implementation:** Robinson-style importance-weighted negatives with FNM. Unit-tested (8/8 passing): β=0 collapses to plain InfoNCE; sentence-ID FNM excludes same-sentence pairs; weight-normalization invariance holds; end-to-end forward/backward smoke test.
+
+**Weight files (gitignored):** `gmc_link_weights_v1train_hninfo_beta{0.5,1.0,2.0}.pth` + `*_curves.png`.
+
+---
+
 ## Open Questions
 
 1. Why does IoU matching only find ~20 GT matches? (YOLO boxes vs GT boxes misalignment?)
