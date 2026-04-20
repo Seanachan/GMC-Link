@@ -103,5 +103,60 @@ def draw_text_banner(img: np.ndarray, text: str, pos: tuple,
                 cv2.FONT_HERSHEY_SIMPLEX, font_scale, COLOR_TEXT, 1)
 
 
+def render_expression_video(seq: str, slug: str, expr_data: dict) -> Path | None:
+    sentence = expr_data["sentence"]
+    gt_by_frame = expr_data["gt_by_frame"]
+    gt_boxes = load_gt_template_mot(seq, slug)
+    context = load_neuralsort_context(seq)
+
+    frames = sorted(gt_by_frame.keys())
+    if not frames:
+        return None
+
+    img_dir = IMG_ROOT / seq
+    first_img = img_dir / f"{frames[0]:06d}.png"
+    if not first_img.is_file():
+        print(f"  SKIP {seq}/{slug}: missing {first_img}")
+        return None
+    first = cv2.imread(str(first_img))
+    H, W = first.shape[:2]
+
+    OUT_DIR.mkdir(parents=True, exist_ok=True)
+    out_path = OUT_DIR / f"{seq}_{slug}.mp4"
+    fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+    writer = cv2.VideoWriter(str(out_path), fourcc, FPS, (W, H))
+
+    total = len(frames)
+    frames_written = 0
+    for i, fid in enumerate(frames):
+        img_path = img_dir / f"{fid:06d}.png"
+        if not img_path.is_file():
+            continue
+        img = cv2.imread(str(img_path))
+        if img is None:
+            continue
+
+        # Context tracks (gray, thin)
+        for _tid, x, y, w, h in context.get(fid, []):
+            draw_box(img, x, y, w, h, COLOR_CONTEXT, thickness=1)
+
+        # GT tracks for this expression (green, thick, id-labelled)
+        for tid, x, y, w, h in gt_boxes.get(fid, []):
+            draw_box(img, x, y, w, h, COLOR_GT, label=f"id {tid}", thickness=2)
+
+        draw_text_banner(img, sentence[:120], (10, 30))
+        draw_text_banner(img, f"frame {fid}  ({i+1}/{total})", (max(W - 260, 10), 30))
+        draw_text_banner(img, f"seq {seq}", (10, H - 15))
+
+        writer.write(img)
+        frames_written += 1
+
+    writer.release()
+    if frames_written == 0:
+        out_path.unlink(missing_ok=True)
+        return None
+    return out_path
+
+
 if __name__ == "__main__":
     print("Loaders only — run main() added in Task 4.")
