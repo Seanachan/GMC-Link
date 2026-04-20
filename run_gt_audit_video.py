@@ -158,5 +158,43 @@ def render_expression_video(seq: str, slug: str, expr_data: dict) -> Path | None
     return out_path
 
 
+def write_review_csv(clips: list[tuple[str, str, str]]) -> Path:
+    OUT_DIR.mkdir(parents=True, exist_ok=True)
+    csv_path = OUT_DIR / "review.csv"
+    with open(csv_path, "w", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(["seq", "expr_slug", "sentence", "verdict", "note"])
+        for seq, slug, sentence in clips:
+            w.writerow([seq, slug, sentence, "", ""])
+    return csv_path
+
+
+def main() -> None:
+    clips: list[tuple[str, str, str]] = []
+    for seq in SEQS:
+        expr_dir = EXPR_ROOT / seq
+        if not expr_dir.is_dir():
+            print(f"SKIP seq {seq}: {expr_dir} missing")
+            continue
+        jsons = sorted(expr_dir.glob("*.json"))
+        n_motion = 0
+        for expr_json in jsons:
+            data = load_expression(expr_json)
+            if not is_motion_expression(data["sentence"]):
+                continue
+            n_motion += 1
+            slug = expr_json.stem
+            print(f"[{seq}] {slug}: {data['sentence']}")
+            out = render_expression_video(seq, slug, data)
+            if out is not None:
+                clips.append((seq, slug, data["sentence"]))
+        print(f"  seq {seq}: {n_motion} motion expressions, "
+              f"{len([c for c in clips if c[0]==seq])} rendered")
+
+    csv_path = write_review_csv(clips)
+    print(f"\nDone. {len(clips)} clips in {OUT_DIR}")
+    print(f"Review template: {csv_path}")
+
+
 if __name__ == "__main__":
-    print("Loaders only — run main() added in Task 4.")
+    main()
