@@ -1,6 +1,7 @@
 """
 Dataset generation for GMC-Link: spatial-temporal feature extraction from Refer-KITTI targets.
 """
+import hashlib
 import json
 import os
 from typing import Dict, List, Tuple, Any
@@ -18,6 +19,96 @@ HOMOGRAPHY_CACHE = {}
 # Multi-scale frame gaps for temporal velocity features
 FRAME_GAPS = [2, 5, 10]  # short, mid, long
 
+# ── Training-data disk cache ─────────────────────────────────────────
+# Bump CACHE_VERSION whenever the build logic changes in a way that
+# affects output (feature layout, jitter, motion keywords, etc.).
+CACHE_VERSION = 1
+CACHE_DIR = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "cache", "training_data")
+)
+
+
+def _build_cache_key(
+    data_root, sequences, frame_gaps, frame_shape,
+    use_group_labels, extra_features, seq_len,
+):
+    """Deterministic hash of everything that affects build_training_data output."""
+    key_obj = {
+        "version": CACHE_VERSION,
+        "data_root": os.path.abspath(data_root),
+        "sequences": sorted(sequences),
+        "frame_gaps": list(frame_gaps),
+        "frame_shape": list(frame_shape),
+        "use_group_labels": bool(use_group_labels),
+        "extra_features": sorted(extra_features) if extra_features else None,
+        "seq_len": int(seq_len),
+    }
+    key_str = json.dumps(key_obj, sort_keys=True)
+    key_hash = hashlib.sha256(key_str.encode()).hexdigest()[:16]
+    return key_hash, key_obj
+
+
+def _try_load_cache(cache_key, seq_len):
+    """Return tuple of lists matching build_training_data's return contract, or None."""
+    cache_path = os.path.join(CACHE_DIR, f"{cache_key}.npz")
+    if not os.path.exists(cache_path):
+        return None
+    try:
+        data = np.load(cache_path, allow_pickle=False)
+        if seq_len > 0:
+            sm = data["seq_motion"]
+            mk = data["seq_masks"]
+            sl = data["seq_language"]
+            return (
+                [sm[i] for i in range(sm.shape[0])],
+                [mk[i] for i in range(mk.shape[0])],
+                [sl[i] for i in range(sl.shape[0])],
+                data["seq_labels"].astype(int).tolist(),
+            )
+        md = data["motion_data"]
+        ld = data["language_data"]
+        return (
+            [md[i] for i in range(md.shape[0])],
+            [ld[i] for i in range(ld.shape[0])],
+            data["labels"].astype(int).tolist(),
+        )
+    except Exception as e:
+        print(f"  [cache] failed to load {cache_path}: {e}")
+        return None
+
+
+def _save_cache(cache_key, key_obj, payload, seq_len):
+    """Persist build output as stacked arrays + JSON sidecar."""
+    os.makedirs(CACHE_DIR, exist_ok=True)
+    cache_path = os.path.join(CACHE_DIR, f"{cache_key}.npz")
+    sidecar = os.path.join(CACHE_DIR, f"{cache_key}.json")
+
+    if seq_len > 0:
+        seq_motion, seq_masks, seq_language, seq_labels = payload
+        if not seq_motion:
+            return
+        arrays = {
+            "seq_motion": np.stack(seq_motion),
+            "seq_masks": np.stack(seq_masks),
+            "seq_language": np.stack(seq_language),
+            "seq_labels": np.array(seq_labels, dtype=np.int64),
+        }
+    else:
+        motion_data, language_data, labels = payload
+        if not motion_data:
+            return
+        arrays = {
+            "motion_data": np.stack(motion_data),
+            "language_data": np.stack(language_data),
+            "labels": np.array(labels, dtype=np.int64),
+        }
+
+    np.savez(cache_path, **arrays)
+    with open(sidecar, "w") as f:
+        json.dump(key_obj, f, indent=2)
+    size_mb = os.path.getsize(cache_path) / (1024 * 1024)
+    print(f"  [cache] saved {size_mb:.1f} MB → {cache_path}")
+
 
 # ── Extra feature definitions ───────────────────────────────────────
 # Each feature: (name, n_dims). Order matters for vector layout.
@@ -31,6 +122,8 @@ EXTRA_FEATURE_DIMS = {
     "heading_diff": 1,       # F7: heading vs mean flow
     "nn_dist": 1,            # F8: nearest neighbor distance
     "track_density": 1,      # F9: density of nearby tracks
+    "accel_multiscale": 6,   # exp36a: (dx,dy) × {2,5,10} second-order diff
+    "heading_sincos": 6,     # exp36a: (sin,cos) × {2,5,10} heading
 }
 
 
@@ -70,6 +163,28 @@ def compute_per_track_extras(extra_features, scale_velocities, ego_dx_m=0.0, ego
             extras.extend([dx_l - dx_s, dy_l - dy_s])
         elif feat == "ego_motion":
             extras.extend([ego_dx_m, ego_dy_m])
+        elif feat == "accel_multiscale":
+            # Second-order per-scale: use difference across the scale pair as
+            # a proxy for d²x/dt² since we already have velocities at gaps
+            # {2,5,10}. This is equivalent to (v_long - v_short) per axis,
+            # normalized by scale. We emit all three axis-scale combos.
+            # Short-mid, mid-long, short-long deltas capture different
+            # temporal acceleration signatures.
+            extras.extend([
+                dx_m - dx_s,  # accel between short and mid
+                dy_m - dy_s,
+                dx_l - dx_m,  # accel between mid and long
+                dy_l - dy_m,
+                dx_l - dx_s,  # accel between short and long
+                dy_l - dy_s,
+            ])
+        elif feat == "heading_sincos":
+            # Smooth heading encoding per scale (avoids atan2 ±π discontinuity)
+            # When |v|→0, atan2(0,0)=0 → sin=0, cos=1 (stationary encoded).
+            for dx, dy in scale_velocities:
+                theta = np.arctan2(dy, dx)
+                extras.append(float(np.sin(theta)))
+                extras.append(float(np.cos(theta)))
         # F5-F9 are relational — handled separately
 
     return extras
@@ -868,6 +983,20 @@ def build_training_data(
     """
     if frame_gaps is None:
         frame_gaps = FRAME_GAPS
+
+    # ── Disk cache check (skip ORB + velocity rebuild for identical config) ──
+    use_cache = os.environ.get("GMCLINK_NO_CACHE", "0") != "1"
+    cache_key, key_obj = _build_cache_key(
+        data_root, sequences, frame_gaps, frame_shape,
+        use_group_labels, extra_features, seq_len,
+    )
+    if use_cache:
+        cached = _try_load_cache(cache_key, seq_len)
+        if cached is not None:
+            print(f"  [cache] HIT key={cache_key} — skipping ORB+velocity build")
+            return cached
+        print(f"  [cache] MISS key={cache_key} — building from scratch")
+
     all_expressions, sentence_embeddings, all_sentences = _collect_expressions(
         data_root, sequences, text_encoder
     )
@@ -999,6 +1128,12 @@ def build_training_data(
             motion_data, language_data, labels, all_track_boundaries, seq_len=seq_len,
         )
         print(f"  Sequences: {len(seq_motion)} (from {len(motion_data)} individual vectors)")
+        if use_cache:
+            _save_cache(cache_key, key_obj,
+                        (seq_motion, seq_masks, seq_language, seq_labels), seq_len)
         return seq_motion, seq_masks, seq_language, seq_labels
 
+    if use_cache:
+        _save_cache(cache_key, key_obj,
+                    (motion_data, language_data, labels), seq_len)
     return motion_data, language_data, labels
