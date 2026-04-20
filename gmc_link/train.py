@@ -95,7 +95,7 @@ def train_one_epoch(
 
 def setup_data(
     device: torch.device,
-    data_root: str,
+    data_root,
     sequences: list,
     batch_size: int,
     use_group_labels: bool = False,
@@ -104,33 +104,67 @@ def setup_data(
 ) -> Optional[DataLoader]:
     """
     Initialize text encoder, build training dataset, and return a DataLoader.
+
+    data_root may be either:
+      - str: single dataset root; `sequences` is the seq list for that root.
+      - list of (root, seqs) pairs: multiple sources are loaded and
+        concatenated; `sequences` is ignored in that case. Label IDs are
+        offset per source so they remain distinct.
     """
     print("Loading text encoder...")
     encoder = TextEncoder(device=str(device))
 
+    sources = data_root if isinstance(data_root, (list, tuple)) else [(data_root, sequences)]
+
     print("Building training data...")
-    result = build_training_data(
-        data_root=data_root,
-        sequences=sequences,
-        text_encoder=encoder,
-        use_group_labels=use_group_labels,
-        extra_features=extra_features,
-        seq_len=seq_len,
-    )
+    if seq_len > 0:
+        all_motion, all_masks, all_lang, all_labels = [], [], [], []
+    else:
+        all_motion, all_lang, all_labels = [], [], []
+    label_offset = 0
+
+    for root, seqs in sources:
+        if len(sources) > 1:
+            print(f"  === Source: {root} ({len(seqs)} seqs) ===")
+        result = build_training_data(
+            data_root=root,
+            sequences=seqs,
+            text_encoder=encoder,
+            use_group_labels=use_group_labels,
+            extra_features=extra_features,
+            seq_len=seq_len,
+        )
+        if seq_len > 0:
+            seq_motion, seq_masks, seq_language, seq_labels = result
+            if len(seq_motion) == 0:
+                continue
+            offset_labels = [lbl + label_offset for lbl in seq_labels]
+            all_motion.extend(seq_motion)
+            all_masks.extend(seq_masks)
+            all_lang.extend(seq_language)
+            all_labels.extend(offset_labels)
+            label_offset = max(offset_labels) + 1 if offset_labels else label_offset
+        else:
+            motion_data, language_data, label_ids = result
+            if len(motion_data) == 0:
+                continue
+            offset_labels = [lbl + label_offset for lbl in label_ids]
+            all_motion.extend(motion_data)
+            all_lang.extend(language_data)
+            all_labels.extend(offset_labels)
+            label_offset = max(offset_labels) + 1 if offset_labels else label_offset
 
     if seq_len > 0:
-        seq_motion, seq_masks, seq_language, seq_labels = result
-        if len(seq_motion) == 0:
+        if len(all_motion) == 0:
             return None
-        print(f"Total training sequences: {len(seq_motion)}")
-        dataset = SequenceMotionLanguageDataset(seq_motion, seq_masks, seq_language, seq_labels)
+        print(f"Total training sequences: {len(all_motion)}")
+        dataset = SequenceMotionLanguageDataset(all_motion, all_masks, all_lang, all_labels)
         chosen_collate = sequence_collate_fn
     else:
-        motion_data, language_data, label_ids = result
-        if len(motion_data) == 0:
+        if len(all_motion) == 0:
             return None
-        print(f"Total training samples: {len(motion_data)}")
-        dataset = MotionLanguageDataset(motion_data, language_data, label_ids)
+        print(f"Total training samples: {len(all_motion)}")
+        dataset = MotionLanguageDataset(all_motion, all_lang, all_labels)
         chosen_collate = collate_fn
 
     dataloader = DataLoader(
@@ -369,7 +403,7 @@ def main() -> None:
 
     parser = argparse.ArgumentParser(description="Train GMC-Link MotionLanguageAligner")
     parser.add_argument("--split", default=os.environ.get("TRAIN_SPLIT", "v2").lower(),
-                        choices=["v1", "v2"], help="Dataset split (default: v2, or TRAIN_SPLIT env)")
+                        choices=["v1", "v2", "v1v2"], help="Dataset split (default: v2, or TRAIN_SPLIT env; v1v2 joins V1 and V2 with held-out seqs filtered from V2)")
     parser.add_argument("--data-root", default=None,
                         help="Path to Refer-KITTI dataset (default: refer-kitti for v1, refer-kitti-v2 for v2)")
     parser.add_argument("--save-path", default=None,
@@ -430,6 +464,17 @@ def main() -> None:
         sequences = V1_TRAIN_SEQS
         batch_size = args.batch_size or 256
         save_path = args.save_path or "gmc_link_weights_v1train.pth"
+    elif args.split == "v1v2":
+        # Joint V1+V2 training. Exclude V1 held-out eval seqs from V2.
+        heldout = {"0005", "0011", "0013"}
+        v2_clean = [s for s in V2_TRAIN_SEQS if s not in heldout]
+        data_root = [
+            ("refer-kitti", V1_TRAIN_SEQS),
+            ("refer-kitti-v2", v2_clean),
+        ]
+        sequences = None  # unused when data_root is a list
+        batch_size = args.batch_size or 256
+        save_path = args.save_path or "gmc_link_weights_v1v2train.pth"
     else:
         data_root = args.data_root or "refer-kitti-v2"
         sequences = V2_TRAIN_SEQS
