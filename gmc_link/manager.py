@@ -18,6 +18,7 @@ from .utils import (
 )
 from .alignment import MotionLanguageAligner
 from .core import ORBHomographyEngine
+from .dataset import compute_per_track_extras
 
 
 class GMCLinkManager:
@@ -48,16 +49,24 @@ class GMCLinkManager:
         self.motion_buffer = MotionBuffer(alpha=0.3)
         self.score_buffer = ScoreBuffer(alpha=0.4)
         self.cosine_buffer = ScoreBuffer(alpha=0.4)
-        self.aligner = MotionLanguageAligner(
-            motion_dim=13, lang_dim=lang_dim, embed_dim=256
-        ).to(device)
 
-        self.temperature = 1.0  # default (no scaling)
+        self.extra_features: list = []
+        motion_dim = 13
+        self.temperature = 1.0
+        checkpoint = None
         if weights_path:
             checkpoint = torch.load(weights_path, map_location=device)
             if isinstance(checkpoint, dict) and "model" in checkpoint:
-                self.aligner.load_state_dict(checkpoint["model"])
+                motion_dim = checkpoint.get("motion_dim", 13)
+                self.extra_features = checkpoint.get("extra_features") or []
                 self.temperature = checkpoint.get("temperature", 1.0)
+
+        self.aligner = MotionLanguageAligner(
+            motion_dim=motion_dim, lang_dim=lang_dim, embed_dim=256
+        ).to(device)
+        if checkpoint is not None:
+            if isinstance(checkpoint, dict) and "model" in checkpoint:
+                self.aligner.load_state_dict(checkpoint["model"])
             else:
                 self.aligner.load_state_dict(checkpoint)
         self.aligner.eval()
@@ -250,6 +259,20 @@ class GMCLinkManager:
                 [dx_s, dy_s, dx_m, dy_m, dx_l, dy_l,
                  dw, dh, cx_n, cy_n, w_n, h_n, snr], dtype=np.float32
             )
+
+            if self.extra_features:
+                # Per-track (non-relational) extras only — manager has no neighbor context.
+                per_track_names = [
+                    f for f in self.extra_features
+                    if f in {"speed_m", "heading_m", "accel", "ego_motion",
+                             "accel_multiscale", "heading_sincos"}
+                ]
+                if per_track_names:
+                    scale_velocities = [(dx_s, dy_s), (dx_m, dy_m), (dx_l, dy_l)]
+                    extras = compute_per_track_extras(per_track_names, scale_velocities)
+                    spatial_motion = np.concatenate(
+                        [spatial_motion, np.array(extras, dtype=np.float32)]
+                    )
 
             track_ids.append(tid)
             compensated_velocities.append(spatial_motion)
