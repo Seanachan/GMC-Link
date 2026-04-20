@@ -30,7 +30,7 @@ CACHE_DIR = os.path.abspath(
 
 def _build_cache_key(
     data_root, sequences, frame_gaps, frame_shape,
-    use_group_labels, extra_features, seq_len,
+    use_group_labels, extra_features, seq_len, text_encoder_name="all-MiniLM-L6-v2",
 ):
     """Deterministic hash of everything that affects build_training_data output."""
     key_obj = {
@@ -42,6 +42,7 @@ def _build_cache_key(
         "use_group_labels": bool(use_group_labels),
         "extra_features": sorted(extra_features) if extra_features else None,
         "seq_len": int(seq_len),
+        "text_encoder": str(text_encoder_name),
     }
     key_str = json.dumps(key_obj, sort_keys=True)
     key_hash = hashlib.sha256(key_str.encode()).hexdigest()[:16]
@@ -1023,9 +1024,11 @@ def build_training_data(
 
     # ── Disk cache check (skip ORB + velocity rebuild for identical config) ──
     use_cache = os.environ.get("GMCLINK_NO_CACHE", "0") != "1"
+    encoder_name = getattr(text_encoder, "model_name", "all-MiniLM-L6-v2")
     cache_key, key_obj = _build_cache_key(
         data_root, sequences, frame_gaps, frame_shape,
         use_group_labels, extra_features, seq_len,
+        text_encoder_name=encoder_name,
     )
     if use_cache:
         cached = _try_load_cache(cache_key, seq_len)

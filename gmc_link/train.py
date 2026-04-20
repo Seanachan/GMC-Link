@@ -101,6 +101,7 @@ def setup_data(
     use_group_labels: bool = False,
     extra_features: list = None,
     seq_len: int = 0,
+    text_encoder_name: str = "all-MiniLM-L6-v2",
 ) -> Optional[DataLoader]:
     """
     Initialize text encoder, build training dataset, and return a DataLoader.
@@ -111,8 +112,8 @@ def setup_data(
         concatenated; `sequences` is ignored in that case. Label IDs are
         offset per source so they remain distinct.
     """
-    print("Loading text encoder...")
-    encoder = TextEncoder(device=str(device))
+    print(f"Loading text encoder: {text_encoder_name}")
+    encoder = TextEncoder(model_name=text_encoder_name, device=str(device))
 
     sources = data_root if isinstance(data_root, (list, tuple)) else [(data_root, sequences)]
 
@@ -346,6 +347,7 @@ def _run_single_stage(
     seq_len: int = 10,
     loss_name: str = "infonce",
     beta: float = 1.0,
+    text_encoder_name: str = "all-MiniLM-L6-v2",
 ) -> None:
     """Run a single training stage."""
     if loss_name == "hninfo" and use_group_labels:
@@ -357,7 +359,8 @@ def _run_single_stage(
     dataloader = setup_data(device, data_root, sequences, batch_size,
                             use_group_labels=use_group_labels,
                             extra_features=extra_features,
-                            seq_len=seq_len if architecture == "temporal_transformer" else 0)
+                            seq_len=seq_len if architecture == "temporal_transformer" else 0,
+                            text_encoder_name=text_encoder_name)
     if dataloader is None:
         print("ERROR: No training data found.")
         return
@@ -388,6 +391,8 @@ def _run_single_stage(
     checkpoint["seq_len"] = seq_len if architecture == "temporal_transformer" else None
     checkpoint["loss_name"] = loss_name
     checkpoint["beta"] = beta if loss_name == "hninfo" else None
+    checkpoint["text_encoder"] = text_encoder_name
+    checkpoint["lang_dim"] = lang_dim
     torch.save(checkpoint, save_path)
 
 
@@ -428,6 +433,9 @@ def main() -> None:
                         help="Motion encoder architecture (default: mlp)")
     parser.add_argument("--seq-len", type=int, default=10,
                         help="Sequence length T for temporal_transformer (default: 10)")
+    parser.add_argument("--text-encoder", default="all-MiniLM-L6-v2",
+                        help="Sentence-transformers model for language embeddings "
+                             "(default: all-MiniLM-L6-v2; e.g., BAAI/bge-base-en-v1.5)")
     args = parser.parse_args()
 
     if args.stage == "curriculum" and args.loss == "hninfo":
@@ -457,7 +465,11 @@ def main() -> None:
     )
     print(f"Device: {device}")
 
-    lang_dim = 384
+    # Infer lang_dim from encoder. Covers MiniLM (384), BGE-base/E5-base (768), etc.
+    from sentence_transformers import SentenceTransformer
+    lang_dim = SentenceTransformer(args.text_encoder).get_sentence_embedding_dimension()
+    if args.text_encoder != "all-MiniLM-L6-v2":
+        print(f"Text encoder: {args.text_encoder} (lang_dim={lang_dim})")
 
     if args.split == "v1":
         data_root = args.data_root or "refer-kitti"
@@ -495,6 +507,7 @@ def main() -> None:
             warmup_epochs=args.warmup_epochs, grad_clip=args.grad_clip,
             extra_features=extra_features,
             architecture=args.architecture, seq_len=args.seq_len,
+            text_encoder_name=args.text_encoder,
         )
 
         stage2_lr = args.lr * 0.1
@@ -507,6 +520,7 @@ def main() -> None:
             warmup_epochs=0, grad_clip=args.grad_clip,
             extra_features=extra_features,
             architecture=args.architecture, seq_len=args.seq_len,
+            text_encoder_name=args.text_encoder,
         )
         return
 
@@ -533,6 +547,7 @@ def main() -> None:
         grad_clip=args.grad_clip, extra_features=extra_features,
         architecture=args.architecture, seq_len=args.seq_len,
         loss_name=args.loss, beta=args.beta,
+        text_encoder_name=args.text_encoder,
     )
 
 

@@ -274,18 +274,24 @@ def main():
     extra_features = None
     architecture = "mlp"
     seq_len = 10
+    text_encoder_name = "all-MiniLM-L6-v2"
+    lang_dim = 384
     if isinstance(checkpoint, dict):
         motion_dim = checkpoint.get("motion_dim", 13)
         extra_features = checkpoint.get("extra_features", None)
         architecture = checkpoint.get("architecture", "mlp")
         seq_len = checkpoint.get("seq_len", 10) or 10
+        text_encoder_name = checkpoint.get("text_encoder", "all-MiniLM-L6-v2")
+        lang_dim = checkpoint.get("lang_dim", 384)
     else:
         motion_dim = 13
 
     print(f"  Architecture: {architecture}" + (f" (seq_len={seq_len})" if architecture == "temporal_transformer" else ""))
+    if text_encoder_name != "all-MiniLM-L6-v2":
+        print(f"  Text encoder: {text_encoder_name} (lang_dim={lang_dim})")
 
     model = MotionLanguageAligner(
-        motion_dim=motion_dim, lang_dim=384, embed_dim=256,
+        motion_dim=motion_dim, lang_dim=lang_dim, embed_dim=256,
         architecture=architecture, seq_len=seq_len,
     ).to(device)
     if isinstance(checkpoint, dict) and "model" in checkpoint:
@@ -299,7 +305,7 @@ def main():
         from gmc_link.dataset import compute_per_track_extras
 
     # ── Load data ─────────────────────────────────────────────────────
-    encoder = TextEncoder(device=str(device))
+    encoder = TextEncoder(model_name=text_encoder_name, device=str(device))
     orb_engine = ORBHomographyEngine(max_features=1500)
 
     frame_dir = os.path.join(DATA_ROOT, "KITTI", "training", "image_02", args.seq)
