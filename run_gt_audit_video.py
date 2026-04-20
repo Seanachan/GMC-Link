@@ -81,5 +81,27 @@ def load_neuralsort_context(seq: str) -> dict:
     return out
 
 
+def draw_box(img: np.ndarray, x: float, y: float, w: float, h: float,
+             color: tuple, label: str | None = None, thickness: int = 2) -> None:
+    x1, y1 = int(x), int(y)
+    x2, y2 = int(x + w), int(y + h)
+    cv2.rectangle(img, (x1, y1), (x2, y2), color, thickness)
+    if label:
+        (tw, th), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
+        cv2.rectangle(img, (x1, y1 - th - 4), (x1 + tw + 4, y1), color, -1)
+        cv2.putText(img, label, (x1 + 2, y1 - 2),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1)
+
+
+def draw_text_banner(img: np.ndarray, text: str, pos: tuple,
+                     font_scale: float = 0.6) -> None:
+    (tw, th), _ = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, font_scale, 1)
+    x, y = pos
+    cv2.rectangle(img, (x - 4, y - th - 6), (x + tw + 4, y + 4),
+                  COLOR_TEXT_BG, -1)
+    cv2.putText(img, text, (x, y),
+                cv2.FONT_HERSHEY_SIMPLEX, font_scale, COLOR_TEXT, 1)
+
+
 if __name__ == "__main__":
     print("Loaders only — run main() added in Task 4.")
