@@ -1,29 +1,43 @@
 #!/usr/bin/env python
 """
-Exp 38 Day 1 — Extract ego-compensated 13D velocity cache for FlexHook.
+Exp 38 — Extract ego-compensated 13D velocity cache for FlexHook.
 
-For each (seq, frame, track_id) in Temp-NeuralSORT-kitti1 predictions, run ORB
-homography + cumulative warp + multi-scale residual velocity (identical to
-GMCLinkManager.process_frame) and cache 13D vectors as npz keyed by
-(seq, frame, track_id, class).
+Two sources:
+  --source pred  (default): Temp-NeuralSORT predict.txt tracker output
+                             Keyed by tracker-id (ped shift applied at cache
+                             load time).
+  --source gt              : Refer-KITTI labels.json GT tracks
+                             Keyed by labels.json obj_id (no ped shift — all
+                             rows tagged class=b'c' so EgoCacheLookup's shift
+                             logic is a no-op).
 
-Output layout:
+Output layout (identical for both sources):
     {cache_root}/{seq}/ego_13d.npz with arrays:
       frames   : (N,) int32   (1-indexed MOT frame)
       track_ids: (N,) int32
       classes  : (N,) |S1     (b'c'=car, b'p'=pedestrian)
       vec13d   : (N, 13) float32
 
-Usage:
+Usage — test seqs (tracker-keyed):
     python tools/flexhook_ego_extractor.py \
-        --tracks /home/seanachan/FlexHook/tracker_outputs/Temp-NeuralSORT-kitti1 \
-        --frames /home/seanachan/FlexHook/datasets/refer-kitti/KITTI/training/image_02 \
+        --source pred \
+        --tracks /home/seanachan/FlexHook-ego/tracker_outputs/Temp-NeuralSORT-kitti1 \
+        --frames /home/seanachan/FlexHook-ego/datasets/refer-kitti/KITTI/training/image_02 \
         --out /home/seanachan/GMC-Link/diagnostics/results/exp38/cache/ego_speed \
         --seqs 0005 0011 0013
+
+Usage — train seqs (GT-keyed, Exp 38-A):
+    python tools/flexhook_ego_extractor.py \
+        --source gt \
+        --labels /home/seanachan/FlexHook-ego/datasets/refer-kitti/labels.json \
+        --frames /home/seanachan/FlexHook-ego/datasets/refer-kitti/KITTI/training/image_02 \
+        --out /home/seanachan/GMC-Link/diagnostics/results/exp38/cache/ego_speed \
+        --seqs 0001 0002 0003 0004 0006 0007 0008 0009 0010 0012 0014 0015 0016 0018 0020
 """
 from __future__ import annotations
 
 import argparse
+import json
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -35,6 +49,19 @@ from gmc_link.manager import GMCLinkManager
 
 
 CLASS_TAG = {"car": b"c", "pedestrian": b"p"}
+
+# Same (H, W) table FlexHook uses (data/utils.py RESOLUTION). Required to
+# denormalize labels.json bboxes, which are [x_left_norm, y_top_norm, w_norm,
+# h_norm]. Only V1 KITTI seqs listed — no DanceTrack.
+KITTI_RESOLUTION = {
+    "0000": (375, 1242), "0001": (375, 1242), "0002": (375, 1242),
+    "0003": (375, 1242), "0004": (375, 1242), "0005": (375, 1242),
+    "0006": (375, 1242), "0007": (375, 1242), "0008": (375, 1242),
+    "0009": (375, 1242), "0010": (375, 1242), "0011": (375, 1242),
+    "0012": (375, 1242), "0013": (375, 1242), "0014": (370, 1224),
+    "0015": (370, 1224), "0016": (370, 1224), "0018": (374, 1238),
+    "0019": (374, 1238), "0020": (376, 1241),
+}
 
 # Coord conversion: GMCLinkManager emits residual velocity in VELOCITY_SCALE=100
 # units (v_pixel / img_dim * 100). FlexHook's `grid_sample` operates in normgrid
@@ -70,6 +97,39 @@ def load_tracks(tracks_root: Path, seq: str):
     return per_frame
 
 
+def load_gt_tracks(labels_path: Path, seq: str):
+    """
+    Parse Refer-KITTI labels.json for one seq, yielding per-frame GT tracks.
+    labels.json structure:
+        seq -> obj_id_str -> frame_id_str -> {"bbox": [xn, yn, wn, hn], ...}
+    frame_id_str is absolute 0-indexed (matches PNG filename). We emit
+    1-indexed fr to match predict.txt convention downstream.
+
+    All rows tagged cls="car" so EgoCacheLookup's ped-shift becomes a no-op
+    — the training dataloader queries `f'{video}_{int(obj_id)}'` without
+    class awareness.
+    """
+    if seq not in KITTI_RESOLUTION:
+        raise KeyError(f"no resolution for seq {seq}")
+    H, W = KITTI_RESOLUTION[seq]
+    with labels_path.open() as f:
+        all_labels = json.load(f)
+    if seq not in all_labels:
+        return {}
+    per_frame: dict[int, list] = {}
+    for obj_id_str, obj_frames in all_labels[seq].items():
+        tid = int(obj_id_str)
+        for frame_id_str, info in obj_frames.items():
+            frame_1idx = int(frame_id_str) + 1
+            xn, yn, wn, hn = info["bbox"]
+            x1 = xn * W
+            y1 = yn * H
+            w = wn * W
+            h = hn * H
+            per_frame.setdefault(frame_1idx, []).append(("car", tid, x1, y1, w, h))
+    return per_frame
+
+
 def build_track_objs(rows):
     """Wrap predictions into objects GMCLinkManager consumes."""
     tracks = []
@@ -95,11 +155,20 @@ def build_track_objs(rows):
 
 def process_sequence(
     seq: str,
-    tracks_root: Path,
     frames_root: Path,
     out_root: Path,
+    tracks_root: Path | None = None,
+    labels_path: Path | None = None,
+    source: str = "pred",
 ) -> None:
-    tracks_by_frame = load_tracks(tracks_root, seq)
+    if source == "pred":
+        assert tracks_root is not None, "--tracks required for --source pred"
+        tracks_by_frame = load_tracks(tracks_root, seq)
+    elif source == "gt":
+        assert labels_path is not None, "--labels required for --source gt"
+        tracks_by_frame = load_gt_tracks(labels_path, seq)
+    else:
+        raise ValueError(f"unknown source: {source}")
     if not tracks_by_frame:
         print(f"[{seq}] no tracks, skipping")
         return
@@ -165,15 +234,31 @@ def process_sequence(
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--tracks", type=Path, required=True)
+    ap.add_argument("--source", choices=["pred", "gt"], default="pred")
+    ap.add_argument("--tracks", type=Path, default=None,
+                    help="Temp-NeuralSORT tracker root (required for --source pred)")
+    ap.add_argument("--labels", type=Path, default=None,
+                    help="Refer-KITTI labels.json (required for --source gt)")
     ap.add_argument("--frames", type=Path, required=True)
     ap.add_argument("--out", type=Path, required=True)
     ap.add_argument("--seqs", nargs="+", default=["0005", "0011", "0013"])
     args = ap.parse_args()
 
+    if args.source == "pred" and args.tracks is None:
+        ap.error("--source pred requires --tracks")
+    if args.source == "gt" and args.labels is None:
+        ap.error("--source gt requires --labels")
+
     args.out.mkdir(parents=True, exist_ok=True)
     for seq in args.seqs:
-        process_sequence(seq, args.tracks, args.frames, args.out)
+        process_sequence(
+            seq,
+            frames_root=args.frames,
+            out_root=args.out,
+            tracks_root=args.tracks,
+            labels_path=args.labels,
+            source=args.source,
+        )
 
 
 if __name__ == "__main__":
