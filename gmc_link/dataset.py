@@ -804,7 +804,8 @@ def _generate_positive_pairs(
     # Determine which extras are per-track vs relational
     per_track_feats = [f for f in (extra_features or [])
                        if f in ("speed_m", "heading_m", "accel", "ego_motion",
-                                "accel_multiscale", "heading_sincos")]
+                                "accel_multiscale", "heading_sincos",
+                                "ego_velocity_concat", "omf_stats")]
     relational_feats = [f for f in (extra_features or [])
                         if f in ("neighbor_mean_vel", "velocity_rank", "heading_diff",
                                  "nn_dist", "track_density")]
