@@ -14,8 +14,36 @@ from torch.utils.data import Dataset
 from gmc_link.utils import VELOCITY_SCALE, warp_points
 from gmc_link.core import ORBHomographyEngine
 from gmc_link.ego.ego_router import make_ego_router
+from gmc_link.features.omf_stats import per_bbox_omf_stats
 
 HOMOGRAPHY_CACHE = {}
+
+# Flow fields are ~3.7MB each; full V1 train set is ~45k fields total. We use a
+# small LRU so expressions sharing the same seq reuse loaded flows (each seq has
+# many GT tracks that overlap on frames). 256 entries ≈ 1GB RAM, a good tradeoff
+# vs disk re-decompression. Callers pass .cache_clear() hints between seqs via
+# ``_omf_cache_reset`` to keep memory bounded even for the largest seqs.
+from functools import lru_cache
+
+
+@lru_cache(maxsize=1024)
+def _load_omf_field(ego_router_name: str, seq: str, frame_id: int, gap: int) -> np.ndarray:
+    """Load a precomputed Farneback OMF .npz → (H, W, 2). Return None if missing."""
+    path = os.path.join(
+        "cache", "omf", ego_router_name, seq, f"{int(frame_id):06d}_gap{int(gap)}.npz"
+    )
+    if not os.path.exists(path):
+        return None
+    try:
+        with np.load(path) as npz:
+            return np.asarray(npz["flow"], dtype=np.float32)
+    except Exception:
+        return None
+
+
+def _omf_cache_reset():
+    """Clear the flow-field LRU. Call between sequences to bound peak RSS."""
+    _load_omf_field.cache_clear()
 
 # Multi-scale frame gaps for temporal velocity features
 FRAME_GAPS = [2, 5, 10]  # short, mid, long
@@ -788,6 +816,7 @@ def _generate_positive_pairs(
     extra_features: List[str] = None,
     all_track_centroids_for_frame: Dict[int, Dict[int, Tuple]] = None,
     track_boundaries: List = None,
+    ego_router_name: str = "orb",
 ) -> Tuple[List[np.ndarray], List[np.ndarray], List[int]]:
     """
     Generate positive (motion, language) pairs with residual velocity (raw - ego).
@@ -818,6 +847,7 @@ def _generate_positive_pairs(
     frame_track_data = {}
 
     needs_accel_multiscale = "accel_multiscale" in per_track_feats
+    needs_omf_stats = "omf_stats" in per_track_feats
 
     for tid, centroids in track_centroids.items():
         track_start_idx = len(motion_data)
@@ -869,6 +899,26 @@ def _generate_positive_pairs(
                         ))
                 track_vel_hist[curr_fid] = list(scale_velocities)
 
+            # Exp 37 Stage B: per-bbox OMF pooling × 3 scales (15D).
+            # Loads precomputed Farneback flow field and pools over the
+            # anchor-frame bbox. Missing flow → 5D zeros for that scale.
+            omf_stats_per_scale = None
+            if needs_omf_stats and seq is not None:
+                cx_px, cy_px, bw_px, bh_px = centroids[curr_fid]
+                bbox_px = (
+                    int(round(cx_px - bw_px / 2.0)),
+                    int(round(cy_px - bh_px / 2.0)),
+                    int(round(bw_px)),
+                    int(round(bh_px)),
+                )
+                omf_stats_per_scale = []
+                for gap in frame_gaps:
+                    flow = _load_omf_field(ego_router_name, seq, curr_fid, gap)
+                    if flow is None:
+                        omf_stats_per_scale.append(np.zeros(5, dtype=np.float32))
+                    else:
+                        omf_stats_per_scale.append(per_bbox_omf_stats(flow, bbox_px))
+
             # dw, dh from primary scale (mid)
             primary_future_j = _find_future_frame(sorted_frames, i, frame_gaps[primary_gap_idx])
             if primary_future_j is not None:
@@ -910,6 +960,7 @@ def _generate_positive_pairs(
                 per_track_feats, scale_velocities,
                 ego_dx_m=ego_dx_m, ego_dy_m=ego_dy_m,
                 accel_per_scale=accel_per_scale,
+                omf_stats_per_scale=omf_stats_per_scale,
             ))
 
             # Store for relational feature computation
@@ -1115,8 +1166,17 @@ def build_training_data(
 
     all_track_boundaries = [] if seq_len > 0 else None
 
+    # Process expressions grouped by seq so the OMF flow LRU stays hot.
+    motion_expressions.sort(key=lambda e: e["seq"])
+    _prev_seq = None
+
     for expr in motion_expressions:
         seq = expr["seq"]
+        # Drop flow cache when crossing a seq boundary — flows from earlier seqs
+        # won't be reused and we want to bound peak RSS for large seqs.
+        if _prev_seq is not None and seq != _prev_seq:
+            _omf_cache_reset()
+        _prev_seq = seq
         label_map = expr["label"]
         sentence = expr["sentence"]
         embedding = expr["embedding"]
@@ -1173,6 +1233,7 @@ def build_training_data(
             extra_features=extra_features,
             all_track_centroids_for_frame=all_frame_track_data,
             track_boundaries=per_expr_boundaries,
+            ego_router_name=ego_router_name,
         )
 
         # Offset boundaries to global indices before extending

@@ -7,4 +7,4 @@ AUC = probability that a randomly chosen GT-matching track gets a higher cosine 
 
 | model_tag | mean_auc_micro | mean_auc_macro ± std | best_seq | worst_seq | max_gap |
 |---|---|---|---|---|---|
-| exp37_stage_c2_orb | 0.755 | 0.814 ± 0.070 | 0013: 0.829 | 0011: 0.745 | 0.084 |
+| exp37_stage_b2_orb_omf28d | 0.624 | 0.577 ± 0.030 | 0013: 0.643 | 0011: 0.609 | 0.034 |

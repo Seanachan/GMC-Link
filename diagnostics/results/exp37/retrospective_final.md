@@ -19,7 +19,7 @@ on centroid geometry now exhausted; further aligner-side iteration is low-prior.
 | Stage | Hypothesis | Status | Headline Δ vs baseline | Decision |
 |---|---|---|---|---|
 | A | ORB vs recoverPose ego source | Executed | −0.036 micro AUC | **NEGATIVE** — ORB wins |
-| B | 13D vs 13D + OMF (28D) | Deferred | — | Infrastructure-blocked; expected NEG per pattern |
+| B | 13D vs 13D + OMF (28D) | Executed 2026-04-24 | −0.155 micro AUC | **NEGATIVE** — worst of 12 levers |
 | C | Structural EMAP ego-velocity concat | Executed | −0.024 micro AUC | **NEGATIVE** |
 | D | TempRMOT cross-tracker portability | Executed (4 arms) | −3.79 to −5.38 HOTA | **NEGATIVE** (all β ∈ {0.5, 1.0, 2.0}) |
 
