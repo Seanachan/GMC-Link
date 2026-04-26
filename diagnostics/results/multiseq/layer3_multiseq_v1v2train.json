@@ -1,0 +1,678 @@
+{
+  "headline": {
+    "mean_auc_macro": 0.8429660803514344,
+    "mean_auc_micro": 0.7673662566510929,
+    "n_expressions": 33,
+    "n_expressions_macro": 12,
+    "std_across_seqs": 0.04694418301064546
+  },
+  "model_tag": "v1v2train",
+  "per_expression": {
+    "cars in front of ours": {
+      "auc_macro_mean": 1.0,
+      "auc_macro_std": null,
+      "auc_micro": 1.0,
+      "auc_per_seq": {
+        "0005": 1.0,
+        "0011": null,
+        "0013": null
+      },
+      "gt_count_per_seq": {
+        "0005": 295,
+        "0011": 0,
+        "0013": 0
+      },
+      "nongt_count_per_seq": {
+        "0005": 868,
+        "0011": 0,
+        "0013": 0
+      }
+    },
+    "cars in horizon direction": {
+      "auc_macro_mean": 0.638981756825067,
+      "auc_macro_std": null,
+      "auc_micro": 0.638981756825067,
+      "auc_per_seq": {
+        "0005": null,
+        "0011": 0.638981756825067,
+        "0013": null
+      },
+      "gt_count_per_seq": {
+        "0005": 0,
+        "0011": 178,
+        "0013": 0
+      },
+      "nongt_count_per_seq": {
+        "0005": 0,
+        "0011": 3223,
+        "0013": 0
+      }
+    },
+    "cars in the counter direction of ours": {
+      "auc_macro_mean": 0.8373708277407326,
+      "auc_macro_std": 0.008918183155551429,
+      "auc_micro": 0.8370047591703008,
+      "auc_per_seq": {
+        "0005": 0.8284526445851812,
+        "0011": 0.846289010896284,
+        "0013": null
+      },
+      "gt_count_per_seq": {
+        "0005": 526,
+        "0011": 1692,
+        "0013": 0
+      },
+      "nongt_count_per_seq": {
+        "0005": 637,
+        "0011": 1709,
+        "0013": 0
+      }
+    },
+    "cars in the same direction of ours": {
+      "auc_macro_mean": 0.8296673284850619,
+      "auc_macro_std": 0.09068885807699056,
+      "auc_micro": 0.7439824601360424,
+      "auc_per_seq": {
+        "0005": 0.7389784704080713,
+        "0011": 0.9203561865620524,
+        "0013": null
+      },
+      "gt_count_per_seq": {
+        "0005": 510,
+        "0011": 371,
+        "0013": 0
+      },
+      "nongt_count_per_seq": {
+        "0005": 653,
+        "0011": 3030,
+        "0013": 0
+      }
+    },
+    "cars which are braking": {
+      "auc_macro_mean": 0.9850269468093416,
+      "auc_macro_std": null,
+      "auc_micro": 0.9850269468093416,
+      "auc_per_seq": {
+        "0005": 0.9850269468093416,
+        "0011": null,
+        "0013": null
+      },
+      "gt_count_per_seq": {
+        "0005": 295,
+        "0011": 0,
+        "0013": 0
+      },
+      "nongt_count_per_seq": {
+        "0005": 868,
+        "0011": 0,
+        "0013": 0
+      }
+    },
+    "cars which are faster than ours": {
+      "auc_macro_mean": 0.7296149021910278,
+      "auc_macro_std": null,
+      "auc_micro": 0.7296149021910278,
+      "auc_per_seq": {
+        "0005": null,
+        "0011": 0.7296149021910278,
+        "0013": null
+      },
+      "gt_count_per_seq": {
+        "0005": 0,
+        "0011": 371,
+        "0013": 0
+      },
+      "nongt_count_per_seq": {
+        "0005": 0,
+        "0011": 3030,
+        "0013": 0
+      }
+    },
+    "counter direction cars in the left": {
+      "auc_macro_mean": 0.8935391109925894,
+      "auc_macro_std": 0.0788003462266656,
+      "auc_micro": 0.9138952244558779,
+      "auc_per_seq": {
+        "0005": 0.8147387647659239,
+        "0011": 0.9723394572192551,
+        "0013": null
+      },
+      "gt_count_per_seq": {
+        "0005": 526,
+        "0011": 1692,
+        "0013": 0
+      },
+      "nongt_count_per_seq": {
+        "0005": 637,
+        "0011": 1709,
+        "0013": 0
+      }
+    },
+    "counter direction vehicles in the left": {
+      "auc_macro_mean": 0.8955003020244245,
+      "auc_macro_std": 0.07657425251716926,
+      "auc_micro": 0.9138827326908339,
+      "auc_per_seq": {
+        "0005": 0.8189260495072553,
+        "0011": 0.9720745545415939,
+        "0013": null
+      },
+      "gt_count_per_seq": {
+        "0005": 526,
+        "0011": 1692,
+        "0013": 0
+      },
+      "nongt_count_per_seq": {
+        "0005": 637,
+        "0011": 1709,
+        "0013": 0
+      }
+    },
+    "left cars in the counter direction of ours": {
+      "auc_macro_mean": 0.8924747907408823,
+      "auc_macro_std": 0.0811473349267346,
+      "auc_micro": 0.9132058712064431,
+      "auc_per_seq": {
+        "0005": 0.8113274558141478,
+        "0011": 0.973622125667617,
+        "0013": null
+      },
+      "gt_count_per_seq": {
+        "0005": 526,
+        "0011": 1692,
+        "0013": 0
+      },
+      "nongt_count_per_seq": {
+        "0005": 637,
+        "0011": 1709,
+        "0013": 0
+      }
+    },
+    "left cars in the same direction of ours": {
+      "auc_macro_mean": 0.5508340692768129,
+      "auc_macro_std": null,
+      "auc_micro": 0.5508340692768129,
+      "auc_per_seq": {
+        "0005": 0.5508340692768129,
+        "0011": null,
+        "0013": null
+      },
+      "gt_count_per_seq": {
+        "0005": 215,
+        "0011": 0,
+        "0013": 0
+      },
+      "nongt_count_per_seq": {
+        "0005": 948,
+        "0011": 0,
+        "0013": 0
+      }
+    },
+    "left cars which are parking": {
+      "auc_macro_mean": 0.7525471196714161,
+      "auc_macro_std": 0.17463586516211171,
+      "auc_micro": 0.8056218474419243,
+      "auc_per_seq": {
+        "0005": 0.5779112545093044,
+        "0011": 0.9271829848335278,
+        "0013": null
+      },
+      "gt_count_per_seq": {
+        "0005": 169,
+        "0011": 1375,
+        "0013": 0
+      },
+      "nongt_count_per_seq": {
+        "0005": 994,
+        "0011": 2026,
+        "0013": 0
+      }
+    },
+    "left vehicles in the counter direction of ours": {
+      "auc_macro_mean": 0.8920257493751194,
+      "auc_macro_std": 0.07956119057704608,
+      "auc_micro": 0.9138033619375535,
+      "auc_per_seq": {
+        "0005": 0.8124645587980732,
+        "0011": 0.9715869399521654,
+        "0013": null
+      },
+      "gt_count_per_seq": {
+        "0005": 526,
+        "0011": 1692,
+        "0013": 0
+      },
+      "nongt_count_per_seq": {
+        "0005": 637,
+        "0011": 1709,
+        "0013": 0
+      }
+    },
+    "left vehicles in the same direction of ours": {
+      "auc_macro_mean": 0.5015847316259444,
+      "auc_macro_std": null,
+      "auc_micro": 0.5015847316259444,
+      "auc_per_seq": {
+        "0005": 0.5015847316259444,
+        "0011": null,
+        "0013": null
+      },
+      "gt_count_per_seq": {
+        "0005": 215,
+        "0011": 0,
+        "0013": 0
+      },
+      "nongt_count_per_seq": {
+        "0005": 948,
+        "0011": 0,
+        "0013": 0
+      }
+    },
+    "left vehicles which are parking": {
+      "auc_macro_mean": 0.7592383657813888,
+      "auc_macro_std": 0.1688617867807578,
+      "auc_micro": 0.8133599835294925,
+      "auc_per_seq": {
+        "0005": 0.590376579000631,
+        "0011": 0.9281001525621466,
+        "0013": null
+      },
+      "gt_count_per_seq": {
+        "0005": 169,
+        "0011": 1375,
+        "0013": 0
+      },
+      "nongt_count_per_seq": {
+        "0005": 994,
+        "0011": 2026,
+        "0013": 0
+      }
+    },
+    "moving cars": {
+      "auc_macro_mean": 0.8659975833866281,
+      "auc_macro_std": 0.0032192434553883764,
+      "auc_micro": 0.8339952701667742,
+      "auc_per_seq": {
+        "0005": 0.8627783399312398,
+        "0011": 0.8692168268420165,
+        "0013": null
+      },
+      "gt_count_per_seq": {
+        "0005": 569,
+        "0011": 765,
+        "0013": 0
+      },
+      "nongt_count_per_seq": {
+        "0005": 594,
+        "0011": 2636,
+        "0013": 0
+      }
+    },
+    "moving left pedestrian": {
+      "auc_macro_mean": 0.5965675734830246,
+      "auc_macro_std": null,
+      "auc_micro": 0.5965675734830246,
+      "auc_per_seq": {
+        "0005": null,
+        "0011": null,
+        "0013": 0.5965675734830246
+      },
+      "gt_count_per_seq": {
+        "0005": 0,
+        "0011": 0,
+        "0013": 253
+      },
+      "nongt_count_per_seq": {
+        "0005": 0,
+        "0011": 0,
+        "0013": 614
+      }
+    },
+    "moving pedestrian": {
+      "auc_macro_mean": 0.7013383914606371,
+      "auc_macro_std": null,
+      "auc_micro": 0.7013383914606371,
+      "auc_per_seq": {
+        "0005": null,
+        "0011": 0.7013383914606371,
+        "0013": null
+      },
+      "gt_count_per_seq": {
+        "0005": 0,
+        "0011": 88,
+        "0013": 0
+      },
+      "nongt_count_per_seq": {
+        "0005": 0,
+        "0011": 3313,
+        "0013": 0
+      }
+    },
+    "moving right pedestrian": {
+      "auc_macro_mean": 0.8252279250913597,
+      "auc_macro_std": null,
+      "auc_micro": 0.8252279250913597,
+      "auc_per_seq": {
+        "0005": null,
+        "0011": null,
+        "0013": 0.8252279250913597
+      },
+      "gt_count_per_seq": {
+        "0005": 0,
+        "0011": 0,
+        "0013": 261
+      },
+      "nongt_count_per_seq": {
+        "0005": 0,
+        "0011": 0,
+        "0013": 606
+      }
+    },
+    "moving vehicles": {
+      "auc_macro_mean": 0.834770602150307,
+      "auc_macro_std": 0.00465633706240387,
+      "auc_micro": 0.8059313222645643,
+      "auc_per_seq": {
+        "0005": 0.8301142650879031,
+        "0011": 0.8394269392127108,
+        "0013": null
+      },
+      "gt_count_per_seq": {
+        "0005": 569,
+        "0011": 765,
+        "0013": 0
+      },
+      "nongt_count_per_seq": {
+        "0005": 594,
+        "0011": 2636,
+        "0013": 0
+      }
+    },
+    "parking cars": {
+      "auc_macro_mean": 0.5229297535155129,
+      "auc_macro_std": null,
+      "auc_micro": 0.5229297535155129,
+      "auc_per_seq": {
+        "0005": null,
+        "0011": 0.5229297535155129,
+        "0013": null
+      },
+      "gt_count_per_seq": {
+        "0005": 0,
+        "0011": 2851,
+        "0013": 0
+      },
+      "nongt_count_per_seq": {
+        "0005": 0,
+        "0011": 550,
+        "0013": 0
+      }
+    },
+    "parking vehicles": {
+      "auc_macro_mean": 0.5377035171072351,
+      "auc_macro_std": null,
+      "auc_micro": 0.5377035171072351,
+      "auc_per_seq": {
+        "0005": null,
+        "0011": 0.5377035171072351,
+        "0013": null
+      },
+      "gt_count_per_seq": {
+        "0005": 0,
+        "0011": 2851,
+        "0013": 0
+      },
+      "nongt_count_per_seq": {
+        "0005": 0,
+        "0011": 550,
+        "0013": 0
+      }
+    },
+    "right cars which are parking": {
+      "auc_macro_mean": 0.9077166925114686,
+      "auc_macro_std": null,
+      "auc_micro": 0.9077166925114686,
+      "auc_per_seq": {
+        "0005": null,
+        "0011": 0.9077166925114686,
+        "0013": null
+      },
+      "gt_count_per_seq": {
+        "0005": 0,
+        "0011": 1056,
+        "0013": 0
+      },
+      "nongt_count_per_seq": {
+        "0005": 0,
+        "0011": 2345,
+        "0013": 0
+      }
+    },
+    "right vehicles which are parking": {
+      "auc_macro_mean": 0.9098610034244362,
+      "auc_macro_std": null,
+      "auc_micro": 0.9098610034244362,
+      "auc_per_seq": {
+        "0005": null,
+        "0011": 0.9098610034244362,
+        "0013": null
+      },
+      "gt_count_per_seq": {
+        "0005": 0,
+        "0011": 1056,
+        "0013": 0
+      },
+      "nongt_count_per_seq": {
+        "0005": 0,
+        "0011": 2345,
+        "0013": 0
+      }
+    },
+    "same direction cars in the left": {
+      "auc_macro_mean": 0.5530468060052988,
+      "auc_macro_std": null,
+      "auc_micro": 0.5530468060052988,
+      "auc_per_seq": {
+        "0005": 0.5530468060052988,
+        "0011": null,
+        "0013": null
+      },
+      "gt_count_per_seq": {
+        "0005": 215,
+        "0011": 0,
+        "0013": 0
+      },
+      "nongt_count_per_seq": {
+        "0005": 948,
+        "0011": 0,
+        "0013": 0
+      }
+    },
+    "same direction vehicles in the left": {
+      "auc_macro_mean": 0.5231282504170346,
+      "auc_macro_std": null,
+      "auc_micro": 0.5231282504170346,
+      "auc_per_seq": {
+        "0005": 0.5231282504170346,
+        "0011": null,
+        "0013": null
+      },
+      "gt_count_per_seq": {
+        "0005": 215,
+        "0011": 0,
+        "0013": 0
+      },
+      "nongt_count_per_seq": {
+        "0005": 948,
+        "0011": 0,
+        "0013": 0
+      }
+    },
+    "turning cars": {
+      "auc_macro_mean": 0.631306239493721,
+      "auc_macro_std": null,
+      "auc_micro": 0.631306239493721,
+      "auc_per_seq": {
+        "0005": null,
+        "0011": 0.631306239493721,
+        "0013": null
+      },
+      "gt_count_per_seq": {
+        "0005": 0,
+        "0011": 30,
+        "0013": 0
+      },
+      "nongt_count_per_seq": {
+        "0005": 0,
+        "0011": 3371,
+        "0013": 0
+      }
+    },
+    "turning vehicles": {
+      "auc_macro_mean": 0.5984178779788392,
+      "auc_macro_std": null,
+      "auc_micro": 0.5984178779788392,
+      "auc_per_seq": {
+        "0005": null,
+        "0011": 0.5984178779788392,
+        "0013": null
+      },
+      "gt_count_per_seq": {
+        "0005": 0,
+        "0011": 30,
+        "0013": 0
+      },
+      "nongt_count_per_seq": {
+        "0005": 0,
+        "0011": 3371,
+        "0013": 0
+      }
+    },
+    "vehicles in front of ours": {
+      "auc_macro_mean": 0.9999960946653128,
+      "auc_macro_std": null,
+      "auc_micro": 0.9999960946653128,
+      "auc_per_seq": {
+        "0005": 0.9999960946653128,
+        "0011": null,
+        "0013": null
+      },
+      "gt_count_per_seq": {
+        "0005": 295,
+        "0011": 0,
+        "0013": 0
+      },
+      "nongt_count_per_seq": {
+        "0005": 868,
+        "0011": 0,
+        "0013": 0
+      }
+    },
+    "vehicles in horizon direction": {
+      "auc_macro_mean": 0.6446398254121535,
+      "auc_macro_std": null,
+      "auc_micro": 0.6446398254121535,
+      "auc_per_seq": {
+        "0005": null,
+        "0011": 0.6446398254121535,
+        "0013": null
+      },
+      "gt_count_per_seq": {
+        "0005": 0,
+        "0011": 178,
+        "0013": 0
+      },
+      "nongt_count_per_seq": {
+        "0005": 0,
+        "0011": 3223,
+        "0013": 0
+      }
+    },
+    "vehicles in the counter direction of ours": {
+      "auc_macro_mean": 0.8301137311672632,
+      "auc_macro_std": 0.009749141927062888,
+      "auc_micro": 0.8314958907858435,
+      "auc_per_seq": {
+        "0005": 0.8203645892402003,
+        "0011": 0.8398628730943261,
+        "0013": null
+      },
+      "gt_count_per_seq": {
+        "0005": 526,
+        "0011": 1692,
+        "0013": 0
+      },
+      "nongt_count_per_seq": {
+        "0005": 637,
+        "0011": 1709,
+        "0013": 0
+      }
+    },
+    "vehicles in the same direction of ours": {
+      "auc_macro_mean": 0.8323474527014,
+      "auc_macro_std": 0.08123193758264191,
+      "auc_micro": 0.7554259639420684,
+      "auc_per_seq": {
+        "0005": 0.7511155151187581,
+        "0011": 0.9135793902840419,
+        "0013": null
+      },
+      "gt_count_per_seq": {
+        "0005": 510,
+        "0011": 371,
+        "0013": 0
+      },
+      "nongt_count_per_seq": {
+        "0005": 653,
+        "0011": 3030,
+        "0013": 0
+      }
+    },
+    "vehicles which are braking": {
+      "auc_macro_mean": 0.9844294306022026,
+      "auc_macro_std": null,
+      "auc_micro": 0.9844294306022026,
+      "auc_per_seq": {
+        "0005": 0.9844294306022026,
+        "0011": null,
+        "0013": null
+      },
+      "gt_count_per_seq": {
+        "0005": 295,
+        "0011": 0,
+        "0013": 0
+      },
+      "nongt_count_per_seq": {
+        "0005": 868,
+        "0011": 0,
+        "0013": 0
+      }
+    },
+    "vehicles which are faster than ours": {
+      "auc_macro_mean": 0.8991299938619198,
+      "auc_macro_std": null,
+      "auc_micro": 0.8991299938619198,
+      "auc_per_seq": {
+        "0005": null,
+        "0011": 0.8991299938619198,
+        "0013": null
+      },
+      "gt_count_per_seq": {
+        "0005": 0,
+        "0011": 371,
+        "0013": 0
+      },
+      "nongt_count_per_seq": {
+        "0005": 0,
+        "0011": 3030,
+        "0013": 0
+      }
+    }
+  },
+  "sequences": [
+    "0005",
+    "0011",
+    "0013"
+  ],
+  "weights_path": "gmc_link_weights_v1v2train.pth"
+}

@@ -1,0 +1,235 @@
+============================================================
+Pre-computing Farneback OMF cache → cache/omf/orb
+============================================================
+  0001: 447 frames
+  0002: 233 frames
+  0003: 144 frames
+  0004: 314 frames
+  0006: 270 frames
+  0007: 800 frames
+  0008: 390 frames
+  0009: 803 frames
+  0010: 294 frames
+  0012: 78 frames
+  0014: 106 frames
+  0015: 376 frames
+  0016: 209 frames
+  0018: 339 frames
+  0020: 837 frames
+OMF cache complete.
+============================================================
+Training B2: 13D + omf_stats (28D) → gmc_link_weights_exp37_stage_b2_orb_omf28d.pth
+============================================================
+Extra features: ['omf_stats'] (+15D → 28D)
+Device: cuda
+Training on V1 → gmc_link_weights_exp37_stage_b2_orb_omf28d.pth
+  data_root=refer-kitti  batch_size=128  epochs=100  lr=0.001
+Loading text encoder: all-MiniLM-L6-v2
+Building training data...
+  [cache] MISS key=64036eafc7b6e877 — building from scratch
+Encoding all sentences (batch mode)...
+Unique sentences: 166
+Batches:   0%|          | 0/3 [00:00<?, ?it/s]Batches:  33%|███▎      | 1/3 [00:00<00:00,  7.30it/s]Batches: 100%|██████████| 3/3 [00:00<00:00, 20.91it/s]
+Terminated
+============================================================
+Training B2: 13D + omf_stats (28D) → gmc_link_weights_exp37_stage_b2_orb_omf28d.pth
+============================================================
+Extra features: ['omf_stats'] (+15D → 28D)
+Device: cuda
+Training on V1 → gmc_link_weights_exp37_stage_b2_orb_omf28d.pth
+  data_root=refer-kitti  batch_size=128  epochs=100  lr=0.001
+Loading text encoder: all-MiniLM-L6-v2
+Building training data...
+  [cache] MISS key=64036eafc7b6e877 — building from scratch
+Encoding all sentences (batch mode)...
+Unique sentences: 166
+Batches:   0%|          | 0/3 [00:00<?, ?it/s]Batches:  33%|███▎      | 1/3 [00:00<00:00,  7.38it/s]Batches: 100%|██████████| 3/3 [00:00<00:00, 21.16it/s]
+Total expressions: 660
+  Initializing 'orb' ego router for dataset ego-motion compensation...
+  Computing centroid-difference velocities and generating positive pairs...
+  Motion-filtered: 296/660 expressions
+  Unique expressions: 166 | Total samples: 147212
+  Extra features: ['omf_stats'] (+15D → 28D)
+  [cache] saved 232.5 MB → /home/seanachan/GMC-Link/cache/training_data/64036eafc7b6e877.npz
+Total training samples: 147212
+Starting training on cuda | 1150 batches/epoch...
+  0%|          | 0/100 [00:00<?, ?it/s]  1%|          | 1/100 [00:02<04:26,  2.69s/it]  2%|▏         | 2/100 [00:05<04:03,  2.48s/it]  3%|▎         | 3/100 [00:07<03:48,  2.36s/it]  4%|▍         | 4/100 [00:09<03:39,  2.28s/it]  5%|▌         | 5/100 [00:11<03:32,  2.23s/it]  6%|▌         | 6/100 [00:13<03:27,  2.20s/it]  7%|▋         | 7/100 [00:15<03:21,  2.16s/it]  8%|▊         | 8/100 [00:17<03:18,  2.16s/it]  9%|▉         | 9/100 [00:20<03:16,  2.16s/it] 10%|█         | 10/100 [00:22<03:14,  2.16s/it] 11%|█         | 11/100 [00:24<03:12,  2.17s/it] 12%|█▏        | 12/100 [00:26<03:11,  2.18s/it] 13%|█▎        | 13/100 [00:28<03:08,  2.16s/it] 14%|█▍        | 14/100 [00:31<03:08,  2.19s/it] 15%|█▌        | 15/100 [00:33<03:07,  2.21s/it] 16%|█▌        | 16/100 [00:35<03:03,  2.19s/it] 17%|█▋        | 17/100 [00:37<02:59,  2.16s/it] 18%|█▊        | 18/100 [00:39<02:57,  2.16s/it] 19%|█▉        | 19/100 [00:41<02:55,  2.16s/it] 20%|██        | 20/100 [00:44<02:54,  2.18s/it] 21%|██        | 21/100 [00:46<02:52,  2.18s/it] 22%|██▏       | 22/100 [00:48<02:47,  2.15s/it] 23%|██▎       | 23/100 [00:50<02:45,  2.15s/it] 24%|██▍       | 24/100 [00:52<02:43,  2.15s/it] 25%|██▌       | 25/100 [00:54<02:41,  2.15s/it] 26%|██▌       | 26/100 [00:56<02:40,  2.17s/it] 27%|██▋       | 27/100 [00:59<02:37,  2.15s/it] 28%|██▊       | 28/100 [01:01<02:34,  2.14s/it] 29%|██▉       | 29/100 [01:03<02:33,  2.16s/it] 30%|███       | 30/100 [01:05<02:31,  2.16s/it] 31%|███       | 31/100 [01:07<02:29,  2.17s/it] 32%|███▏      | 32/100 [01:09<02:26,  2.15s/it] 33%|███▎      | 33/100 [01:12<02:24,  2.16s/it] 34%|███▍      | 34/100 [01:14<02:21,  2.15s/it] 35%|███▌      | 35/100 [01:16<02:19,  2.14s/it] 36%|███▌      | 36/100 [01:18<02:17,  2.15s/it] 37%|███▋      | 37/100 [01:20<02:14,  2.14s/it] 38%|███▊      | 38/100 [01:22<02:12,  2.13s/it] 39%|███▉      | 39/100 [01:24<02:11,  2.15s/it] 40%|████      | 40/100 [01:27<02:09,  2.16s/it] 41%|████      | 41/100 [01:29<02:07,  2.16s/it] 42%|████▏     | 42/100 [01:31<02:04,  2.15s/it] 43%|████▎     | 43/100 [01:33<02:00,  2.11s/it] 44%|████▍     | 44/100 [01:35<01:58,  2.11s/it] 45%|████▌     | 45/100 [01:37<01:57,  2.13s/it] 46%|████▌     | 46/100 [01:39<01:55,  2.14s/it] 47%|████▋     | 47/100 [01:42<01:55,  2.18s/it] 48%|████▊     | 48/100 [01:44<01:54,  2.19s/it] 49%|████▉     | 49/100 [01:46<01:50,  2.18s/it] 50%|█████     | 50/100 [01:48<01:48,  2.16s/it] 51%|█████     | 51/100 [01:50<01:46,  2.17s/it] 52%|█████▏    | 52/100 [01:53<01:47,  2.23s/it] 53%|█████▎    | 53/100 [01:55<01:42,  2.17s/it] 54%|█████▍    | 54/100 [01:57<01:39,  2.16s/it] 55%|█████▌    | 55/100 [01:59<01:35,  2.12s/it] 56%|█████▌    | 56/100 [02:01<01:33,  2.12s/it] 57%|█████▋    | 57/100 [02:03<01:30,  2.11s/it] 58%|█████▊    | 58/100 [02:05<01:28,  2.10s/it] 59%|█████▉    | 59/100 [02:07<01:26,  2.12s/it] 60%|██████    | 60/100 [02:09<01:24,  2.12s/it] 61%|██████    | 61/100 [02:12<01:22,  2.13s/it] 62%|██████▏   | 62/100 [02:14<01:19,  2.09s/it] 63%|██████▎   | 63/100 [02:16<01:18,  2.11s/it] 64%|██████▍   | 64/100 [02:18<01:15,  2.09s/it] 65%|██████▌   | 65/100 [02:20<01:13,  2.10s/it] 66%|██████▌   | 66/100 [02:22<01:11,  2.10s/it] 67%|██████▋   | 67/100 [02:24<01:09,  2.10s/it] 68%|██████▊   | 68/100 [02:26<01:07,  2.10s/it] 69%|██████▉   | 69/100 [02:28<01:06,  2.14s/it] 70%|███████   | 70/100 [02:31<01:04,  2.14s/it] 71%|███████   | 71/100 [02:33<01:01,  2.14s/it] 72%|███████▏  | 72/100 [02:35<01:01,  2.19s/it] 73%|███████▎  | 73/100 [02:37<00:58,  2.16s/it] 74%|███████▍  | 74/100 [02:39<00:55,  2.15s/it] 75%|███████▌  | 75/100 [02:41<00:53,  2.13s/it] 76%|███████▌  | 76/100 [02:43<00:50,  2.12s/it] 77%|███████▋  | 77/100 [02:46<00:49,  2.13s/it] 78%|███████▊  | 78/100 [02:48<00:46,  2.11s/it] 79%|███████▉  | 79/100 [02:50<00:43,  2.09s/it] 80%|████████  | 80/100 [02:52<00:41,  2.09s/it] 81%|████████  | 81/100 [02:54<00:39,  2.10s/it] 82%|████████▏ | 82/100 [02:56<00:38,  2.12s/it] 83%|████████▎ | 83/100 [02:58<00:35,  2.12s/it] 84%|████████▍ | 84/100 [03:00<00:33,  2.11s/it] 85%|████████▌ | 85/100 [03:02<00:31,  2.10s/it] 86%|████████▌ | 86/100 [03:04<00:29,  2.10s/it] 87%|████████▋ | 87/100 [03:07<00:27,  2.09s/it] 88%|████████▊ | 88/100 [03:09<00:25,  2.15s/it] 89%|████████▉ | 89/100 [03:11<00:23,  2.16s/it] 90%|█████████ | 90/100 [03:13<00:21,  2.16s/it] 91%|█████████ | 91/100 [03:15<00:19,  2.17s/it] 92%|█████████▏| 92/100 [03:18<00:17,  2.18s/it] 93%|█████████▎| 93/100 [03:20<00:15,  2.17s/it] 94%|█████████▍| 94/100 [03:22<00:12,  2.14s/it] 95%|█████████▌| 95/100 [03:24<00:10,  2.17s/it] 96%|█████████▌| 96/100 [03:26<00:08,  2.16s/it] 97%|█████████▋| 97/100 [03:28<00:06,  2.14s/it] 98%|█████████▊| 98/100 [03:30<00:04,  2.13s/it] 99%|█████████▉| 99/100 [03:32<00:02,  2.11s/it]100%|██████████| 100/100 [03:35<00:00,  2.11s/it]100%|██████████| 100/100 [03:35<00:00,  2.15s/it]
+Epoch [20/100] | Loss: 3.6361 | Acc: 16.57% | LR: 0.000905
+Epoch [40/100] | Loss: 3.5632 | Acc: 17.35% | LR: 0.000658
+Epoch [60/100] | Loss: 3.5176 | Acc: 17.83% | LR: 0.000352
+Epoch [80/100] | Loss: 3.4834 | Acc: 18.59% | LR: 0.000105
+Epoch [100/100] | Loss: 3.4713 | Acc: 18.86% | LR: 0.000010
+Training complete. Weights saved to gmc_link_weights_exp37_stage_b2_orb_omf28d.pth (τ=0.0700)
+Training curves saved to gmc_link_weights_exp37_stage_b2_orb_omf28d_curves.png
+--- 0005 / exp37_stage_b2_orb_omf28d ---
+Device: cuda | Seq: 0005 | Weights: gmc_link_weights_exp37_stage_b2_orb_omf28d.pth
+  Architecture: mlp
+  Extra features: ['omf_stats'] (28D)
+Frame shape: 1242x375
+Sequence has 297 labeled frames, 33 tracks
+  Preloading 297 frames...
+  Computing 874 homographies...
+    100/874 done
+    200/874 done
+    300/874 done
+    400/874 done
+    500/874 done
+    600/874 done
+    700/874 done
+    800/874 done
+  Homography precompute complete.
+Computing motion vectors for all tracks...
+  Tracks with motion vectors: 31
+Encoding all motion vectors on GPU...
+  Encoded 1163 motion vectors → torch.Size([1163, 256])
+Motion expressions: 20/50
+  Processed 10/20 expressions
+  Processed 20/20 expressions
+
+======================================================================
+LAYER 3: GT vs NON-GT COSINE SIMILARITY DISTRIBUTIONS
+======================================================================
+
+  Expression                                     GT mean    NonGT     Sep    AUC
+  ------------------------------------------------------------------------------
+  vehicles in front of ours                       0.0790  -0.0709 +0.1499  0.854
+  cars in front of ours                           0.0793  -0.0705 +0.1498  0.854
+  same direction cars in the left                 0.0998   0.0299 +0.0699  0.681
+  same direction vehicles in the left             0.1000   0.0303 +0.0698  0.681
+  left cars in the same direction of ours         0.0994   0.0296 +0.0698  0.681
+  left vehicles in the same direction of ours     0.0991   0.0293 +0.0698  0.681
+  vehicles which are braking                     -0.0747  -0.1533 +0.0786  0.676
+  cars which are braking                         -0.0743  -0.1528 +0.0785  0.676
+  counter direction cars in the left              0.3854   0.3405 +0.0450  0.663
+  counter direction vehicles in the left          0.3850   0.3403 +0.0448  0.662
+  left cars in the counter direction of ours      0.3841   0.3395 +0.0446  0.661
+  left vehicles in the counter direction of ou    0.3843   0.3397 +0.0447  0.661
+  cars in the counter direction of ours           0.3653   0.3311 +0.0342  0.619
+  vehicles in the counter direction of ours       0.3650   0.3309 +0.0342  0.618
+  vehicles in the same direction of ours          0.1021   0.0843 +0.0179  0.520
+  cars in the same direction of ours              0.1019   0.0841 +0.0179  0.520
+  moving cars                                     0.1650   0.2110 -0.0459  0.403
+  moving vehicles                                 0.1650   0.2110 -0.0460  0.403
+  left vehicles which are parking                 0.3196   0.3789 -0.0594  0.355
+  left cars which are parking                     0.3190   0.3787 -0.0598  0.354
+
+  Aggregate (20 expressions):
+    Mean separation: +0.0404 (std=0.0576)
+    Mean AUC:        0.611 (std=0.140)
+
+  ⚠ Weak discrimination — signal exists but is noisy.
+
+  Saved: diagnostics/results/layer3_gt_cosine_0005.npz
+  Plot saved: diagnostics/results/layer3_gt_cosine_0005.png
+======================================================================
+--- 0011 / exp37_stage_b2_orb_omf28d ---
+Device: cuda | Seq: 0011 | Weights: gmc_link_weights_exp37_stage_b2_orb_omf28d.pth
+  Architecture: mlp
+  Extra features: ['omf_stats'] (28D)
+Frame shape: 1242x375
+Sequence has 373 labeled frames, 57 tracks
+  Preloading 373 frames...
+  Computing 1102 homographies...
+    100/1102 done
+    200/1102 done
+    300/1102 done
+    400/1102 done
+    500/1102 done
+    600/1102 done
+    700/1102 done
+    800/1102 done
+    900/1102 done
+    1000/1102 done
+    1100/1102 done
+  Homography precompute complete.
+Computing motion vectors for all tracks...
+  Tracks with motion vectors: 56
+Encoding all motion vectors on GPU...
+  Encoded 3401 motion vectors → torch.Size([3401, 256])
+Motion expressions: 23/64
+  Processed 10/23 expressions
+  Processed 20/23 expressions
+
+======================================================================
+LAYER 3: GT vs NON-GT COSINE SIMILARITY DISTRIBUTIONS
+======================================================================
+
+  Expression                                     GT mean    NonGT     Sep    AUC
+  ------------------------------------------------------------------------------
+  right cars which are parking                    0.1902  -0.0352 +0.2254  0.827
+  right vehicles which are parking                0.1911  -0.0335 +0.2246  0.827
+  left cars which are parking                     0.4066   0.2592 +0.1475  0.808
+  left vehicles which are parking                 0.4067   0.2590 +0.1477  0.808
+  vehicles in the same direction of ours          0.2416   0.1364 +0.1051  0.690
+  cars in the same direction of ours              0.2414   0.1363 +0.1051  0.690
+  vehicles which are faster than ours             0.1582   0.0219 +0.1363  0.675
+  cars which are faster than ours                 0.1538   0.0186 +0.1352  0.671
+  moving vehicles                                 0.2245   0.1350 +0.0896  0.659
+  moving cars                                     0.2246   0.1350 +0.0896  0.659
+  moving pedestrian                               0.1493   0.1266 +0.0227  0.579
+  parking cars                                    0.2556   0.2118 +0.0438  0.576
+  parking vehicles                                0.2556   0.2118 +0.0438  0.576
+  counter direction cars in the left              0.2647   0.2252 +0.0395  0.544
+  counter direction vehicles in the left          0.2636   0.2260 +0.0376  0.542
+  left cars in the counter direction of ours      0.2619   0.2265 +0.0354  0.540
+  left vehicles in the counter direction of ou    0.2619   0.2270 +0.0350  0.539
+  cars in horizon direction                       0.1052   0.1221 -0.0169  0.490
+  vehicles in horizon direction                   0.1051   0.1221 -0.0170  0.489
+  cars in the counter direction of ours           0.2372   0.2806 -0.0434  0.460
+  vehicles in the counter direction of ours       0.2367   0.2806 -0.0439  0.459
+  turning cars                                    0.2142   0.2415 -0.0273  0.452
+  turning vehicles                                0.2141   0.2414 -0.0273  0.452
+
+  Aggregate (23 expressions):
+    Mean separation: +0.0647 (std=0.0778)
+    Mean AUC:        0.609 (std=0.122)
+
+  ⚠ Weak discrimination — signal exists but is noisy.
+
+  Saved: diagnostics/results/layer3_gt_cosine_0011.npz
+  Plot saved: diagnostics/results/layer3_gt_cosine_0011.png
+======================================================================
+--- 0013 / exp37_stage_b2_orb_omf28d ---
+Device: cuda | Seq: 0013 | Weights: gmc_link_weights_exp37_stage_b2_orb_omf28d.pth
+  Architecture: mlp
+  Extra features: ['omf_stats'] (28D)
+Frame shape: 1242x375
+Sequence has 266 labeled frames, 44 tracks
+  Preloading 266 frames...
+  Computing 781 homographies...
+    100/781 done
+    200/781 done
+    300/781 done
+    400/781 done
+    500/781 done
+    600/781 done
+    700/781 done
+  Homography precompute complete.
+Computing motion vectors for all tracks...
+  Tracks with motion vectors: 43
+Encoding all motion vectors on GPU...
+  Encoded 867 motion vectors → torch.Size([867, 256])
+Motion expressions: 2/44
+
+======================================================================
+LAYER 3: GT vs NON-GT COSINE SIMILARITY DISTRIBUTIONS
+======================================================================
+
+  Expression                                     GT mean    NonGT     Sep    AUC
+  ------------------------------------------------------------------------------
+  moving left pedestrian                          0.1741   0.0773 +0.0969  0.645
+  moving right pedestrian                        -0.0489  -0.0985 +0.0496  0.642
+
+  Aggregate (2 expressions):
+    Mean separation: +0.0732 (std=0.0236)
+    Mean AUC:        0.643 (std=0.002)
+
+  ⚠ Weak discrimination — signal exists but is noisy.
+
+  Saved: diagnostics/results/layer3_gt_cosine_0013.npz
+  Plot saved: diagnostics/results/layer3_gt_cosine_0013.png
+======================================================================
+/home/seanachan/GMC-Link/diagnostics/aggregate_multiseq.py:291: MatplotlibDeprecationWarning: The 'labels' parameter of boxplot() has been renamed 'tick_labels' since Matplotlib 3.9; support for the old name will be dropped in 3.11.
+  ax.boxplot(
+Wrote aggregated artifacts to diagnostics/results/exp37
+Done. See diagnostics/results/exp37/layer3_multiseq_exp37_stage_b2_orb_omf28d.md

@@ -18,6 +18,8 @@ from .utils import (
 )
 from .alignment import MotionLanguageAligner
 from .core import ORBHomographyEngine
+from .dataset import compute_per_track_extras
+from .ego.ego_router import EgoRouter, make_ego_router
 
 
 class GMCLinkManager:
@@ -41,6 +43,7 @@ class GMCLinkManager:
         device: str = "cpu",
         lang_dim: int = 384,
         frame_gap: int = 10,  # max gap for buffer sizing
+        ego_router: "EgoRouter | str | None" = None,
     ) -> None:
         self.device = device
         self.frame_gap = frame_gap
@@ -48,27 +51,44 @@ class GMCLinkManager:
         self.motion_buffer = MotionBuffer(alpha=0.3)
         self.score_buffer = ScoreBuffer(alpha=0.4)
         self.cosine_buffer = ScoreBuffer(alpha=0.4)
-        self.aligner = MotionLanguageAligner(
-            motion_dim=13, lang_dim=lang_dim, embed_dim=256
-        ).to(device)
 
-        self.temperature = 1.0  # default (no scaling)
+        self.extra_features: list = []
+        motion_dim = 13
+        self.temperature = 1.0
+        checkpoint = None
         if weights_path:
             checkpoint = torch.load(weights_path, map_location=device)
             if isinstance(checkpoint, dict) and "model" in checkpoint:
-                self.aligner.load_state_dict(checkpoint["model"])
+                motion_dim = checkpoint.get("motion_dim", 13)
+                self.extra_features = checkpoint.get("extra_features") or []
                 self.temperature = checkpoint.get("temperature", 1.0)
+
+        self.aligner = MotionLanguageAligner(
+            motion_dim=motion_dim, lang_dim=lang_dim, embed_dim=256
+        ).to(device)
+        if checkpoint is not None:
+            if isinstance(checkpoint, dict) and "model" in checkpoint:
+                self.aligner.load_state_dict(checkpoint["model"])
             else:
                 self.aligner.load_state_dict(checkpoint)
         self.aligner.eval()
 
-        self.ego_engine = ORBHomographyEngine(max_features=1500)
+        if ego_router is None:
+            self.ego_engine = ORBHomographyEngine(max_features=1500)
+        elif isinstance(ego_router, str):
+            self.ego_engine = make_ego_router(ego_router)
+        else:
+            self.ego_engine = ego_router
         self.prev_frame = None
         self.prev_detections = None
 
         # CUMULATIVE HOMOGRAPHY: Store original coordinates (never warped)
         self.centroid_history: Dict[int, deque] = {}
         self.wh_history: Dict[int, deque] = {}
+        # Per-track scale-velocity history for accel_multiscale: {tid: [(frame_idx, scale_vels)]}
+        # frame_idx is the manager's live frame counter (monotone); deque keeps last max_gap+1 entries.
+        self.scale_vel_history: Dict[int, deque] = {}
+        self._frame_counter: int = -1
 
         # Store cumulative homographies: H[i] warps frame[t-i] -> current frame
         self.homography_buffer: deque = deque(maxlen=frame_gap + 1)
@@ -102,6 +122,9 @@ class GMCLinkManager:
         """
         if not active_tracks:
             return {}, {}, {}
+
+        if update_state:
+            self._frame_counter += 1
 
         img_h, img_w = frame.shape[:2]
         frame_shape = (img_h, img_w)
@@ -251,6 +274,48 @@ class GMCLinkManager:
                  dw, dh, cx_n, cy_n, w_n, h_n, snr], dtype=np.float32
             )
 
+            if self.extra_features:
+                # Per-track (non-relational) extras only — manager has no neighbor context.
+                per_track_names = [
+                    f for f in self.extra_features
+                    if f in {"speed_m", "heading_m", "accel", "ego_motion",
+                             "accel_multiscale", "heading_sincos"}
+                ]
+                if per_track_names:
+                    scale_velocities = [(dx_s, dy_s), (dx_m, dy_m), (dx_l, dy_l)]
+                    accel_per_scale = None
+                    if "accel_multiscale" in per_track_names:
+                        if tid not in self.scale_vel_history:
+                            self.scale_vel_history[tid] = deque(maxlen=self.frame_gap + 1)
+                        hist = self.scale_vel_history[tid]
+                        counter = self._frame_counter
+                        accel_per_scale = []
+                        for gap_idx, gap in enumerate(self.FRAME_GAPS):
+                            past = None
+                            for (pc, pv) in reversed(hist):
+                                lag = counter - pc
+                                if lag >= gap and lag <= 2 * gap:
+                                    past = pv
+                                    break
+                            if past is None:
+                                accel_per_scale.append((0.0, 0.0))
+                            else:
+                                now_dx, now_dy = scale_velocities[gap_idx]
+                                past_dx, past_dy = past[gap_idx]
+                                accel_per_scale.append((
+                                    (now_dx - past_dx) / gap,
+                                    (now_dy - past_dy) / gap,
+                                ))
+                        if update_state:
+                            hist.append((counter, list(scale_velocities)))
+                    extras = compute_per_track_extras(
+                        per_track_names, scale_velocities,
+                        accel_per_scale=accel_per_scale,
+                    )
+                    spatial_motion = np.concatenate(
+                        [spatial_motion, np.array(extras, dtype=np.float32)]
+                    )
+
             track_ids.append(tid)
             compensated_velocities.append(spatial_motion)
 
@@ -302,5 +367,7 @@ class GMCLinkManager:
                 del self.centroid_history[d]
                 if d in self.wh_history:
                     del self.wh_history[d]
+                if d in self.scale_vel_history:
+                    del self.scale_vel_history[d]
 
         return scores_dict, velocities_dict, cosine_dict

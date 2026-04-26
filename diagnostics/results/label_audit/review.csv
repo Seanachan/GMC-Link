@@ -1,0 +1,44 @@
+seq,expr_slug,sentence,verdict,note
+0005,cars-in-front-of-ours,cars in front of ours,accept,re-classified after legend clarification (was flag-wrong)
+0005,cars-in-the-counter-direction-of-ours,cars in the counter direction of ours,accept,
+0005,cars-in-the-same-direction-of-ours,cars in the same direction of ours,accept,
+0005,cars-which-are-braking,cars which are braking,accept,re-classified after legend clarification (was flag-wrong)
+0005,counter-direction-cars-in-the-left,counter direction cars in the left,accept,
+0005,counter-direction-vehicles-in-the-left,counter direction vehicles in the left,accept,auto-propagated from counter-direction-cars-in-the-left
+0005,left-cars-in-the-counter-direction-of-ours,left cars in the counter direction of ours,accept,
+0005,left-cars-in-the-same-direction-of-ours,left cars in the same direction of ours,accept,
+0005,left-cars-which-are-parking,left cars which are parking,accept,re-classified after legend clarification (was flag-wrong)
+0005,left-vehicles-in-the-counter-direction-of-ours,left vehicles in the counter direction of ours,accept,auto-propagated from left-cars-in-the-counter-direction-of-ours
+0005,left-vehicles-in-the-same-direction-of-ours,left vehicles in the same direction of ours,accept,auto-propagated from left-cars-in-the-same-direction-of-ours
+0005,left-vehicles-which-are-parking,left vehicles which are parking,accept,auto-propagated from left-cars-which-are-parking | re-classified after legend clarification (was flag-wrong)
+0005,moving-cars,moving cars,accept,re-classified after legend clarification (was ambiguous)
+0005,moving-vehicles,moving vehicles,accept,auto-propagated from moving-cars | re-classified after legend clarification (was ambiguous)
+0005,same-direction-cars-in-the-left,same direction cars in the left,accept,
+0005,same-direction-vehicles-in-the-left,same direction vehicles in the left,accept,auto-propagated from same-direction-cars-in-the-left
+0005,vehicles-in-front-of-ours,vehicles in front of ours,accept,auto-propagated from cars-in-front-of-ours | re-classified after legend clarification (was flag-wrong)
+0005,vehicles-in-the-counter-direction-of-ours,vehicles in the counter direction of ours,accept,auto-propagated from cars-in-the-counter-direction-of-ours
+0005,vehicles-in-the-same-direction-of-ours,vehicles in the same direction of ours,accept,auto-propagated from cars-in-the-same-direction-of-ours
+0005,vehicles-which-are-braking,vehicles which are braking,accept,auto-propagated from paired slug (labels identical) | re-classified after legend clarification (was flag-wrong)
+0011,cars-in-horizon-direction,cars in horizon direction,accept,re-classified after legend clarification (was ambiguous)
+0011,cars-in-the-counter-direction-of-ours,cars in the counter direction of ours,accept,re-classified after legend clarification (was ambiguous)
+0011,cars-in-the-same-direction-of-ours,cars in the same direction of ours,accept,re-classified after legend clarification (was flag-wrong)
+0011,cars-which-are-faster-than-ours,cars which are faster than ours,accept,
+0011,counter-direction-cars-in-the-left,counter direction cars in the left,accept,re-classified after legend clarification (was ambiguous)
+0011,counter-direction-vehicles-in-the-left,counter direction vehicles in the left,accept,auto-propagated from counter-direction-cars-in-the-left | re-classified after legend clarification (was ambiguous)
+0011,left-cars-in-the-counter-direction-of-ours,left cars in the counter direction of ours,accept,re-classified after legend clarification (was ambiguous)
+0011,left-cars-which-are-parking,left cars which are parking,accept,
+0011,left-vehicles-in-the-counter-direction-of-ours,left vehicles in the counter direction of ours,accept,auto-propagated from left-cars-in-the-counter-direction-of-ours | re-classified after legend clarification (was ambiguous)
+0011,left-vehicles-which-are-parking,left vehicles which are parking,accept,auto-propagated from left-cars-which-are-parking
+0011,moving-cars,moving cars,accept,
+0011,moving-pedestrian,moving pedestrian,accept,
+0011,moving-vehicles,moving vehicles,accept,auto-propagated from moving-cars
+0011,parking-cars,parking cars,accept,
+0011,parking-vehicles,parking vehicles,accept,auto-propagated from parking-cars
+0011,right-cars-which-are-parking,right cars which are parking,accept,
+0011,right-vehicles-which-are-parking,right vehicles which are parking,accept,auto-propagated from right-cars-which-are-parking
+0011,turning-cars,turning cars,accept,
+0011,turning-vehicles,turning vehicles,accept,auto-propagated from turning-cars
+0011,vehicles-in-horizon-direction,vehicles in horizon direction,accept,auto-propagated from cars-in-horizon-direction | re-classified after legend clarification (was ambiguous)
+0011,vehicles-in-the-counter-direction-of-ours,vehicles in the counter direction of ours,accept,auto-propagated from cars-in-the-counter-direction-of-ours | re-classified after legend clarification (was ambiguous)
+0011,vehicles-in-the-same-direction-of-ours,vehicles in the same direction of ours,accept,auto-propagated from cars-in-the-same-direction-of-ours | re-classified after legend clarification (was flag-wrong)
+0011,vehicles-which-are-faster-than-ours,vehicles which are faster than ours,accept,auto-propagated from cars-which-are-faster-than-ours

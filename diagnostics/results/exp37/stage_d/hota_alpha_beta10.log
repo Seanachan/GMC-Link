@@ -1,0 +1,350 @@
+
+Eval Config:
+USE_PARALLEL         : True                          
+NUM_PARALLEL_CORES   : 2                             
+BREAK_ON_ERROR       : True                          
+RETURN_ON_ERROR      : False                         
+LOG_ON_ERROR         : /home/seanachan/TempRMOT/TrackEval/error_log.txt
+PRINT_RESULTS        : True                          
+PRINT_ONLY_COMBINED  : False                         
+PRINT_CONFIG         : True                          
+TIME_PROGRESS        : True                          
+DISPLAY_LESS_PROGRESS : False                         
+OUTPUT_SUMMARY       : True                          
+OUTPUT_EMPTY_CLASSES : True                          
+OUTPUT_DETAILED      : True                          
+PLOT_CURVES          : False                         
+
+MotChallenge2DBox Config:
+PRINT_CONFIG         : True                          
+GT_FOLDER            : /home/seanachan/TempRMOT/datasets/refer-kitti/gt_template/
+TRACKERS_FOLDER      : /home/seanachan/TempRMOT/exps/exp37_stage_d_alpha_beta10/results_epoch50
+OUTPUT_FOLDER        : None                          
+TRACKERS_TO_EVAL     : ['/home/seanachan/TempRMOT/exps/exp37_stage_d_alpha_beta10/results_epoch50']
+CLASSES_TO_EVAL      : ['pedestrian']                
+BENCHMARK            : MOT17                         
+SPLIT_TO_EVAL        : train                         
+INPUT_AS_ZIP         : False                         
+DO_PREPROC           : True                          
+TRACKER_SUB_FOLDER   : data                          
+OUTPUT_SUB_FOLDER    :                               
+TRACKER_DISPLAY_NAMES : None                          
+SEQMAP_FOLDER        : None                          
+SEQMAP_FILE          : /home/seanachan/TempRMOT/datasets/data_path/seqmap-v1.txt
+SEQ_INFO             : None                          
+GT_LOC_FORMAT        : {gt_folder}/{video_id}/{expression_id}/gt.txt
+SKIP_SPLIT_FOL       : True                          
+
+Evaluating 1 tracker(s) on 150 sequence(s) for 1 class(es) on MotChallenge2DBox dataset using the following metrics: HOTA, Count
+
+
+Evaluating /home/seanachan/TempRMOT/exps/exp37_stage_d_alpha_beta10/results_epoch50
+
+
+All sequences for /home/seanachan/TempRMOT/exps/exp37_stage_d_alpha_beta10/results_epoch50 finished in 3.74 seconds
+
+HOTA: /home/seanachan/TempRMOT/exps/exp37_stage_d_alpha_beta10/results_epoch50-pedestrianHOTA      DetA      AssA      DetRe     DetPr     AssRe     AssPr     LocA      RHOTA     HOTA(0)   LocA(0)   HOTALocA(0)
+0005+black-cars-in-the-left        57.16     49.621    66.045    70.663    60.63     75.541    83.401    89.809    68.285    66.652    84.095    56.051    
+0005+black-vehicles-in-the-left    57.492    49.966    66.349    70.867    60.989    75.828    83.511    89.797    68.543    66.809    84.29     56.313    
+0005+cars-in-black                 75.997    70.92     81.494    81.831    81.183    84.473    91.022    91.785    81.654    82.625    90.292    74.603    
+0005+cars-in-front-of-ours         93.379    93.068    93.691    95.147    93.874    95.147    94.506    93.172    94.382    98.994    92.994    92.058    
+0005+cars-in-left                  67.987    64.199    72.044    74.401    80.124    84.571    81.851    92.081    73.209    73.842    90.963    67.169    
+0005+cars-in-light-color           64.878    56.762    74.161    63.074    83.022    76.989    93.268    93.025    68.385    69.396    92.499    64.191    
+0005+cars-in-right                 54.082    48.05     60.877    48.988    90.977    62.405    91.093    89.682    54.577    60.852    88.621    53.928    
+0005+cars-in-silver                46.159    32.444    65.672    47.194    50.352    66.896    94.838    92.99     55.665    49.152    92.33     45.382    
+0005+cars-in-the-counter-direction-of-ours61.557    50.493    75.055    75.501    59.179    78.91     91.107    92.364    75.271    66.661    91.554    61.031    
+0005+cars-in-the-same-direction-of-ours59.34     42.345    83.189    88.114    44.143    87.497    90.111    92.019    85.598    64.112    88.94     57.021    
+0005+counter-direction-cars-in-the-left58.619    46.13     74.51     83.856    49.873    88.508    81.836    92.706    79.042    63.274    91.541    57.921    
+0005+counter-direction-vehicles-in-the-left58.571    46.103    74.429    83.819    49.851    88.427    81.79     92.716    78.982    63.274    91.525    57.911    
+0005+left-cars-in-black            58.994    52.77     66.093    73.944    62.874    76.011    82.01     90.221    69.893    65.777    87.49     57.548    
+0005+left-cars-in-light-color      64.017    55.555    73.77     70.581    71.278    86.153    83.701    93.769    72.142    67.87     92.709    62.922    
+0005+left-cars-in-silver           42.01     27.653    63.841    41.237    45.337    64.864    95.235    94.725    51.288    43.733    94.568    41.357    
+0005+left-cars-in-the-counter-direction-of-ours56.344    43.479    73.042    81.873    47.446    86.617    82.358    92.692    77.328    60.356    91.482    55.214    
+0005+left-cars-in-the-same-direction-of-ours36.21     18.782    69.83     78.363    19.659    78.856    82.999    90.184    73.962    41.027    83.162    34.119    
+0005+left-cars-which-are-parking   28.151    12.002    66.253    78.301    12.38     87.71     73.496    92.067    71.922    30.428    82.628    25.142    
+0005+left-vehicles-in-black        57.236    49.307    66.627    69.922    60.728    76.189    83.21     89.869    68.229    65.702    84.597    55.582    
+0005+left-vehicles-in-light-color  64.193    55.807    73.84     70.77     71.468    86.363    83.597    93.854    72.272    67.95     93.444    63.495    
+0005+left-vehicles-in-silver       42.915    28.947    63.649    40.23     50.421    64.855    94.352    94.8      50.578    44.667    94.651    42.278    
+0005+left-vehicles-in-the-counter-direction-of-ours57.987    45.482    73.952    83.268    49.319    88.042    81.582    92.751    78.469    62.476    91.636    57.251    
+0005+left-vehicles-in-the-same-direction-of-ours34.346    17.983    65.693    77.022    18.863    74.799    82.159    90.117    71.097    38.288    82.189    31.468    
+0005+left-vehicles-which-are-parking24.947    10.858    57.532    69.621    11.371    80.998    71.709    92.318    63.189    27.006    81.953    22.132    
+0005+light-color-cars-in-the-left  64.546    56.605    73.603    70.478    73.097    85.114    85.005    93.767    72.009    68.431    93.022    63.656    
+0005+light-color-cars-in-the-right 52.235    46.202    59.064    47.053    90.486    60.476    90.598    89.367    52.687    59.047    88.286    52.13     
+0005+light-color-vehicles-in-the-left64.289    56.27     73.451    70.084    72.935    84.885    84.872    93.802    71.734    68.121    93.38     63.612    
+0005+light-color-vehicles-in-the-right52.235    46.202    59.064    47.053    90.486    60.476    90.598    89.38     52.687    59.047    88.296    52.136    
+0005+moving-cars                   63.819    46.938    86.774    86.511    49.822    88.309    95.177    93.251    86.63     67.731    92.94     62.949    
+0005+moving-vehicles               64.033    47.169    86.928    86.681    50.018    88.432    95.22     93.241    86.794    67.919    92.931    63.118    
+0005+right-cars-in-light-color     54.366    48.022    61.557    48.947    90.643    63.094    90.767    89.409    54.857    61.399    88.351    54.246    
+0005+right-cars-in-silver          35.978    35.978    35.978    36.288    91.93     36.288    91.93     90.972    36.13     39.474    90.092    35.563    
+0005+right-vehicles-in-light-color 54.215    47.9      61.371    48.842    90.448    62.946    90.547    89.383    54.718    61.399    88.283    54.205    
+0005+right-vehicles-in-silver      35.978    35.978    35.978    36.288    91.93     36.288    91.93     91.008    36.13     39.474    90.133    35.579    
+0005+same-direction-cars-in-the-left35.309    18.868    66.161    77.51     19.813    74.85     82.783    90.3      71.58     39.051    83.069    32.439    
+0005+same-direction-vehicles-in-the-left35.138    18.703    66.099    76.73     19.684    74.854    82.763    90.297    71.184    38.98     82.639    32.213    
+0005+silver-cars-in-right          28.357    27.993    28.725    28.947    84.615    28.947    91.667    90.782    28.834    31.171    89.851    28.008    
+0005+silver-cars-in-the-left       41.73     26.741    65.133    42.385    41.719    68.149    89.539    94.078    52.527    43.809    93.723    41.059    
+0005+silver-vehicles-in-right      28.357    27.993    28.725    28.947    84.615    28.947    91.667    90.783    28.834    31.171    89.854    28.009    
+0005+silver-vehicles-in-the-left   41.692    26.84     64.778    41.825    42.504    67.507    89.491    94.04     52.034    43.834    93.68     41.064    
+0005+vehicles-in-black             76.057    71.018    81.506    81.983    81.204    84.501    91.049    91.836    81.736    82.611    90.447    74.719    
+0005+vehicles-in-front-of-ours     93.39     93.079    93.702    95.165    93.892    95.165    94.524    93.177    94.396    98.994    92.999    92.063    
+0005+vehicles-in-left              67.848    63.324    72.737    73.62     79.63     83.809    83.747    91.987    73.174    73.979    90.66     67.069    
+0005+vehicles-in-light-color       65.814    58.451    74.109    64.687    83.883    76.869    93.408    93.039    69.229    70.303    92.532    65.053    
+0005+vehicles-in-right             54.082    48.05     60.877    48.988    90.977    62.405    91.093    89.759    54.577    60.852    88.695    53.973    
+0005+vehicles-in-silver            45.362    32.029    64.247    45.407    51.486    65.463    94.946    93.003    54.007    48.338    92.32     44.626    
+0005+vehicles-in-the-counter-direction-of-ours61.995    50.878    75.555    76.1      59.318    79.644    91.215    92.287    75.821    67.233    91.428    61.469    
+0005+vehicles-in-the-same-direction-of-ours59.121    42.026    83.203    88.197    43.798    87.519    90.158    92.046    85.643    63.835    88.982    56.801    
+0011+black-cars-in-right           64.587    52.539    79.438    77.512    61.475    81.875    94.782    93.342    78.466    69.955    91.621    64.093    
+0011+black-cars-in-the-left        58.462    51.048    66.971    73.292    60.7      70.086    88.872    89.862    70.048    66.993    87.847    58.852    
+0011+black-vehicles-in-right       64.151    52.024    79.144    77.033    61.096    81.408    95.238    93.489    78.079    69.027    91.922    63.451    
+0011+black-vehicles-in-the-left    57.654    53.436    62.236    73.563    63.928    64.897    90.454    89.991    67.654    65.792    88.144    57.991    
+0011+cars-in-black                 61.715    52.415    72.835    73.555    63.058    75.189    92.945    91.118    73.164    68.761    89.448    61.506    
+0011+cars-in-left                  61.282    56.064    67.037    60.572    85.217    70.408    90.802    91.289    63.718    68.17     89.646    61.111    
+0011+cars-in-light-color           53.104    43.946    64.212    55.123    67.076    65.86     93.125    91.788    59.477    58.646    87.917    51.56     
+0011+cars-in-right                 57.104    49.632    65.742    55.726    80.673    69.883    89.446    92.557    60.527    62.813    89.86     56.444    
+0011+cars-in-the-counter-direction-of-ours48.394    37.242    62.924    56.626    51.019    65.591    89.285    91.041    59.688    53.483    89.512    47.874    
+0011+cars-in-the-same-direction-of-ours38.24     15.04     97.257    98.624    15.064    98.624    98.095    95.971    97.917    38.977    95.919    37.386    
+0011+cars-in-white                 2.13      0.67187   6.7825    2.7713    0.85914   11.184    10.267    66.923    4.3236    14.59     17.462    2.5478    
+0011+cars-which-are-faster-than-ours19.101    7.8737    46.344    83.904    7.9909    83.904    50.687    95.656    62.352    19.512    95.593    18.652    
+0011+counter-direction-cars-in-the-left57.632    49.838    66.685    61.283    70.702    70.571    90.443    91.316    63.922    63.846    89.785    57.325    
+0011+counter-direction-vehicles-in-the-left58.499    50.561    67.73     61.515    71.844    71.726    90.005    91.292    64.543    64.819    89.711    58.15     
+0011+left-cars-in-black            60.015    52.81     68.219    73.414    63.118    71.27     89.73     89.813    70.754    68.977    87.557    60.394    
+0011+left-cars-in-light-color      55.881    47.961    65.11     57.405    72.713    66.169    94.497    92.427    61.121    60.097    91.125    54.764    
+0011+left-cars-in-the-counter-direction-of-ours57.878    49.502    67.719    61.638    69.557    71.867    89.79     91.266    64.603    64.142    89.68     57.523    
+0011+left-cars-in-white            1.8911    0.66222   5.4179    2.0526    0.92253   7.3308    8.9245    71.229    3.3278    17.313    13.297    2.302     
+0011+left-cars-which-are-parking   50.141    39.743    63.4      58.078    54.405    66.047    89.6      90.095    60.653    57.17     81.669    46.69     
+0011+left-vehicles-in-black        60.005    52.841    68.162    73.451    63.15     71.379    89.623    89.825    70.743    68.9      87.579    60.342    
+0011+left-vehicles-in-light-color  55.477    47.452    64.861    57.045    72.097    65.917    94.506    92.479    60.814    59.624    91.405    54.499    
+0011+left-vehicles-in-the-counter-direction-of-ours58.701    50.864    67.788    61.558    72.391    71.789    89.985    91.281    64.593    65.073    89.699    58.37     
+0011+left-vehicles-in-white        1.8782    0.64871   5.4547    2.1579    0.87898   7.7068    8.6316    71.356    3.4239    16.813    13.653    2.2954    
+0011+left-vehicles-which-are-parking51.537    40.504    65.714    60.076    54.114    68.395    89.821    90.138    62.807    58.588    82.024    48.056    
+0011+light-color-cars-in-the-left  55.57     47.432    65.107    57.101    72.007    66.175    94.624    92.528    60.957    59.708    91.469    54.614    
+0011+light-color-cars-in-the-right 51.818    42.014    64.19     53.325    65.292    66.132    93.656    91.274    58.431    59.895    81.495    48.811    
+0011+light-color-vehicles-in-the-left55.629    47.445    65.227    57.11     72.019    66.293    94.649    92.53     61.018    59.758    91.474    54.662    
+0011+light-color-vehicles-in-the-right51.604    41.72     64.102    53.241    64.679    66.072    93.491    91.223    58.346    59.644    81.802    48.789    
+0011+moving-cars                   36.298    20.984    62.79     74.019    22.567    81.808    75.486    93.793    68.173    38.189    92.513    35.329    
+0011+moving-pedestrian             11.594    2.2328    60.345    54.577    2.2699    68.012    71.895    86.46     57.316    13.466    84.85     11.426    
+0011+moving-vehicles               36.948    20.522    66.525    73.652    22.069    85.321    76.831    93.84     69.993    38.991    92.605    36.108    
+0011+parking-cars                  54.339    45.273    65.311    57.403    66.798    73.459    84.917    91.257    61.219    61.009    85.175    51.964    
+0011+parking-vehicles              53.877    44.826    64.849    56.613    66.906    73.215    84.525    91.331    60.581    60.085    85.656    51.466    
+0011+pedestrian                    41.646    26.202    66.271    30.309    61.038    69.6      81.551    85.102    44.797    49.06     82.95     40.695    
+0011+pedestrian-who-are-walking    51.616    46.106    57.856    56.636    65.956    66.061    70.785    85.574    57.175    62.768    82.438    51.745    
+0011+people                        40.174    26.233    61.616    30.635    60.028    70.236    78.281    85.376    43.424    48.252    82.349    39.735    
+0011+people-who-are-walking        44.913    35.683    56.599    48.341    54.236    61.391    76.676    86        52.253    52.92     83.999    44.452    
+0011+persons                       41.549    26.696    64.718    31.325    59.765    73.878    76.807    85.358    45.009    50.01     82.522    41.269    
+0011+persons-who-are-walking       49.003    43.154    55.754    54.805    62.248    63.633    71.613    85.617    55.207    59.51     82.506    49.099    
+0011+right-cars-in-black           65.571    54.717    78.628    74.745    66.586    80.633    95.491    93.665    76.659    70.356    92.252    64.905    
+0011+right-cars-in-light-color     52.923    44.131    63.755    56.05     66.28     66.123    92.66     91.354    59.711    61.621    81.624    50.298    
+0011+right-cars-in-white           0         0         0         0         0         0         0         100       0         0         100       0         
+0011+right-cars-which-are-parking  45.259    30.646    66.862    61.168    37.776    71.234    89.473    92.366    63.951    49.426    89.822    44.396    
+0011+right-vehicles-in-black       66.11     55.72     78.485    75.348    67.6      80.394    95.71     93.769    76.898    70.685    92.512    65.391    
+0011+right-vehicles-in-light-color 52.437    43.847    63.054    55.813    66        65.862    90.664    91.399    59.229    60.076    81.228    48.799    
+0011+right-vehicles-in-white       0         0         0         0         0         0         0         100       0         0         100       0         
+0011+right-vehicles-which-are-parking43.693    29.442    64.87     59.558    36.553    71.229    85.621    92.618    62.156    47.233    90.345    42.673    
+0011+turning-cars                  7.1518    1.2243    41.832    79.474    1.2277    43.562    88.926    90.958    57.623    7.7273    83.172    6.427     
+0011+turning-vehicles              7.1427    1.2212    41.832    79.474    1.2246    43.562    88.926    90.865    57.623    7.7174    83.069    6.4108    
+0011+vehicles-in-black             61.392    52.494    71.969    73.472    63.252    74.393    92.884    91.193    72.686    68.428    89.402    61.176    
+0011+vehicles-in-left              60.529    54.746    66.975    60.349    82.674    70.266    90.684    91.31     63.572    67.292    89.621    60.307    
+0011+vehicles-in-light-color       49.311    39.307    61.9      48.396    66.413    63.384    92.967    92.11     54.711    54.136    88.013    47.647    
+0011+vehicles-in-right             57.7      51.774    64.378    59.229    79.064    69.69     86.731    92.146    61.747    64.086    88.309    56.593    
+0011+vehicles-in-the-counter-direction-of-ours49.977    39.732    62.905    60.018    52.896    65.605    89.45     91.118    61.441    55.356    89.238    49.398    
+0011+vehicles-in-the-same-direction-of-ours38.132    14.958    97.239    98.61     14.981    98.61     98.081    95.936    97.901    38.873    95.885    37.273    
+0011+vehicles-in-white             2.2189    0.69228   7.1465    2.7946    0.8908    11.278    11.08     66.489    4.4556    15.146    17.462    2.6448    
+0011+vehicles-which-are-faster-than-ours20.72     8.6054    49.895    90.879    8.6752    90.879    52.293    95.508    67.331    21.215    95.437    20.247    
+0011+walking-pedestrian            27.645    15.286    50.045    35.698    20.655    51.003    88.173    86.328    42.249    31.734    84.612    26.851    
+0011+white-cars-in-the-left        1.738     0.55047   5.5058    2.1842    0.70572   7.8008    8.7368    70.144    3.4605    15.377    13.582    2.0885    
+0011+white-cars-in-the-right       0         0         0         0         0         0         0         100       0         0         100       0         
+0011+white-vehicles-in-the-left    1.7728    0.56543   5.5773    2.1842    0.73051   7.8008    8.9151    70.108    3.4827    15.7      13.569    2.1303    
+0011+white-vehicles-in-the-right   0         0         0         0         0         0         0         100       0         0         100       0         
+0013+cars-in-the-left              65.26     65.26     65.26     81.895    68.246    81.895    68.246    83.244    73.023    83.333    80.28     66.9      
+0013+cars-in-the-right             84.398    73.158    97.368    98.246    73.684    98.246    98.246    96.549    97.776    86.603    96.47     83.546    
+0013+females                       37.982    27.751    52.374    44.962    39.438    65.83     66.415    82.53     48.414    47.489    78.682    37.365    
+0013+females-in-the-left           42.621    35.421    51.722    51.234    49.232    62.869    65.794    82.326    51.335    54.608    78.204    42.705    
+0013+females-in-the-right          24.421    8.6575    68.963    28.874    10.8      73.619    77.969    81.952    44.585    31.23     78.635    24.558    
+0013+left-pedestrian-who-are-walking39.363    31.337    49.583    53.873    40.179    55.333    71.635    82.603    51.644    50.566    77.98     39.432    
+0013+left-people-who-are-walking   37.102    26.995    51.371    52.277    33.878    60.281    69.669    82.037    51.69     47.968    76.935    36.904    
+0013+left-persons-who-are-walking  41.258    31.814    53.868    53.795    40.804    62.189    71.45     82.165    53.714    53.078    77.579    41.177    
+0013+males                         26.442    13.913    50.645    33.16     18.725    55.468    76.455    81.631    40.866    32.44     78.308    25.403    
+0013+males-in-the-left             22.285    8.7521    57.723    61.545    9.1069    68.184    68.657    80.94     59.168    27.493    76.685    21.083    
+0013+males-in-the-right            39.049    23.753    64.197    44.695    31.907    73.366    74.42     82.656    53.556    48.568    79.788    38.752    
+0013+men                           34.12     19.393    60.412    45.592    24.181    69.317    72.591    81.576    52.382    42.127    78.142    32.919    
+0013+men-in-the-left               23.469    9.5947    58.368    62.988    9.9879    67.293    71.355    80.709    60.212    28.896    76.523    22.112    
+0013+men-in-the-right              39.11     26.096    58.711    48.204    34.026    67.748    74.85     81.329    53.191    49.925    77.488    38.686    
+0013+moving-left-pedestrian        39.581    27.554    57.327    57.146    33.026    65.082    74.497    83.069    57.078    49.646    78.846    39.144    
+0013+moving-right-pedestrian       34.675    17.414    69.096    39.502    22.865    76.828    76.859    81.893    52.233    43.55     77.796    33.88     
+0013+pedestrian-in-the-left        46.151    39.68     54.021    47.277    64.341    64.371    67.728    82.875    50.475    57.819    78.941    45.643    
+0013+pedestrian-in-the-right       39.661    29.145    54.014    39.047    49.113    65.969    65.84     81.971    45.912    50.602    78.3      39.622    
+0013+people-in-the-left            48.367    41.988    56.095    50.114    64.937    65.719    69.953    82.747    52.95     60.539    79.006    47.829    
+0013+people-in-the-right           41.555    26.453    65.294    35.562    46.992    76.885    71.92     82.493    48.176    52.405    78.989    41.395    
+0013+persons-in-the-left           45.287    39.979    51.653    49.485    61.027    61.921    66.069    82.308    50.486    57.44     77.998    44.802    
+0013+persons-in-the-right          40.629    25.856    63.863    35.491    45.152    76.514    70.461    82.134    47.604    51.581    77.74     40.099    
+0013+right-pedestrian-who-are-walking16.258    9.0299    29.411    14.186    19.12     31.734    73.171    80.212    20.39     20.66     76.218    15.747    
+0013+right-people-who-are-walking  29.347    15.448    55.789    28.787    24.047    60.737    77.148    82.08     40.064    36.739    77.349    28.417    
+0013+right-persons-who-are-walking 38.292    26.292    56.043    36.899    43.807    60.354    77.361    80.764    45.426    48.406    76.471    37.017    
+0013+standing-females              15.926    8.6842    29.335    19.729    13.178    38.324    58.095    83.268    24.014    20.224    72.633    14.689    
+0013+standing-males                0         0         0         0         0         0         0         100       0         0         100       0         
+0013+standing-men                  18.513    5.3926    64.564    24.662    6.3819    69.675    76.174    80.598    39.62     22.896    73.625    16.857    
+0013+standing-women                24.238    12.02     48.99     36.313    14.943    67.855    58.652    83.797    42.145    29.245    75.922    22.203    
+0013+vehicles-in-the-left          65.623    65.623    65.623    82.316    68.596    82.316    68.596    83.771    73.412    83.333    80.88     67.4      
+0013+vehicles-in-the-right         79.597    65.072    97.368    98.246    65.497    98.246    98.246    96.64     97.776    81.65     96.564    78.844    
+0013+walking-females               20.234    13.597    30.145    16.041    43.336    31.992    70.505    80.748    21.969    27.122    73.484    19.931    
+0013+walking-males                 0         0         0         0         0         0         0         100       0         0         100       0         
+0013+walking-men                   12.462    6.4523    24.717    22.491    8.134     27.258    68.059    77.896    23.296    16.015    72.271    11.574    
+0013+walking-women                 30.436    21.586    43.177    39.607    30.643    50.345    67.528    82.386    41.24     39.022    77.414    30.209    
+0013+women                         37.035    25.533    53.951    46.938    34.029    64.813    68.385    82.837    50.236    46.677    79.276    37.004    
+0013+women-carrying-a-bag          37.576    26.145    54.205    45.77     35.609    61.593    73.22     81.972    49.76     47.863    77.707    37.193    
+0013+women-holding-a-bag           34.057    22.916    50.823    39.818    33.138    59.762    70.439    82.199    44.927    43.384    77.867    33.782    
+0013+women-in-the-left             44.549    36.971    53.902    50.335    53.681    63.902    68.655    83.467    52.041    55.498    79.879    44.331    
+0013+women-in-the-right            23.944    8.5493    67.227    27.924    10.78     74.039    74.385    82.4      43.254    30.595    79.026    24.178    
+COMBINED                           47.597    33.131    68.483    59.701    41.975    74.576    87.274    90.628    63.929    52.802    87.311    46.102    
+
+Count: /home/seanachan/TempRMOT/exps/exp37_stage_d_alpha_beta10/results_epoch50-pedestrianDets      GT_Dets   IDs       GT_IDs    
+0005+black-cars-in-the-left        331       284       17        10        
+0005+black-vehicles-in-the-left    330       284       17        10        
+0005+cars-in-black                 631       626       17        11        
+0005+cars-in-front-of-ours         299       295       3         1         
+0005+cars-in-left                  689       742       25        28        
+0005+cars-in-light-color           332       437       19        15        
+0005+cars-in-right                 28        52        2         2         
+0005+cars-in-silver                254       271       15        9         
+0005+cars-in-the-counter-direction-of-ours717       562       29        18        
+0005+cars-in-the-same-direction-of-ours1020      511       31        8         
+0005+counter-direction-cars-in-the-left723       430       28        18        
+0005+counter-direction-vehicles-in-the-left723       430       28        18        
+0005+left-cars-in-black            334       284       16        10        
+0005+left-cars-in-light-color      304       307       15        13        
+0005+left-cars-in-silver           171       188       14        8         
+0005+left-cars-in-the-counter-direction-of-ours742       430       30        18        
+0005+left-cars-in-the-same-direction-of-ours861       216       27        7         
+0005+left-cars-which-are-parking   721       114       27        6         
+0005+left-vehicles-in-black        327       284       17        10        
+0005+left-vehicles-in-light-color  304       307       15        13        
+0005+left-vehicles-in-silver       150       188       14        8         
+0005+left-vehicles-in-the-counter-direction-of-ours726       430       29        18        
+0005+left-vehicles-in-the-same-direction-of-ours882       216       28        7         
+0005+left-vehicles-which-are-parking698       114       27        6         
+0005+light-color-cars-in-the-left  296       307       16        13        
+0005+light-color-cars-in-the-right 26        50        2         2         
+0005+light-color-vehicles-in-the-left295       307       16        13        
+0005+light-color-vehicles-in-the-right26        50        2         2         
+0005+moving-cars                   1021      588       31        11        
+0005+moving-vehicles               1019      588       31        11        
+0005+right-cars-in-light-color     27        50        2         2         
+0005+right-cars-in-silver          15        38        1         1         
+0005+right-vehicles-in-light-color 27        50        2         2         
+0005+right-vehicles-in-silver      15        38        1         1         
+0005+same-direction-cars-in-the-left845       216       28        7         
+0005+same-direction-vehicles-in-the-left842       216       28        7         
+0005+silver-cars-in-right          13        38        2         1         
+0005+silver-cars-in-the-left       191       188       14        8         
+0005+silver-vehicles-in-right      13        38        2         1         
+0005+silver-vehicles-in-the-left   185       188       15        8         
+0005+vehicles-in-black             632       626       18        11        
+0005+vehicles-in-front-of-ours     299       295       3         1         
+0005+vehicles-in-left              686       742       27        28        
+0005+vehicles-in-light-color       337       437       18        15        
+0005+vehicles-in-right             28        52        2         2         
+0005+vehicles-in-silver            239       271       17        9         
+0005+vehicles-in-the-counter-direction-of-ours721       562       30        18        
+0005+vehicles-in-the-same-direction-of-ours1029      511       31        8         
+0011+black-cars-in-right           319       253       18        3         
+0011+black-cars-in-the-left        681       564       20        5         
+0011+black-vehicles-in-right       319       253       20        3         
+0011+black-vehicles-in-the-left    649       564       20        5         
+0011+cars-in-black                 953       817       33        8         
+0011+cars-in-left                  1224      1722      31        24        
+0011+cars-in-light-color           724       881       39        17        
+0011+cars-in-right                 793       1148      26        25        
+0011+cars-in-the-counter-direction-of-ours1929      1738      59        23        
+0011+cars-in-the-same-direction-of-ours2429      371       59        1         
+0011+cars-in-white                 729       226       28        4         
+0011+cars-which-are-faster-than-ours2163      206       55        1         
+0011+counter-direction-cars-in-the-left1477      1704      51        23        
+0011+counter-direction-vehicles-in-the-left1459      1704      51        23        
+0011+left-cars-in-black            656       564       20        5         
+0011+left-cars-in-light-color      450       570       23        9         
+0011+left-cars-in-the-counter-direction-of-ours1510      1704      51        23        
+0011+left-cars-in-white            445       200       18        3         
+0011+left-cars-which-are-parking   1502      1407      53        16        
+0011+left-vehicles-in-black        656       564       20        5         
+0011+left-vehicles-in-light-color  451       570       24        9         
+0011+left-vehicles-in-the-counter-direction-of-ours1449      1704      50        23        
+0011+left-vehicles-in-white        491       200       18        3         
+0011+left-vehicles-which-are-parking1562      1407      54        16        
+0011+light-color-cars-in-the-left  452       570       24        9         
+0011+light-color-cars-in-the-right 254       311       20        8         
+0011+light-color-vehicles-in-the-left452       570       24        9         
+0011+light-color-vehicles-in-the-right256       311       21        8         
+0011+moving-cars                   2168      661       56        12        
+0011+moving-pedestrian             2212      92        57        2         
+0011+moving-vehicles               2206      661       54        12        
+0011+parking-cars                  2279      2652      58        41        
+0011+parking-vehicles              2244      2652      57        41        
+0011+pedestrian                    72        145       9         4         
+0011+pedestrian-who-are-walking    79        92        9         2         
+0011+people                        74        145       9         4         
+0011+people-who-are-walking        82        92        9         2         
+0011+persons                       76        145       8         4         
+0011+persons-who-are-walking       81        92        8         2         
+0011+right-cars-in-black           284       253       14        3         
+0011+right-cars-in-light-color     263       311       18        8         
+0011+right-cars-in-white           132       26        7         1         
+0011+right-cars-which-are-parking  1752      1082      57        22        
+0011+right-vehicles-in-black       282       253       15        3         
+0011+right-vehicles-in-light-color 263       311       18        8         
+0011+right-vehicles-in-white       147       26        8         1         
+0011+right-vehicles-which-are-parking1763      1082      57        22        
+0011+turning-cars                  1942      30        53        1         
+0011+turning-vehicles              1947      30        52        1         
+0011+vehicles-in-black             949       817       35        8         
+0011+vehicles-in-left              1257      1722      33        24        
+0011+vehicles-in-light-color       642       881       38        17        
+0011+vehicles-in-right             860       1148      28        25        
+0011+vehicles-in-the-counter-direction-of-ours1972      1738      60        23        
+0011+vehicles-in-the-same-direction-of-ours2442      371       61        1         
+0011+vehicles-in-white             709       226       26        4         
+0011+vehicles-which-are-faster-than-ours2158      206       52        1         
+0011+walking-pedestrian            159       92        10        2         
+0011+white-cars-in-the-left        619       200       19        3         
+0011+white-cars-in-the-right       237       26        14        1         
+0011+white-vehicles-in-the-left    598       200       18        3         
+0011+white-vehicles-in-the-right   224       26        14        1         
+0013+cars-in-the-left              30        25        1         1         
+0013+cars-in-the-right             8         6         3         1         
+0013+females                       586       514       41        21        
+0013+females-in-the-left           384       369       22        14        
+0013+females-in-the-right          385       144       38        7         
+0013+left-pedestrian-who-are-walking358       267       22        9         
+0013+left-people-who-are-walking   412       267       22        9         
+0013+left-persons-who-are-walking  352       267       19        9         
+0013+males                         572       323       41        13        
+0013+males-in-the-left             419       62        21        3         
+0013+males-in-the-right            353       252       34        9         
+0013+men                           609       323       43        13        
+0013+men-in-the-left               391       62        20        3         
+0013+men-in-the-right              357       252       31        9         
+0013+moving-left-pedestrian        462       267       38        9         
+0013+moving-right-pedestrian       482       279       38        11        
+0013+pedestrian-in-the-left        338       460       15        20        
+0013+pedestrian-in-the-right       353       444       32        21        
+0013+people-in-the-left            355       460       19        20        
+0013+people-in-the-right           336       444       30        21        
+0013+persons-in-the-left           373       460       18        20        
+0013+persons-in-the-right          349       444       30        21        
+0013+right-pedestrian-who-are-walking207       279       30        11        
+0013+right-people-who-are-walking  334       279       35        11        
+0013+right-persons-who-are-walking 235       279       24        11        
+0013+standing-females              268       179       26        10        
+0013+standing-males                19        140       8         7         
+0013+standing-men                  541       140       42        7         
+0013+standing-women                435       179       40        10        
+0013+vehicles-in-the-left          30        25        1         1         
+0013+vehicles-in-the-right         9         6         4         1         
+0013+walking-females               124       335       17        11        
+0013+walking-males                 13        183       6         6         
+0013+walking-men                   506       183       42        6         
+0013+walking-women                 433       335       44        11        
+0013+women                         709       514       41        21        
+0013+women-carrying-a-bag          491       382       41        14        
+0013+women-holding-a-bag           459       382       40        14        
+0013+women-in-the-left             346       369       16        14        
+0013+women-in-the-right            373       144       33        7         
+COMBINED                           94528     66461     3868      1511      

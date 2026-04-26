@@ -3,6 +3,9 @@ __pycache__/
 *.py[codz]
 *$py.class
 
+# Training data cache (build_training_data disk cache)
+cache/
+
 # C extensions
 *.so
 
@@ -212,6 +215,7 @@ __marimo__/
 
 # Dataset
 /refer-kitti
+/refer-kitti-v2
 /Refer-KITTI
 /NeuralSORT
 Refer-KITTI_labels.json
@@ -230,6 +234,13 @@ test_mtime.txt
 
 # Generated data
 *.npz
+*_curves.png
 
 # TensorBoard
 events.out.tfevents.*
+
+# Multi-sequence evaluation results
+diagnostics/results/multiseq/*.npz
+diagnostics/results/multiseq/*.png
+
+diagnostics/results/label_audit/*.mp4

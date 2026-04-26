@@ -53,7 +53,7 @@ ALPHA       = 0.07         # weight for GMC logit in additive mode
 
 # V1 split
 TRAIN_SEQS = ["0011"]
-TEST_SEQS  = ["0011"]
+TEST_SEQS  = ["0005", "0011", "0013"]  # held-out set
 ALL_SEQS   = ["0005", "0011", "0013"]
 
 FRAMES = {
@@ -213,15 +213,26 @@ def generate_predictions(method: str):
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
+    # Read encoder name + lang_dim from checkpoint (fallback to MiniLM/384 for legacy weights)
+    ckpt_enc_name, ckpt_lang_dim = "all-MiniLM-L6-v2", 384
+    if method == "fusion":
+        try:
+            _ck = torch.load(WEIGHTS_PATH, map_location="cpu", weights_only=False)
+            if isinstance(_ck, dict):
+                ckpt_enc_name = _ck.get("text_encoder", ckpt_enc_name)
+                ckpt_lang_dim = int(_ck.get("lang_dim", ckpt_lang_dim))
+        except Exception as e:
+            print(f"Warning: could not inspect {WEIGHTS_PATH} metadata ({e}); using defaults")
+
     encoder, fusion_model, fusion_thr = None, None, 0.5
     if method == "fusion":
-        encoder = TextEncoder(device=device)
+        encoder = TextEncoder(model_name=ckpt_enc_name, device=device)
         if FUSION_MODE == "mlp":
             from gmc_link.fusion_head import load_fusion_head
             fusion_model, fusion_thr = load_fusion_head(FUSION_WEIGHTS)
-            print(f"Fusion head loaded (thr={fusion_thr:.2f}) | GMC weights: {WEIGHTS_PATH}")
+            print(f"Fusion head loaded (thr={fusion_thr:.2f}) | GMC weights: {WEIGHTS_PATH} | enc: {ckpt_enc_name} ({ckpt_lang_dim}D)")
         else:
-            print(f"Additive logit fusion (α={ALPHA:.3f}) | GMC weights: {WEIGHTS_PATH}")
+            print(f"Additive logit fusion (α={ALPHA:.3f}) | GMC weights: {WEIGHTS_PATH} | enc: {ckpt_enc_name} ({ckpt_lang_dim}D)")
 
     for sequence in TEST_SEQS:
         print(f"\n── Sequence {sequence} [{method}] ──")
@@ -279,7 +290,7 @@ def generate_predictions(method: str):
             linker = None
             lang_emb = None
             if method == "fusion":
-                linker = GMCLinkManager(weights_path=WEIGHTS_PATH, device=device, lang_dim=384)
+                linker = GMCLinkManager(weights_path=WEIGHTS_PATH, device=device, lang_dim=ckpt_lang_dim)
                 lang_emb = encoder.encode(sentence)
 
             predict_lines = []
@@ -406,6 +417,8 @@ def main():
                         help="GMC logit weight for additive fusion (overrides ALPHA)")
     parser.add_argument("--weights", type=str, default=None,
                         help="GMC-Link aligner weights path (overrides WEIGHTS_PATH)")
+    parser.add_argument("--tag", type=str, default=None,
+                        help="Suffix for OUTPUT_ROOT (e.g. 'stage1' → hota_eval_v1_stage1)")
     args = parser.parse_args()
 
     FUSION_MODE = args.fusion_mode
@@ -418,6 +431,10 @@ def main():
         MOTION_ONLY = True
         OUTPUT_ROOT = "hota_eval_v1_motion"
         print("Motion-only mode: filtering appearance-only expressions")
+
+    if args.tag:
+        OUTPUT_ROOT = f"hota_eval_v1_{args.tag}"
+        print(f"Output root: {OUTPUT_ROOT}")
 
     if not args.skip_ikun:
         run_ikun_inference()
