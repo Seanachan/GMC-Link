@@ -420,3 +420,120 @@ These risks are not serial — multiple can trigger simultaneously. Timeline est
 - Not adding CLIP visual features (that's the alternative next-step; Exp 38 is orthogonal).
 - Not publishing without at least 38-A headline + A3 bare_finetuned control.
 - Not extending to Refer-Dance or LaMOT.
+
+---
+
+## 15. Retrospective (executed 2026-04-24, NEGATIVE)
+
+**Status:** All three recipes (38-A / 38-B / 38-C) executed and falsified.
+Lever #11 of the GMC-Link ceiling probe (after Exp 37's 10) is now closed.
+
+### Headline result
+
+| Recipe | Mode | Channels | Best ckpt | Epoch | Best HOTA | Δ vs 53.824 |
+|--------|------|---------|-----------|-------|-----------|-------------|
+| 38-A | `on_13d` (replace raw `speed`) | 2 | best_4 | 3 | 53.107 | **−0.717** |
+| 38-B | `on_concat` (raw + ego) | 4 | best_4 | 1 | **53.328** | **−0.496** |
+| 38-C | `on_all13d` (full 13D vec) | 13 | best_0 | 6 | 53.196 | **−0.628** |
+| zero-shot `on_13d` | inference-only | 2 | — | — | 53.803 | −0.021 (noise) |
+
+Setup: 10 epochs from `SOTA_ckpts/refer-kitti-best.pth`, batch 1, frozen visual+text,
+checkpointing, LR=1e-5 → 5e-6 at ep 6. Partial preload (shape-mismatched
+`output_obj_norm_ped` + `output_proj_ped` keys dropped for 38-B/C). FlexHook keeps
+top-5 F1 ckpts (renumbered by F1 rank).
+
+### Gates fired and falsifications
+
+- **§4.1 Null-test (M1) — PASSED.** `FLEXHOOK_EGO=off` → HOTA 53.824, exact
+  match to G0. Fork integrity verified before proceeding.
+- **§4.4 Zero-shot pass (M3.5) — PASSED but unimpactful.** HOTA 53.803 vs 53.824
+  baseline (Δ=−0.021, within seed-level noise). Confirms that ego-injection at
+  inference does not corrupt the path; it also confirms the lever is at most a
+  zero-noise no-op without finetuning, contradicting the §3.2 hypothesis that
+  `speed` carries meaningful signal that ego-compensation should sharpen.
+- **§7.1 Headline gate (M5) — FAILED.** No recipe surpassed baseline; finetune
+  *hurts* even when the ego-feature variant differs. **The kill-switch in §13
+  ("38-A NEG → terminate early, pivot to appearance fusion")** triggers, but
+  38-B / 38-C were already in flight by the time 38-A landed, so all three
+  arms were carried to completion for the cleaner negative.
+
+### Falsification summary
+
+| Hypothesis (from §3) | Outcome |
+|---|---|
+| H_38A — Replacing raw bbox displacement with ego-compensated 13D residual lifts HOTA | **NEG** Δ=−0.717. Replacement loses raw signal that FlexHook's iterator relies on. |
+| H_38B — Concatenating raw + ego (4ch) keeps both signals and lifts HOTA | **NEG** Δ=−0.496 (least bad of three). Adds noise channels without complementary gain. |
+| H_38C — Giving the model the full 13D residual vec lifts HOTA | **NEG** Δ=−0.628. Richer input improved training F1 (73.10 vs 72.24 for A/B) but did not transfer to HOTA. **F1/HOTA decouple is real.** |
+
+### F1 vs HOTA decoupling
+
+For 38-A and 38-B, the highest-HOTA ckpt was the lowest-F1-ranked of the kept
+top-5 (38-A: F1-rank #5 ep 3; 38-B: F1-rank #5 ep 1). For 38-C, F1-rank #1
+(ep 6) coincided with HOTA-best — but the absolute HOTA was still NEG. **Implication:**
+F1 on FlexHook's training objective is a poor proxy for downstream tracker HOTA
+on the cascaded path. Future fork iterations should NOT use F1-rank to pick
+deployment ckpts.
+
+### Why none surpass baseline
+
+Three factors compound:
+
+1. **Replacement (38-A) loses raw bbox signal.** FlexHook's iterator was tuned
+   on raw `speed`; replacing it changes the input distribution the rest of the
+   pipeline expects. 53.107 is the worst of the three.
+2. **Concat (38-B) keeps both but adds noise.** The 4-channel concat carries
+   raw + ego, but the model never learns to discriminate which channel matters
+   for which expression. Noise channels dominate at low data.
+3. **Full 13D (38-C) gives max info but still NEG.** Even with the full
+   residual vec, the FlexHook decoder cannot extract net positive gain from
+   the geometric signal that GMC-Link's MLP head extracts cleanly. Suggests
+   the bottleneck is the **decoder's capacity to consume motion features**,
+   not the feature richness.
+
+### Spec assumptions that didn't hold
+
+- **§3.2 "fine↔short, coarse↔long" mapping** — FlexHook `pos_avg_pool` is spatial,
+  not temporal. The §13-risk-#1 falsification fired: spatial-scale grids carry
+  no information about FRAME_GAPS={2,5,10}. The injection point at `speed` was
+  the right axis (it's already a temporal channel), but the spec's framing of
+  "matching scales" was misleading.
+- **§3.2 "GMC-Link gain transfers under FlexHook decoder"** — Did not transfer.
+  GMC-Link's +8.4% F1 on iKUN comes from the MLP aligner's ability to map 13D →
+  language space cleanly; FlexHook's decoder treats `speed` as one query
+  channel among many and dilutes the signal.
+
+### Updated lever count
+
+**12 levers exhausted** (after subsequent Exp 37 Stage B OMF on 2026-04-24).
+FlexHook ceiling 53.824 likely at feature-fusion saturation; ego channel is
+noise around this plateau.
+
+### Decision: lever closed
+
+- **DO NOT pursue further ego-channel widening on FlexHook.** Axis exhausted
+  (2ch / 4ch / 13ch all NEG).
+- **Artifacts preserved:**
+  - Fork at `/home/seanachan/FlexHook-ego/`, branches `exp38-{a,b,c}`.
+  - Eval dirs `/kitti-1/{exp38a-ego-on13d, exp38b-ego-concat, exp38c-ego-all13d}/`
+    + `retest-kitti-1/` parallel evals.
+  - GT cache + extractor (`tools/flexhook_ego_extractor.py --source gt`)
+    reusable for any future widened-arch partial preload.
+  - `utils.py` shape-mismatched-key drop patch retained.
+- **Memory:** see `project_exp38_zeroshot_and_train_cache_gap.md` for the live
+  state record.
+
+### Implication for next experiment
+
+Per kill-switch §13: **pivot away from FlexHook-class decoder iteration.**
+Three remaining directions of non-low prior (carried over from Exp 37
+retrospective):
+
+1. **Appearance fusion** (CLIP visual features at decision level only, per
+   the −21.7% F1 burn-in lesson from Exp 14). Highest a-priori prior.
+2. **Portability to TransRMOT** (the other spatially-ignorant tracker)
+   to verify the tracker-class dichotomy generalizes.
+3. **Accept ceiling, pivot to measurement** — publish 12-lever negative +
+   tracker-class dichotomy as RMOT design-guideline paper without further
+   model iteration.
+
+This retrospective closes Exp 38 as falsified.
