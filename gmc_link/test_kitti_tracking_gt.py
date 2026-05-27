@@ -43,3 +43,35 @@ def test_ego_dz_sign_and_magnitude():
     fwd_dist = oxts[t - gap:t, 8].sum() * DT        # ~ vf * 0.5s
     assert dz < 0                                    # closing
     assert abs(abs(dz) - fwd_dist) / fwd_dist < 0.15
+
+
+# ── LiDAR projection (calib-only, no velodyne files needed) ───────────────
+
+def test_velo_projection_forward_point():
+    # A Velodyne point 12 m forward, on axis -> camera Z ~ 12, u near principal pt.
+    calib = G.load_calib("0005")
+    pts = np.array([[12.0, 0.0, 0.0]])              # velo: x=fwd, y=left, z=up
+    uv, z_cam = G.project_velo_to_image(pts, calib)
+    assert z_cam.shape[0] == 1
+    assert abs(z_cam[0] - 12.0) / 12.0 < 0.10        # forward distance preserved
+    assert 0 <= uv[0, 0] <= 1242                     # lands in image width
+
+
+def test_velo_projection_culls_behind():
+    # Point behind the vehicle (velo x negative) must be culled (z_cam <= 0).
+    calib = G.load_calib("0005")
+    uv, z_cam = G.project_velo_to_image(np.array([[-8.0, 0.0, 0.0]]), calib)
+    assert z_cam.shape[0] == 0
+
+
+def test_bbox_lidar_depth_median_and_hole():
+    calib = G.load_calib("0005")
+    pts = np.array([[10.0, 0.0, 0.0], [10.5, 0.1, 0.0], [11.0, -0.1, 0.0]])
+    uv, z_cam = G.project_velo_to_image(pts, calib)
+    box = (uv[:, 0].min() - 5, uv[:, 1].min() - 5, uv[:, 0].max() + 5, uv[:, 1].max() + 5)
+    res = G.bbox_lidar_depth(uv, z_cam, box, min_pts=1)
+    assert res is not None
+    med, std, n = res
+    assert n == 3 and 10.0 <= med <= 11.0
+    # empty box -> hole
+    assert G.bbox_lidar_depth(uv, z_cam, (0, 0, 1, 1), min_pts=1) is None

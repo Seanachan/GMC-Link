@@ -117,6 +117,41 @@ def cam_to_world(calib: Dict[str, np.ndarray], pose: np.ndarray) -> np.ndarray:
 
 # ── ego depth-velocity (the dz_ego replacement) ───────────────────────────
 
+# ── Velodyne LiDAR → per-bbox depth (Path B depth source) ─────────────────
+
+def load_velodyne(seq: str, frame0: int) -> np.ndarray:
+    """(N,4) raw Velodyne scan [x,y,z,reflectance] for 0-based image index frame0.
+    Path: training/velodyne/{seq}/{frame0:06d}.bin (tracking-indexed, sync'd to images)."""
+    path = os.path.join(TRACKING_ROOT, "velodyne", seq, f"{frame0:06d}.bin")
+    return np.fromfile(path, dtype=np.float32).reshape(-1, 4)
+
+
+def project_velo_to_image(pts_xyz: np.ndarray, calib: Dict[str, np.ndarray]):
+    """Project Velodyne xyz (N,3) to image. Returns (uv (M,2), z_cam (M,)) for points
+    IN FRONT of the camera (z_cam>0). Y = P2 . R_rect . Tr_velo_cam . X_velo."""
+    n = pts_xyz.shape[0]
+    pts_h = np.hstack([pts_xyz, np.ones((n, 1))])           # (N,4)
+    cam = (calib["R_rect"] @ calib["Tr_velo_cam"] @ pts_h.T).T   # (N,4) rectified cam
+    z_cam = cam[:, 2]
+    front = z_cam > 0.1
+    cam, z_cam = cam[front], z_cam[front]
+    uvw = (calib["P2"] @ cam.T).T                            # (M,3)
+    uv = uvw[:, :2] / uvw[:, 2:3]
+    return uv, z_cam
+
+
+def bbox_lidar_depth(uv: np.ndarray, z_cam: np.ndarray, box, min_pts: int = 1):
+    """Median camera-Z of LiDAR points inside box (x1,y1,x2,y2).
+    Returns (median_z, std_z, n_points) or None if fewer than min_pts points.
+    std is reported for diagnostics (multi-Z-layer bboxes have large std)."""
+    x1, y1, x2, y2 = box
+    m = (uv[:, 0] >= x1) & (uv[:, 0] <= x2) & (uv[:, 1] >= y1) & (uv[:, 1] <= y2)
+    zs = z_cam[m]
+    if zs.shape[0] < min_pts:
+        return None
+    return float(np.median(zs)), float(np.std(zs)), int(zs.shape[0])
+
+
 def ego_dz_camera(poses: List[np.ndarray], calib: Dict[str, np.ndarray],
                   t: int, gap: int) -> float:
     """Ego-induced ΔZ (camera frame, meters) of a static point between frame
