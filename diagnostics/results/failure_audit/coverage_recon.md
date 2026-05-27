@@ -8,11 +8,11 @@ failure is upstream of detector/tracker/aligner/fusion levers.
 
 | expr | seq | cls | n_gt_rows | gt_frames | gt_range | ikun_frames | ikun_range | overlap | coverage_pct |
 |---|---|---|---|---|---|---|---|---|---|
-| turning-cars | 0011 | car | 30 | 30 | 309-338 | 60 | 1-114 | 0 | 0.0% |
-| turning-vehicles | 0011 | car | 30 | 30 | 309-338 | 60 | 1-114 | 0 | 0.0% |
-| pedestrian-who-are-walking | 0011 | pedestrian | 90 | 56 | 1-56 | 60 | 1-114 | 25 | 44.6% |
-| moving-cars | 0011 | car | 650 | 316 | 1-371 | 60 | 1-114 | 60 | 19.0% |
-| parking-vehicles | 0011 | car | 2598 | 354 | 1-355 | 60 | 1-114 | 60 | 16.9% |
+| turning-cars | 0011 | car | 30 | 30 | 309-338 | 371 | 1-371 | 30 | 100.0% |
+| turning-vehicles | 0011 | car | 30 | 30 | 309-338 | 371 | 1-371 | 30 | 100.0% |
+| pedestrian-who-are-walking | 0011 | pedestrian | 90 | 56 | 1-56 | 371 | 1-371 | 56 | 100.0% |
+| moving-cars | 0011 | car | 650 | 316 | 1-371 | 371 | 1-371 | 316 | 100.0% |
+| parking-vehicles | 0011 | car | 2598 | 354 | 1-355 | 371 | 1-371 | 354 | 100.0% |
 
 ## Interpretation
 

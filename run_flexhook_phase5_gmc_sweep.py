@@ -48,6 +48,25 @@ def classify(e):
     return "APPEARANCE"
 
 
+def _iou_xywh(a, b):
+    ax, ay, aw, ah = a; bx, by, bw, bh = b
+    ix1, iy1 = max(ax, bx), max(ay, by)
+    ix2, iy2 = min(ax + aw, bx + bw), min(ay + ah, by + bh)
+    iw, ih = max(0.0, ix2 - ix1), max(0.0, iy2 - iy1)
+    inter = iw * ih; uni = aw * ah + bw * bh - inter
+    return inter / uni if uni > 0 else 0.0
+
+
+def _load_gt_boxes(gt_path):
+    boxes = defaultdict(list)
+    if not os.path.exists(gt_path): return boxes
+    for line in open(gt_path):
+        p = line.strip().split(",")
+        if len(p) < 6: continue
+        boxes[int(p[0])].append((float(p[2]), float(p[3]), float(p[4]), float(p[5])))
+    return boxes
+
+
 def load_tracks(seq):
     car_path = os.path.join(TRACK_DIR, seq, "car", "predict.txt")
     ped_path = os.path.join(TRACK_DIR, seq, "pedestrian", "predict.txt")
@@ -68,11 +87,13 @@ def load_tracks(seq):
 
 def gen_predicts(cls_dict, tracks_by_seq, gmc_caches, alpha, gmc_scale, thr_motion, run_dir,
                  alpha_a=0.0, scale_a=0.0, thr_a=0.0,
-                 alpha_s=0.0, scale_s=0.0, thr_s=0.0):
+                 alpha_s=0.0, scale_s=0.0, thr_s=0.0,
+                 mode="ship", dump_path=None):
     res_dir = os.path.join(run_dir, "results")
     if os.path.exists(res_dir): shutil.rmtree(res_dir)
     os.makedirs(res_dir, exist_ok=True)
     seqmap = []
+    dump_rows = []
 
     for seq in TEST_SEQS:
         if seq not in cls_dict: continue
@@ -81,6 +102,7 @@ def gen_predicts(cls_dict, tracks_by_seq, gmc_caches, alpha, gmc_scale, thr_moti
         expr_dir = os.path.join(DATA_ROOT, "expression", seq)
         exp_files = sorted(f for f in os.listdir(expr_dir) if f.endswith(".json"))
         expr_text_by_id = {}
+        gt_boxes_by_expr = {}
         for ef in exp_files:
             expr_id = ef.replace(".json", "")
             with open(os.path.join(expr_dir, ef)) as fh:
@@ -88,6 +110,7 @@ def gen_predicts(cls_dict, tracks_by_seq, gmc_caches, alpha, gmc_scale, thr_moti
             outd = os.path.join(seq_out, expr_id)
             os.makedirs(outd, exist_ok=True)
             gt_src = os.path.join(GT_TEMPLATE, seq, expr_id, "gt.txt")
+            gt_boxes_by_expr[expr_id] = _load_gt_boxes(gt_src)
             gt_dst = os.path.join(outd, "gt.txt")
             if os.path.exists(gt_src):
                 if os.path.exists(gt_dst) or os.path.islink(gt_dst): os.remove(gt_dst)
@@ -147,8 +170,24 @@ def gen_predicts(cls_dict, tracks_by_seq, gmc_caches, alpha, gmc_scale, thr_moti
                         else:
                             bias = 0.0
                         thr = thr_a
-                    if margin + bias > thr:
+                    # native = FlexHook margin ; gmc_part = bias (per-class GMC contribution)
+                    if mode == "native_only":   fused = margin
+                    elif mode == "gmc_only":    fused = bias
+                    else:                       fused = margin + bias
+                    keep = fused > thr
+                    use_oracle = (mode == "oracle"
+                                  or (mode == "oracle_motion" and cls in ("MOVING", "STATIC"))
+                                  or (mode == "oracle_appear" and cls == "APPEARANCE"))
+                    if use_oracle:
+                        gbs = gt_boxes_by_expr.get(expr_id, {}).get(fid_pred, [])
+                        ob = (float(bbox[2]), float(bbox[3]), float(bbox[4]), float(bbox[5]))
+                        keep = any(_iou_xywh(ob, gb) >= 0.5 for gb in gbs)
+                    if keep:
                         pred_buf[expr_id].append(bbox_str)
+                    if dump_path is not None:
+                        dump_rows.append((seq, expr_id, cls, fid_pred, oid_int,
+                                          float(bbox[2]), float(bbox[3]), float(bbox[4]), float(bbox[5]),
+                                          margin, bias, margin + bias, thr, int(keep)))
 
         for expr_id in expr_text_by_id:
             outd = os.path.join(seq_out, expr_id)
@@ -159,6 +198,12 @@ def gen_predicts(cls_dict, tracks_by_seq, gmc_caches, alpha, gmc_scale, thr_moti
     sm_path = os.path.join(run_dir, "seqmap.txt")
     with open(sm_path, "w") as f:
         f.write("\n".join(seqmap) + "\n")
+    if dump_path is not None:
+        with open(dump_path, "w") as f:
+            f.write("seq,expr,cls,frame,oid,x,y,w,h,native_part,gmc_part,fused,thr,keep\n")
+            for r in dump_rows:
+                f.write("{},{},{},{},{},{:.2f},{:.2f},{:.2f},{:.2f},{:.6f},{:.6f},{:.6f},{:.6f},{}\n".format(*r))
+        print(f"  [dump_preds] wrote {len(dump_rows)} rows -> {dump_path}", flush=True)
     return res_dir, sm_path
 
 
@@ -203,6 +248,9 @@ def main():
     p.add_argument("--gmc_scale_static", type=float, default=0.0)
     p.add_argument("--thr_static", type=float, default=0.0)
     p.add_argument("--grid", action="store_true")
+    p.add_argument("--mode", choices=["ship", "native_only", "gmc_only",
+                                       "oracle", "oracle_motion", "oracle_appear"], default="ship")
+    p.add_argument("--dump_preds", default=None)
     args = p.parse_args()
 
     print("Loading FlexHook result_0.json (~80MB)...", flush=True)
@@ -261,9 +309,11 @@ def main():
         print(f"\n=== {tag}: motion(α={a}, sc={sc}, thr={thr}) "
               f"appear(α={a_a}, sc={sc_a}, thr={thr_a}) "
               f"static(α={a_s}, sc={sc_s}, thr={thr_s}) ===", flush=True)
+        dump_path = (args.dump_preds if (args.dump_preds and len(configs) == 1) else None)
         res_dir, sm = gen_predicts(cls_dict, tracks_by_seq, gmc_caches, a, sc, thr, run_dir,
                                     alpha_a=a_a, scale_a=sc_a, thr_a=thr_a,
-                                    alpha_s=a_s, scale_s=sc_s, thr_s=thr_s)
+                                    alpha_s=a_s, scale_s=sc_s, thr_s=thr_s,
+                                    mode=args.mode, dump_path=dump_path)
         pooled = run_te(sm, res_dir)
         moving = run_te(sm, res_dir, class_filter="MOVING")
         static = run_te(sm, res_dir, class_filter="STATIC")

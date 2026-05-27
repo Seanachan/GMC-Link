@@ -22,7 +22,7 @@ multi-seed statistics. Cite this file when writing the paper/thesis.
 | **`gt_template_old/`** | Paper-iKUN-canonical GT label space. Frame numbering aligns with the NeuralSORT tracker `predict.txt`. **All HOTA evals in this doc use `gt_template_old/`.** The locally-regenerated `gt_template/` (TransRMOT convention) is off-by-one vs NeuralSORT and drops HOTA ~6.4 — not used here. |
 | **raw cosine (`GMC_RAW_COS=1`)** | GMC alignment score taken as the raw cosine ∈ [−1,+1] from the aligner. Bypasses the legacy sigmoid + EMA smoothing path (`manager.py`). Current ship convention. |
 | **EMA** | Legacy exponential-moving-average smoothing (`MotionBuffer` α=0.3, `ScoreBuffer` α=0.4, `cosine_buffer`). **OFF in the current ship.** raw_cos=True bypasses it regardless. |
-| **`shared_weight` (sw) aligner** | Per-modality Linear adapter (motion 13→256, lang 384→256) → shared 2-hidden MLP (256→512→512→256) → LN → L2-norm. Symmetric two-tower, shared nonlinear core. ~628k params. Current default arch. |
+| **`shared_weight` aligner** | Per-modality Linear adapter (motion 13→256, lang 384→256) → shared 2-hidden MLP (256→512→512→256) → LN → L2-norm. Symmetric two-tower, shared nonlinear core. ~628k params. Current default arch. |
 | **`mlp` aligner (legacy)** | Independent dual-MLP per modality (motion 13→256→512→256, lang 384→256→512→256) → L2-norm. Asymmetric. ~627k params. Opt-in only. |
 | **Fusion — baseline (B2, parameter-free)** | `final = model_logit + raw_cos`. Bare additive combination, zero fitted coefficients. |
 | **Fusion — ship (tuned)** | `final = model_logit + α·(sc·raw_cos + thr)`, per arch per axis (motion + appearance). (α,sc,thr)=(1,1,0) recovers B2; ship uses non-identity values fit to the eval seqs. |
@@ -34,11 +34,11 @@ with full recipe in the label (never a bare "B1"/"B2" shorthand):
 
 - **B1 = `{model} Baseline` (no GMC):** the downstream consumer's own detector/tracker
   output with no GMC fusion. iKUN 44.224, FH V1 53.110, FH V2 42.526.
-- **B2 = `{model} + GMC Baseline` (sw aligner, bare `final = model_logit + raw_cos`, raw cos, no-EMA, n=3):**
+- **B2 = `{model} + GMC Baseline` (shared-weight aligner, bare `final = model_logit + raw_cos`, raw cos, no-EMA, n=3):**
   GMC fused with ZERO fitted coefficients — the parameter-free additive combination. Nothing is
   tuned against the eval set, so any lift here is pure GMC signal. The clean anchor for all future
   "+X helps" Δ measurements. (Equivalent to the ship formula at the identity point (α,sc,thr)=(1,1,0).)
-- **Ship = `{model} + GMC` (sw aligner, per-arch APPEAR-axis recipe, raw cos, no-EMA, n=3):**
+- **Ship = `{model} + GMC` (shared-weight aligner, per-arch APPEAR-axis recipe, raw cos, no-EMA, n=3):**
   the 18-hyperparam hand-tuned recipe. The number cited as the headline result.
 - **Paper anchor:** the published HOTA for each consumer, reproduced locally where stated.
 
@@ -48,7 +48,7 @@ with full recipe in the label (never a bare "B1"/"B2" shorthand):
 
 All HOTA. n=3 seeds {0,1,2}. iKUN/FH-V1 = 3-seq pooled (0005/0011/0013); FH-V2 = 4-seq pooled.
 
-| Arch | B1: `{model} Baseline` (no GMC) | B2: `{model} + GMC` (sw, bare `logit + raw_cos`, no-EMA, n=3) | **Ship: `{model} + GMC` (sw, per-arch tuned recipe, raw cos, no-EMA, n=3)** | Paper anchor | Δ ship vs paper |
+| Arch | B1: `{model} Baseline` (no GMC) | B2: `{model} + GMC` (shared-weight, bare `logit + raw_cos`, no-EMA, n=3) | **Ship: `{model} + GMC` (shared-weight, per-arch tuned recipe, raw cos, no-EMA, n=3)** | Paper anchor | Δ ship vs paper |
 |---|---|---|---|---|---|
 | **iKUN** (cascade + simcalib, YOLOv8-NS) | 44.224 | 44.272 ± 0.018 | **44.634 ± 0.066** | 44.564 | **+0.070** ✓ |
 | **FH V1** | 53.110 | 53.121 ± 0.005 | **53.526 ± 0.087** | 53.824 | −0.298 ✗ |
@@ -78,8 +78,8 @@ Notes:
   cascade KUM + YOLOv8-NS + `gt_template_old/` + 3-seq pooled).
 - FH V2 "host alone" baseline (42.526) reproduces the published FlexHook-best HOTA (42.53,
   TempRMOT paper Table 3 / FlexHook paper Table 1); the ship 42.807 beats it by +0.277.
-- **FH V1 paper-gap is structural.** Neither the current sw ship (53.526) nor the prior
-  mlp+EMA ship (53.716) beats paper 53.824. A 17-cell retune around the sw+no-EMA
+- **FH V1 paper-gap is structural.** Neither the current shared-weight ship (53.526) nor the prior
+  mlp+EMA ship (53.716) beats paper 53.824. A 17-cell retune around the shared-weight+no-EMA
   coordinates capped at 53.623. The V1 local loss vs the legacy mlp ship does not affect
   the paper-beat claim (already lost in every tested config).
 - **iKUN-V2: EXCLUDED (protocol mismatch, not benchmark-valid).** Official iKUN-V2 = 10.32 HOTA; our attempt = 31.4 (3× gap) because it paired a V1-trained iKUN with NeuralSORT tracks + FlexHook's V2 GT on 3 of 4 test seqs — not iKUN's official V2 pipeline. GMC flat (−0.007) on that non-comparable baseline. Not part of the headline grid. Internal-only diagnostic: GMC's only mild-POS axis was APPEAR (+0.44); motion-axis NEG (−1.45 MOVING at sc=1). The tuned +0.29 probe was test-set selection and is not cited.
@@ -114,7 +114,7 @@ lever 23 (Variant B std-matching) for the falsification of auto-deriving these.
 
 Pooled + per-class APPEAR / MOVING / STATIC, all 3 seeds per arch. Same ship recipe as §1.
 
-### iKUN — ship (sw + APPEAR-axis recipe α_m=1.0/sc_m=0.9/thr_m=+0.17, α_a=1.0/sc_a=0.30/thr_a=+0.10, raw cos, no-EMA)
+### iKUN — ship (shared-weight + APPEAR-axis recipe α_m=1.0/sc_m=0.9/thr_m=+0.17, α_a=1.0/sc_a=0.30/thr_a=+0.10, raw cos, no-EMA)
 Source: `results/ikun_appearship_noema_sw_20260519_225754.tsv`
 
 | Seed | Pooled | APPEAR | MOVING | STATIC |
@@ -124,7 +124,7 @@ Source: `results/ikun_appearship_noema_sw_20260519_225754.tsv`
 | 2 | 44.708 | 46.785 | 30.576 | 43.226 |
 | **Mean ± std** | **44.634 ± 0.066** | 46.711 ± 0.108 | 29.856 ± 0.689 | 43.478 ± 0.339 |
 
-### FH V1 — ship (sw + recipe motion 0.65/10/+3, appear 1.0/3.5/+0.9, raw cos, no-EMA)
+### FH V1 — ship (shared-weight + recipe motion 0.65/10/+3, appear 1.0/3.5/+0.9, raw cos, no-EMA)
 Source: `results/flexhook_ship_noema_sw_20260520_064025.tsv`
 
 | Seed | Pooled | APPEAR | MOVING | STATIC |
@@ -137,7 +137,7 @@ Source: `results/flexhook_ship_noema_sw_20260520_064025.tsv`
 (Seed 1 MOVING = 44.386 is a low outlier vs ~45.4 on the other two seeds, driving the
 elevated MOVING std.)
 
-### FH V2 — ship (sw + recipe motion 0.4/10/+1.3, appear 1.0/3.5/+1.2, raw cos, no-EMA)
+### FH V2 — ship (shared-weight + recipe motion 0.4/10/+1.3, appear 1.0/3.5/+1.2, raw cos, no-EMA)
 Source: `results/flexhook_ship_noema_sw_20260520_064025.tsv`
 
 | Seed | Pooled | APPEAR | MOVING | STATIC |
@@ -189,9 +189,9 @@ Source: `project_per_class_pool_all_positive` (2026-05-03; ship-recipe per-class
 
 > Note: these per-class numbers are from the legacy mlp+EMA ship-recipe measurement
 > (2026-05-03), which is why the per-class B and ship values differ slightly from the §2
-> sw+no-EMA per-seed tables. They are the strongest available pool defense (all-positive,
+> shared-weight+no-EMA per-seed tables. They are the strongest available pool defense (all-positive,
 > all-significant) and stand as the per-class significance story; re-measurement at the
-> sw+no-EMA ship is a documented follow-up.
+> shared-weight+no-EMA ship is a documented follow-up.
 
 ### Per-expr vs per-class-pool reconciliation
 
@@ -227,7 +227,7 @@ neither config beats paper); FH V2 +0.008 (t=0.23, n.s.).
 
 iKUN per-class vs B1: MOVING +4.325, APPEAR +0.365, STATIC −0.436 (motion class is the
 dominant lift; small STATIC trade). Dropping EMA exposes per-seed variance: iKUN std grows
-0.024 (mlp+EMA) → 0.066 (sw+no-EMA).
+0.024 (mlp+EMA) → 0.066 (shared-weight+no-EMA).
 
 ---
 
@@ -249,7 +249,7 @@ those were re-checked at HOTA where it mattered).
 | 8 | Exp 38 — ego injection (zeroshot) | replace / concat / all-13d ego injection | NEG | best 53.328 (38-B), Δ=−0.496 vs FH V1 53.824 |
 | 9 | Exp 39 — CLIP concat (input) | CLIP B/32 64D/128D concat into 13D motion | NEG | rep-axis 0.7223; HOTA revisit Δ −0.139 iKUN / −0.096 V1 / −0.229 V2 vs depth-aug |
 | 10 | Exp 41 — CLIP late-concat (aligner-internal) | motion 256 ⊕ app 256 = 512D vs CLIP-text 512D | NEG | rep-axis 0.731; (HOTA revisit was iKUN-only POS at legacy EMA pipeline — see lever 24) |
-| 11 | Exp 42 — Arm B raw cosine (vs EMA) | additive fusion on raw cosine, multi-seed | NEG/NEU | iKUN −0.179, FH V1 −0.051, FH V2 multi-seed +0.060 (t=1.22). Note: ship later moved to raw-cos under sw; this was at mlp recipe. |
+| 11 | Exp 42 — Arm B raw cosine (vs EMA) | additive fusion on raw cosine, multi-seed | NEG/NEU | iKUN −0.179, FH V1 −0.051, FH V2 multi-seed +0.060 (t=1.22). Note: ship later moved to raw-cos under shared-weight; this was at mlp recipe. |
 | 12 | Exp 43 — CLIP logit fusion (decision-level) | CLIP cosine as 3rd additive channel on iKUN ship | NEG | best 44.359, Δ=−0.243 (all 8 arms NEG) |
 | 13 | Tier B (1) — per-class specialist aligners | motion/static/appear specialist aligners | NEG | all 3 archs −0.4 to −1.8 HOTA |
 | 14 | World-XY projection (17D) | metric dX,dY via inverse pinhole vs image-domain depth-aug | NEUTRAL | flat all 3 archs (paired t, p>0.29) |
@@ -267,9 +267,9 @@ those were re-checked at HOTA where it mattered).
 | 26 | Path A — Grounding-DINO-Tiny detector | open-vocab detector recall gate vs NS predict.txt | NEG | recall 0.50–0.75 (need 0.90); cannot match YOLOv8-NS geometry |
 | 27 | Path C — Qwen2-VL-2B LVLM calibration | int4 LVLM motion-class discrimination on KITTI crops | NEG | 3 prompt/input variants all degenerate; 2B binds to class noun |
 | 28 | Path B — seed-ensemble cache | ensemble-of-seed GMC caches at ship recipe | NEUTRAL | all 3 archs sign-POS within ±std; FH V1 +0.102 edge; reproducibility, not gain |
-| 29 | V1 retune under sw+no-EMA | 8-cell motion + 9-cell appear sweep to recover −0.190 | NEG | 17 cells within ±0.124 of control; recipe lever closed |
+| 29 | V1 retune under shared-weight+no-EMA | 8-cell motion + 9-cell appear sweep to recover −0.190 | NEG | 17 cells within ±0.124 of control; recipe lever closed |
 | 30 | Variant B — std-matching auto-sc (23rd) | derive sc = std(model_logit)/std(raw_cos) per arch per axis, thr=0 | NEG | iKUN −2.794, FH V1 −5.831, FH V2 −4.436 vs ship; APPEAR-damping is irreducible |
-| 31 | Phase 1 — exp41 per-class CLIP routing gate (24th) | re-eval exp41 cliptext aligner at sw+no-EMA ship across 3 archs | NEG | all 3 pool NEG (iKUN −0.408, V1 −0.353, V2 −0.140), all 12 per-class cells NEG; no class to route to |
+| 31 | Phase 1 — exp41 per-class CLIP routing gate (24th) | re-eval exp41 cliptext aligner at shared-weight+no-EMA ship across 3 archs | NEG | all 3 pool NEG (iKUN −0.408, V1 −0.353, V2 −0.140), all 12 per-class cells NEG; no class to route to |
 
 Notes:
 - Rep-axis (AUC) entries (#1–4, 9, 10) are recorded for completeness of what was tried; the
@@ -278,7 +278,7 @@ Notes:
 - Levers #16–19 form the closed Case 2 fusion-transformer family.
 - Levers #24–27 are the ceiling-break campaign closures (CDRMOT, open-vocab detector, LVLM).
 - Levers #30–31 are the two most recent closures (2026-05-21), tested at the current
-  sw+no-EMA ship recipe.
+  shared-weight+no-EMA ship recipe.
 
 ---
 

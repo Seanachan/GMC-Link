@@ -156,7 +156,7 @@ For each host architecture we report two baselines:
 
 The shipped system adds the per-arch coefficient recipe on top of B2. B2 (n=3, 3-seq pooled V1):
 
-| arch | B1 (no GMC) | B2 = `{model} + GMC Baseline` (sw aligner, bare `model_logit + raw_cos`, n=3) |
+| arch | B1 (no GMC) | B2 = `{model} + GMC Baseline` (shared-weight aligner, bare `model_logit + raw_cos`, n=3) |
 |---|---|---|
 | iKUN (cascade+simcalib, YOLOv8-NS) | 44.224 | 44.272 ± 0.018 (Δ +0.048) |
 | FlexHook V1 (Temp-NeuralSORT-kitti1) | 53.110 | 53.121 ± 0.005 (Δ +0.011) |
@@ -197,7 +197,7 @@ ship gain is a valid paper-beat. **Paper-beat: 2/3** (iKUN V1, FlexHook V2).
 > iKUN-V2 needs iKUN's own V2 tracker outputs (unavailable here). `[VERIFY: re-run if iKUN V2
 > tracker outputs become available.]`
 
-**Paper-beat count: 2/3** (iKUN +0.070; FlexHook V2 +0.281). For iKUN, all three seeds individually beat the paper anchor (44.582 / 44.612 / 44.708); one-sided t vs. paper p≈0.10 `[VERIFY: directional, not significant at α=0.05 — keep framing honest]`. The FlexHook V1 gap is **structural**: no tested configuration beats the V1 paper anchor 53.824 (the prior mlp+EMA ship reached 53.716, also short), and a 17-cell retune around the sw+no-EMA operating point capped at 53.623.
+**Paper-beat count: 2/3** (iKUN +0.070; FlexHook V2 +0.281). For iKUN, all three seeds individually beat the paper anchor (44.582 / 44.612 / 44.708); one-sided t vs. paper p≈0.10 `[VERIFY: directional, not significant at α=0.05 — keep framing honest]`. The FlexHook V1 gap is **structural**: no tested configuration beats the V1 paper anchor 53.824 (the prior mlp+EMA ship reached 53.716, also short), and a 17-cell retune around the shared-weight+no-EMA operating point capped at 53.623.
 
 ### 5.2 Per-class pooled HOTA
 
@@ -279,7 +279,7 @@ Cascading GMC-Link onto TempRMOT (native ~8-frame temporal attention) regresses 
 
 ## 7. Limitations
 
-- **FlexHook V1 paper gap is structural.** No configuration beats the V1 anchor 53.824 (best 53.716 mlp+EMA; 53.526 shipped sw+no-EMA; 17-cell retune capped 53.623). We attribute this to a distribution-fragile aggressive motion-axis recipe (sc=10, thr=+3) under the shifted no-EMA aligner output, and to V1-specific factors; we report it transparently rather than tuning to it.
+- **FlexHook V1 paper gap is structural.** No configuration beats the V1 anchor 53.824 (best 53.716 mlp+EMA; 53.526 shipped shared-weight+no-EMA; 17-cell retune capped 53.623). We attribute this to a distribution-fragile aggressive motion-axis recipe (sc=10, thr=+3) under the shifted no-EMA aligner output, and to V1-specific factors; we report it transparently rather than tuning to it.
 - **18 hand-tuned hyperparameters.** The fusion recipe carries 6 coefficients × 3 archs. Section 6.4 shows these are not arbitrary (they encode score-scale calibration + per-class relevance damping), but they remain a portability cost: each new host backbone needs a calibration sweep. Auto-derivation was falsified.
 - **Not for temporally-aware trackers.** Documented structural regression on TempRMOT (Section 6.6). The positive direction is validated only on spatially-ignorant trackers (iKUN, FlexHook).
 - **Ceiling is representation/pipeline-bound.** After reaching the ceiling, 24 enhancement levers were tested and exhausted, including: richer motion features (25D scale/temporal-derivative, world-XY metric projection, depth-augmented 17D), per-cell flow (Farneback 28D, ORB-grid 3×8 61D), CLIP fusion at four sites (input-concat, late-concat, cliptext aligner, CLIP-logit), language-encoder swap (BGE-base 768D), curriculum, hard-negative InfoNCE, per-class specialist aligners, fusion transformers (Case 2 family 1a–1d), structural-consensus and what/where auxiliary losses, learned gates/residuals, an open-vocabulary detector swap (Grounding-DINO), and an LVLM reranker (Qwen2-VL-2B). The vast majority are negative; the few AUC-positive ideas (e.g., depth-augmented 17D, exp41 late-concat) only survived to HOTA on iKUN and never on FlexHook. This is strong evidence the remaining headroom is bounded by the centroid-geometry representation and the cascade pipeline, not by tuning. `[VERIFY: exact count "24" — derived from the negative-lever memos; confirm the canonical tally and list before publication.]`

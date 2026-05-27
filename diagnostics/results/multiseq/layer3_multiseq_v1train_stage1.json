@@ -674,5 +674,5 @@
     "0011",
     "0013"
   ],
-  "weights_path": "gmc_link_weights_v1train_stage1.pth"
+  "weights_path": "/home/seanachan/GMC-Link/gmc_link_weights_v1train_stage1.pth"
 }

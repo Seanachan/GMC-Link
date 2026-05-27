@@ -101,12 +101,37 @@ def merged_ns(seq):
     return ns
 
 
+def _iou_xywh(a, b):
+    ax, ay, aw, ah = a; bx, by, bw, bh = b
+    ix1, iy1 = max(ax, bx), max(ay, by)
+    ix2, iy2 = min(ax + aw, bx + bw), min(ay + ah, by + bh)
+    iw, ih = max(0.0, ix2 - ix1), max(0.0, iy2 - iy1)
+    inter = iw * ih
+    uni = aw * ah + bw * bh - inter
+    return inter / uni if uni > 0 else 0.0
+
+
+def _load_gt_boxes(gt_path):
+    """frame -> list of (x,y,w,h) GT boxes, KITTI-MOT gt.txt format."""
+    boxes = defaultdict(list)
+    if not os.path.exists(gt_path):
+        return boxes
+    for line in open(gt_path):
+        p = line.strip().split(",")
+        if len(p) < 6:
+            continue
+        boxes[int(p[0])].append((float(p[2]), float(p[3]), float(p[4]), float(p[5])))
+    return boxes
+
+
 def gen_predicts(text_feat, gmc_caches, alpha, gmc_scale, thr_motion, run_dir,
-                 alpha_a=0.0, scale_a=0.0, thr_a=0.0):
+                 alpha_a=0.0, scale_a=0.0, thr_a=0.0, mode="ship", dump_path=None,
+                 motion_fuse="add", gmc_gate=0.35):
     res_dir = os.path.join(run_dir, "results")
     if os.path.exists(res_dir): shutil.rmtree(res_dir)
     os.makedirs(res_dir, exist_ok=True)
     seqmap_lines = []
+    dump_rows = []  # per-object component dump for signal decomposition
 
     for seq in TEST_SEQS:
         ns = merged_ns(seq)
@@ -130,30 +155,66 @@ def gen_predicts(text_feat, gmc_caches, alpha, gmc_scale, thr_motion, run_dir,
             motion = is_motion(expr)
             per_expr_gmc = gmc_seq.get(expr, {})
 
+            cls = classify(expr)
             rows = []
+            use_oracle = (mode == "oracle"
+                          or (mode == "oracle_motion" and motion)
+                          or (mode == "oracle_appear" and not motion))
+            if use_oracle:
+                # Upper bound: admit exactly the tracker boxes that IoU>=0.5-match a GT
+                # box at that frame. Perfect scoring on the current tracker's detections;
+                # ceiling capped only by tracker localization coverage.
+                gt_boxes = _load_gt_boxes(gt_src)
+                for fid, dets in ns.items():
+                    if not (min_f < fid < max_f): continue
+                    gbs = gt_boxes.get(fid, [])
+                    if not gbs: continue
+                    for oid, x, y, w, h in dets:
+                        if any(_iou_xywh((x, y, w, h), gb) >= 0.5 for gb in gbs):
+                            rows.append((fid, oid, x, y, w, h))
+                with open(os.path.join(outd, "predict.txt"), "w") as f:
+                    for fid, oid, x, y, w, h in rows:
+                        f.write(f"{fid},{oid},{x:.2f},{y:.2f},{w:.2f},{h:.2f},1,1,1\n")
+                continue
             for fid, dets in ns.items():
                 if not (min_f < fid < max_f): continue
                 for oid, x, y, w, h in dets:
                     cs = ikun_scores.get(fid, {}).get(oid)
                     if cs is None: continue
+                    native_part = cs + b
                     if motion:
                         default = 0.0 if RAW_COS else 0.5
                         gmc = float(per_expr_gmc.get(str(fid), {}).get(str(oid), default))
                         gmc_term = gmc if RAW_COS else (gmc - 0.5)
-                        fused = cs + b + alpha * gmc_term * gmc_scale
+                        gmc_part = alpha * gmc_term * gmc_scale
                         thr = thr_motion
                     else:
                         if scale_a != 0.0:
                             default = 0.0 if RAW_COS else 0.5
                             gmc = float(per_expr_gmc.get(str(fid), {}).get(str(oid), default))
                             gmc_term = gmc if RAW_COS else (gmc - 0.5)
-                            fused = cs + b + alpha_a * gmc_term * scale_a
+                            gmc_part = alpha_a * gmc_term * scale_a
                             thr = thr_a
                         else:
-                            fused = cs + b
+                            gmc = float("nan")
+                            gmc_part = 0.0
                             thr = 0.0
-                    if fused > thr:
+                    if mode == "native_only":   fused = native_part
+                    elif mode == "gmc_only":    fused = gmc_part
+                    elif motion and motion_fuse == "relu":
+                        fused = max(native_part, 0.0) + gmc_part
+                    elif motion and motion_fuse == "max":
+                        fused = max(native_part, gmc_part)
+                    else:                       fused = native_part + gmc_part
+                    keep = fused > thr
+                    if mode == "ship" and motion and motion_fuse == "orgate" \
+                            and gmc_part > gmc_gate:
+                        keep = True   # high-confidence GMC bypasses native veto
+                    if keep:
                         rows.append((fid, oid, x, y, w, h))
+                    if dump_path is not None:
+                        dump_rows.append((seq, expr, cls, fid, oid, x, y, w, h,
+                                          cs, b, gmc, native_part, gmc_part, fused, thr, int(keep)))
 
             with open(os.path.join(outd, "predict.txt"), "w") as f:
                 for fid, oid, x, y, w, h in rows:
@@ -161,6 +222,18 @@ def gen_predicts(text_feat, gmc_caches, alpha, gmc_scale, thr_motion, run_dir,
 
     sm = os.path.join(run_dir, "seqmap.txt")
     open(sm, "w").write("\n".join(seqmap_lines) + "\n")
+    if dump_path is not None:
+        with open(dump_path, "w") as f:
+            f.write("seq,expr,cls,frame,oid,x,y,w,h,cs,b,gmc,native_part,gmc_part,fused,thr,keep\n")
+            for r in dump_rows:
+                (seq_, expr_, cls_, fid_, oid_, x_, y_, w_, h_,
+                 cs_, b_, gmc_, npart, gpart, fused_, thr_, keep_) = r
+                gmc_s = "{:.6f}".format(gmc_) if gmc_ == gmc_ else "nan"
+                f.write("{},{},{},{},{},{:.2f},{:.2f},{:.2f},{:.2f},"
+                        "{:.6f},{:.6f},{},{:.6f},{:.6f},{:.6f},{:.6f},{}\n".format(
+                    seq_, expr_, cls_, fid_, oid_, x_, y_, w_, h_,
+                    cs_, b_, gmc_s, npart, gpart, fused_, thr_, keep_))
+        print(f"  [dump_preds] wrote {len(dump_rows)} object rows -> {dump_path}", flush=True)
     return res_dir, sm
 
 
@@ -200,6 +273,16 @@ def main():
     p.add_argument("--gmc_scale_appear", type=float, default=0.0)
     p.add_argument("--thr_appear", type=float, default=0.0)
     p.add_argument("--grid", action="store_true")
+    p.add_argument("--mode", choices=["ship", "native_only", "gmc_only", "oracle",
+                                       "oracle_motion", "oracle_appear"], default="ship",
+                   help="counterfactual: drop GMC / drop native / oracle (perfect scoring) "
+                        "/ oracle_motion (perfect on motion exprs, ship on appearance) / oracle_appear (vice versa)")
+    p.add_argument("--dump_preds", default=None,
+                   help="path to write per-object component CSV (cs,b,gmc,fused,thr,keep)")
+    p.add_argument("--motion_fuse", choices=["add", "relu", "max", "orgate"], default="add",
+                   help="motion-expr fusion: add=native+gmc (ship); relu=max(native,0)+gmc; max=max(native,gmc); orgate=add + admit if gmc_part>gmc_gate")
+    p.add_argument("--gmc_gate", type=float, default=0.35,
+                   help="orgate: high-confidence GMC threshold that bypasses the native veto")
     args = p.parse_args()
 
     print("Loading text_feat + GMC caches...", flush=True)
@@ -237,8 +320,14 @@ def main():
         os.makedirs(run_dir, exist_ok=True)
         print(f"\n=== {tag}: motion(α={a}, sc={sc}, thr={thr}) "
               f"appear(α={a_a}, sc={sc_a}, thr={thr_a}) ===", flush=True)
+        dump_path = None
+        if args.dump_preds:
+            dump_path = (args.dump_preds if len(configs) == 1
+                         else args.dump_preds.replace(".csv", f"_{tag}.csv"))
         res_dir, sm = gen_predicts(text_feat, gmc_caches, a, sc, thr, run_dir,
-                                    alpha_a=a_a, scale_a=sc_a, thr_a=thr_a)
+                                    alpha_a=a_a, scale_a=sc_a, thr_a=thr_a,
+                                    mode=args.mode, dump_path=dump_path,
+                                    motion_fuse=args.motion_fuse, gmc_gate=args.gmc_gate)
         pooled = run_te(sm, res_dir)
         moving = run_te(sm, res_dir, class_filter="MOVING")
         static = run_te(sm, res_dir, class_filter="STATIC")

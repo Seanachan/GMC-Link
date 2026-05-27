@@ -9,15 +9,15 @@
       309,
       338
     ],
-    "n_ikun_frames": 60,
+    "n_ikun_frames": 371,
     "ikun_frame_range": [
       1,
-      114
+      371
     ],
-    "n_overlap_frames": 0,
+    "n_overlap_frames": 30,
     "n_tracker_frames": 371,
     "n_gmc_frames": 371,
-    "coverage_pct": 0.0
+    "coverage_pct": 100.0
   },
   {
     "expr": "turning-vehicles",
@@ -29,15 +29,15 @@
       309,
       338
     ],
-    "n_ikun_frames": 60,
+    "n_ikun_frames": 371,
     "ikun_frame_range": [
       1,
-      114
+      371
     ],
-    "n_overlap_frames": 0,
+    "n_overlap_frames": 30,
     "n_tracker_frames": 371,
     "n_gmc_frames": 371,
-    "coverage_pct": 0.0
+    "coverage_pct": 100.0
   },
   {
     "expr": "pedestrian-who-are-walking",
@@ -49,15 +49,15 @@
       1,
       56
     ],
-    "n_ikun_frames": 60,
+    "n_ikun_frames": 371,
     "ikun_frame_range": [
       1,
-      114
+      371
     ],
-    "n_overlap_frames": 25,
+    "n_overlap_frames": 56,
     "n_tracker_frames": 44,
     "n_gmc_frames": 371,
-    "coverage_pct": 44.642857142857146
+    "coverage_pct": 100.0
   },
   {
     "expr": "moving-cars",
@@ -69,15 +69,15 @@
       1,
       371
     ],
-    "n_ikun_frames": 60,
+    "n_ikun_frames": 371,
     "ikun_frame_range": [
       1,
-      114
+      371
     ],
-    "n_overlap_frames": 60,
+    "n_overlap_frames": 316,
     "n_tracker_frames": 371,
     "n_gmc_frames": 371,
-    "coverage_pct": 18.9873417721519
+    "coverage_pct": 100.0
   },
   {
     "expr": "parking-vehicles",
@@ -89,14 +89,14 @@
       1,
       355
     ],
-    "n_ikun_frames": 60,
+    "n_ikun_frames": 371,
     "ikun_frame_range": [
       1,
-      114
+      371
     ],
-    "n_overlap_frames": 60,
+    "n_overlap_frames": 354,
     "n_tracker_frames": 371,
     "n_gmc_frames": 371,
-    "coverage_pct": 16.949152542372882
+    "coverage_pct": 100.0
   }
 ]

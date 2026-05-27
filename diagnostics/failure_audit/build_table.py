@@ -41,10 +41,12 @@ def _iou_xywh(a: tuple, b: tuple) -> float:
 
 
 def build_cell_table(repo_root: Path, seq: str, expr: str,
-                     iou_thr: float = 0.5) -> pd.DataFrame:
+                     iou_thr: float = 0.5,
+                     gmc_cache_tpl: str = "gmc_scores_v1_{seq}_depth_seed1_cache.json"
+                     ) -> pd.DataFrame:
     gt   = load_gt(repo_root, seq, expr)
     ikun = load_ikun_logits(repo_root, seq, expr)
-    gmc  = load_gmc_scores(repo_root, seq, expr)
+    gmc  = load_gmc_scores(repo_root, seq, expr, cache_tpl=gmc_cache_tpl)
     tr   = load_tracker_assoc(repo_root, seq, expr)
     det  = load_detector_hits(repo_root, seq, expr)
 

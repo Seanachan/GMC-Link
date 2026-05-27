@@ -149,3 +149,93 @@ The plumbing is reusable for future Z-based experiments:
 - `diagnostics/diag_gt_cosine_distributions.py` — depth_cache plumb in eval
 
 No code reverted. All commits remain on `exp/ego-motion-systematic`.
+
+---
+
+## 2026-05-10 Addendum — HOTA cross-check FLIPS verdict
+
+**KILL was AUC-only and is wrong at HOTA decision level.**
+
+After noting cliptext precedent (Exp 40: identical micro AUC magnitude but partial HOTA POS at iKUN), ran iKUN HOTA on 17D ckpts at locked Arm A 13D ship recipe (α_m=1, sc_m=0.9, thr_m=0.17, α_a=1, sc_a=0.30, thr_a=0.10).
+
+### iKUN multi-seed n=3 pool HOTA on V1 test 3-seq
+
+| Seed | 17D pooled | 13D pooled (reference) | matched-seed Δ |
+|---|---|---|---|
+| 0 | **44.876** | 44.586 | **+0.290** |
+| 1 | **44.800** | 44.604 | **+0.196** |
+| 2 | **44.793** | 44.634 | **+0.159** |
+| **mean ± std** | **44.823 ± 0.046** | 44.608 ± 0.024 | **+0.215** |
+
+- vs paper iKUN 44.564 → Δ = **+0.259**
+- vs Arm A 13D multi-seed 44.608 → Δ = **+0.215**
+- Paired t (n=3) = 5.51, df=2, p_one-sided ≈ **0.016** → stat-sig POS at α=0.05
+- Sign consistency: 3/3 seeds POS
+
+### 8-arm sweep on seed0 17D ckpt (Arm A reference 44.876)
+
+| Arm | Config | pooled | Δ vs A |
+|---|---|---|---|
+| **A** | **13D ship sc_m=0.9, sc_a=0.30** | **44.876** | **0** |
+| B | sc_m=1.5 | 44.589 | −0.287 |
+| C | sc_a=0.50 | 44.693 | −0.183 |
+| D | both up | 44.380 | −0.496 |
+| E | thr=0 | 44.335 | −0.541 |
+| F | scale-down | 44.646 | −0.230 |
+| G | motion-only | 44.656 | −0.220 |
+| H | appear-only | 44.435 | −0.441 |
+
+**13D ship recipe is optimal on 17D too.** No hyperparameter retuning required — depth contribution lives in ckpt logits, not in needing a new α/scale/thr.
+
+### Why AUC and HOTA disagree
+
+| Mechanism | AUC | HOTA |
+|---|---|---|
+| Sampling | Per-frame random (track, expr) pairs | Per-trajectory association quality |
+| Threshold | Free (ROC integration) | Anchored at IoU + score threshold |
+| Time | Frame-independent | Trajectory-continuous (AssA component) |
+| Weighting | Uniform per-frame pair | GT-trajectory length-weighted |
+
+Per-track Z time-series encodes object persistence (same track stays at similar Z across frames). That's an AssA signal — HOTA's IDF1-style assignment can latch on to it. AUC samples random pairs and can't see the temporal coherence of Z across frames belonging to the same trajectory. Depth tail looks corrupted at AUC because it adds variance to per-frame cosine, but that variance carries trajectory info that decision-level fusion + HOTA unlocks.
+
+### Implications
+
+1. **17D depth-aug iKUN ships POS** at decision-level fusion. Multi-seed mean 44.823 (+0.259 vs paper, +0.215 vs Arm A 13D).
+2. **AUC-only KILL gate is unsafe** for aligner-internal levers — failed twice in a row (cliptext + depth). Add HOTA cross-check before declaring KILL.
+3. **Stage1 AUC gate retains use** for fast prefilter (cheap 9× diag eval), but HOTA is the ship gate.
+4. **Lever count revision**: was "14 stage1 levers exhausted, ceiling representation-bound." Updated: 13 stage1 AUC levers exhausted but the depth lever is POS at decision level. Aligner-internal modality concat closed AT AUC; OPEN at HOTA decision-level transfer.
+
+### FH cross-arch HOTA verify (2026-05-10, n=3 paired)
+
+Built FH V1 + V2 17D depth caches via patched `run_build_gmc_cache_flexhook.py` and `run_build_gmc_cache_flexhook_v2_raw.py` (added `GMC_DEPTH_ARCH`/`GMC_DEPTH_DIR` env vars + `depth_z_lookup` plumbing through `linker.process_frame`). Ran `run_flexhook_depth_multiseed.sh` at locked Arm A 13D appear-extension recipes.
+
+| Arch  | 13D mean ± std | 17D mean ± std | Δ paired | paired_t | p_one  | sign | Verdict |
+|-------|----------------|----------------|----------|----------|--------|------|---------|
+| iKUN  | 44.608 ± 0.024 | 44.823 ± 0.046 | +0.215   | +5.50    | 0.016  | 3/3  | **stat-sig POS α=0.05** |
+| FH V1 | 53.716 ± 0.068 | 53.765 ± 0.059 | +0.048   | +0.80    | 0.255  | 2/3  | mean POS, within seed noise |
+| FH V2 | 42.799 ± 0.047 | 42.833 ± 0.005 | +0.034   | +1.38    | 0.151  | 2/3  | mean POS, within seed noise |
+
+Per-seed pooled — FH V1: 53.787 / 53.809 / 53.698. FH V2: 42.836 / 42.836 / 42.828.
+
+vs paper: all 3 archs beat paper at 17D (iKUN +0.259, FH V1 +0.655 cli-fork drift unchanged, FH V2 +0.307). Sign 7/9 cells POS (V1 seed2 −0.061, V2 seed1 −0.012 NEG).
+
+**Why iKUN sig but FH not:**
+1. iKUN paper baseline 44.564 is weakest of 3 archs — depth headroom widest there. FH V1 paper 53.110, FH V2 paper 42.526 are closer to ceilings.
+2. iKUN seed std (0.024) tightest of 3; smaller paired Δ clears t-test sig. FH V1 std 0.068 / V2 std 0.047 swallow Δ in noise.
+3. Mechanism is decision-level invariant — score distribution unchanged when motion_dim grows 13→17. All 3 archs show POS mean; only iKUN reaches α=0.05.
+
+### Final ship decision
+
+- **iKUN**: ship 17D depth-aug at locked 13D recipe → 44.823 multi-seed mean.
+- **FH V1 + FH V2**: do NOT ship 17D — within seed noise vs 13D, no recipe-level lever. 13D remains FH ship.
+
+### Updated artifacts (2026-05-10)
+
+- 8-arm sweep log: `experiments/depth_v1train/seed0/ikun_hota_sweep.log`
+- Multi-seed Arm A logs: `experiments/depth_v1train/{ikun,fh_v1,fh_v2}_armA_multiseed.log`
+- 9 17D iKUN GMC caches: `gmc_link/gmc_scores_v1_{0005,0011,0013}_depth_seed{0,1,2}_cache.json`
+- 9 17D FH V1 GMC caches: `gmc_link/gmc_scores_flexhook_v1_{0005,0011,0013}_depth_seed{0,1,2}_cache.json`
+- 12 17D FH V2 GMC caches: `gmc_link/gmc_scores_flexhook_v2_raw_{0005,0011,0013,0019}_depth_seed{0,1,2}_cache.json`
+- Patched FH cache builders: `run_build_gmc_cache_flexhook.py`, `run_build_gmc_cache_flexhook_v2_raw.py` (depth path)
+- Sweep drivers: `run_ikun_depth_sweep.sh`, `run_ikun_depth_armA_seeds.sh`, `run_flexhook_depth_multiseed.sh`
+

@@ -14,10 +14,13 @@ from .attribute  import attribute_table
 
 REPO = Path(__file__).resolve().parents[2]
 
-# Per recon, only pedestrian-who-are-walking has partial iKUN coverage (44.6%).
-# turning-cars/0011 + turning-vehicles/0011 are 0% coverage → already answered.
+# Corrected 2026-05-14: prior coverage_recon was wrong (loader inverted
+# obj_id/frame in cache schema). All 3 cells have 100% iKUN coverage —
+# attribution must run on all of them.
 CELLS = [
-    ("pedestrian-who-are-walking", "0011"),
+    ("turning-cars",                  "0011"),
+    ("turning-vehicles",              "0011"),
+    ("pedestrian-who-are-walking",    "0011"),
 ]
 
 

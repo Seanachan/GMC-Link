@@ -34,7 +34,8 @@ def load_gt(repo_root: Path, seq: str, expr: str) -> pd.DataFrame:
 def load_ikun_logits(repo_root: Path, seq: str, expr: str) -> pd.DataFrame:
     """Flatten the nested iKUN cascade logit cache to (frame, track_id, ikun_logit).
 
-    JSON layout: {seq: {frame: {track_id: {expr: [logit]}}}}.
+    JSON layout: {seq: {obj_id: {frame: {expr: [logit]}}}} — confirmed by
+    iKUN/test.py write path `OUTPUTS[video][obj_id][frame_id][expression]`.
     For pedestrian-walking-* expression family, returns rows where the expr
     name *startswith* the given family token (e.g. pedestrian-walking-women,
     pedestrian-walking-men); ikun_logit is the mean across matched exprs.
@@ -43,10 +44,10 @@ def load_ikun_logits(repo_root: Path, seq: str, expr: str) -> pd.DataFrame:
     cache = json.loads(cache_path.read_text())
     seq_data = cache.get(seq, {})
     rows = []
-    for frame_str, track_dict in seq_data.items():
-        frame = int(frame_str)
-        for track_str, expr_dict in track_dict.items():
-            track_id = int(track_str)
+    for obj_str, frame_dict in seq_data.items():
+        track_id = int(obj_str)
+        for frame_str, expr_dict in frame_dict.items():
+            frame = int(frame_str)
             matched = [v[0] for k, v in expr_dict.items() if _expr_match(k, expr)]
             if matched:
                 rows.append((frame, track_id, float(np.mean(matched))))
@@ -134,15 +135,21 @@ def load_tracker_assoc(repo_root: Path, seq: str, expr: str) -> pd.DataFrame:
     return df[["frame","track_id","x","y","w","h","tracker_assoc"]]
 
 
-def load_gmc_scores(repo_root: Path, seq: str, expr: str) -> pd.DataFrame:
-    """Per (frame, track_id) GMC aligner cosine from depth-aug seed-1 JSON cache.
+def load_gmc_scores(repo_root: Path, seq: str, expr: str,
+                    cache_tpl: str = "gmc_scores_v1_{seq}_depth_seed1_cache.json"
+                    ) -> pd.DataFrame:
+    """Per (frame, track_id) GMC aligner cosine from a JSON cache.
 
     Cache schema: {expr: {frame_str: {track_id_str: score_float}}}.
     For family targets (e.g. pedestrian-walking), score is the mean across
     matched exprs for that (frame, track_id).
+
+    cache_tpl selects the aligner cache; default is the depth-aug seed-1 cache
+    used by the legacy 3-cell audit. Pass the ship template, e.g.
+    "gmc_scores_v1_{seq}_sharedweight_seed0_rawcos_cache.json", to decompose the
+    canonical ship signal.
     """
-    cache_path = (repo_root / "gmc_link" /
-                  f"gmc_scores_v1_{seq}_depth_seed1_cache.json")
+    cache_path = repo_root / "gmc_link" / cache_tpl.format(seq=seq)
     if not cache_path.exists():
         return pd.DataFrame(columns=["frame", "track_id", "aligner_gmc_score"])
     cache = json.loads(cache_path.read_text())

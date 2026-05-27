@@ -64,17 +64,18 @@ def compute_simcalib_bias(text_feat, exprs):
     return bias
 
 
-def run_cascade_inference_with_film(ckpt_path, target_seqs):
-    """Run cascade KUM inference with motion_13d FiLM injection."""
+def run_cascade_inference_with_film(ckpt_path, target_seqs, motion_13d_dir=MOTION_13D_DIR,
+                                    kum_mode="cascade attention"):
+    """Run KUM inference with motion_13d FiLM injection (FiLM = no-op if ckpt has no motion_film_head)."""
     sys.argv = [sys.argv[0]]
     from opts import opts as OptsClass
     opt = OptsClass().parse()
     opt.save_root = "/home/seanachan/GMC-Link"
     opt.data_root = os.path.abspath(DATA_ROOT)
     opt.track_root = os.path.abspath(TRACK_DIR)
-    opt.kum_mode = "cascade attention"
+    opt.kum_mode = kum_mode
     opt.test_ckpt = ckpt_path
-    opt.motion_13d_dir = MOTION_13D_DIR
+    opt.motion_13d_dir = motion_13d_dir
 
     import utils as ikun_utils
     _orig = ikun_utils.VIDEOS.copy()
@@ -199,13 +200,18 @@ def main():
     p = argparse.ArgumentParser()
     p.add_argument("--ckpt", required=True, help="FiLM-trained ckpt path")
     p.add_argument("--seqs", nargs="+", default=["0005","0011","0013"])
+    p.add_argument("--motion_13d_dir", default=MOTION_13D_DIR)
+    p.add_argument("--kum_mode", default="cascade attention",
+                   choices=["cascade attention", "cross correlation", "text-first modulation"])
+    p.add_argument("--out_root", default=OUTPUT_ROOT)
     args = p.parse_args()
 
+    out_root = args.out_root
     with open(TEXT_FEAT_JSON) as f:
         text_feat = json.load(f)
-    os.makedirs(OUTPUT_ROOT, exist_ok=True)
+    os.makedirs(out_root, exist_ok=True)
 
-    raw_logits = run_cascade_inference_with_film(args.ckpt, args.seqs)
+    raw_logits = run_cascade_inference_with_film(args.ckpt, args.seqs, args.motion_13d_dir, args.kum_mode)
 
     results = {}
     for seq in args.seqs:
@@ -214,7 +220,7 @@ def main():
         exprs = sorted(f.replace(".json", "") for f in os.listdir(expr_dir) if f.endswith(".json"))
         ns = merged_ns(seq)
         bias = compute_simcalib_bias(text_feat, exprs)
-        rd = os.path.join(OUTPUT_ROOT, seq, "B")
+        rd = os.path.join(out_root, seq, "B")
         if os.path.exists(rd): shutil.rmtree(rd)
         results_dir, sm = gen_predict(seq, bias, ns, exprs, rd, raw_logits)
         pooled, pc = run_te(sm, results_dir)

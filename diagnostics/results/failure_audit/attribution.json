@@ -1,19 +1,47 @@
 [
   {
-    "n_rows": 90,
+    "n_rows": 30,
     "class_counts": {
-      "FN_ikun_coverage": 50,
-      "FN_tracker": 19,
-      "TN": 19,
-      "FN_aligner": 1,
-      "FN_detector": 1
+      "FN_fusion": 18,
+      "TP": 10,
+      "FN_tracker": 2
     },
     "class_pct": {
-      "FN_ikun_coverage": 55.6,
-      "FN_tracker": 21.1,
-      "TN": 21.1,
-      "FN_aligner": 1.1,
-      "FN_detector": 1.1
+      "FN_fusion": 60.0,
+      "TP": 33.3,
+      "FN_tracker": 6.7
+    },
+    "expr": "turning-cars",
+    "seq": "0011"
+  },
+  {
+    "n_rows": 30,
+    "class_counts": {
+      "FN_fusion": 18,
+      "TP": 10,
+      "FN_tracker": 2
+    },
+    "class_pct": {
+      "FN_fusion": 60.0,
+      "TP": 33.3,
+      "FN_tracker": 6.7
+    },
+    "expr": "turning-vehicles",
+    "seq": "0011"
+  },
+  {
+    "n_rows": 90,
+    "class_counts": {
+      "TP": 42,
+      "FN_tracker": 40,
+      "FN_detector": 6,
+      "FN_aligner": 2
+    },
+    "class_pct": {
+      "TP": 46.7,
+      "FN_tracker": 44.4,
+      "FN_detector": 6.7,
+      "FN_aligner": 2.2
     },
     "expr": "pedestrian-who-are-walking",
     "seq": "0011"
