@@ -89,13 +89,20 @@ def match_dav2_id(box, lw_frame):
     return best
 
 
+def zdav2(dav2, tid, img_i):
+    """DAv2 Z at 0-based IMAGE index img_i. Cache is keyed 1-based (f1=f0+1)."""
+    return dav2.get(tid, {}).get(img_i + 1)
+
+
 def cohort_dz(dav2, gap):
-    """frame -> median DAv2 dZ over all cache tracks (ship cohort proxy)."""
-    frames = sorted({f for tr in dav2.values() for f in tr})
+    """IMAGE-index (0-based) -> median DAv2 dZ over all cache tracks (ship cohort
+    proxy). Keyed in image index to match label_02/poses (cache is 1-based)."""
+    img_frames = sorted({k - 1 for tr in dav2.values() for k in tr})
     out = {}
-    for t in frames:
-        dz = [dav2[tid][t] - dav2[tid][t - gap]
-              for tid in dav2 if t in dav2[tid] and (t - gap) in dav2[tid]]
+    for t in img_frames:
+        dz = [zdav2(dav2, tid, t) - zdav2(dav2, tid, t - gap)
+              for tid in dav2
+              if zdav2(dav2, tid, t) is not None and zdav2(dav2, tid, t - gap) is not None]
         if len(dz) >= 3:
             out[t] = float(np.median(dz))
     return out
@@ -156,12 +163,13 @@ def main():
                 # DAv2 arm: IoU-match this box at t and t-GAP to a cache track
                 m_t = match_dav2_id(l2[tid][t]["box"], lw.get(t, []))
                 m_p = match_dav2_id(l2[tid][t - GAP]["box"], lw.get(t - GAP, []))
-                if (m_t is not None and m_t == m_p and m_t in dav2
-                        and t in dav2[m_t] and (t - GAP) in dav2[m_t]):
-                    dz_dav2 = dav2[m_t][t] - dav2[m_t][t - GAP]
+                if (m_t is not None and m_t == m_p
+                        and zdav2(dav2, m_t, t) is not None
+                        and zdav2(dav2, m_t, t - GAP) is not None):
+                    dz_dav2 = zdav2(dav2, m_t, t) - zdav2(dav2, m_t, t - GAP)
                     cells["DAv2_oxts"].append(dz_dav2 - ego_oxts)
                     cells["DAv2_cohort"].append(dz_dav2 - ego_cohort)
-                    dav2_vs_gt_Z.append((dav2[m_t][t], l2[tid][t]["Z"]))
+                    dav2_vs_gt_Z.append((zdav2(dav2, m_t, t), l2[tid][t]["Z"]))
 
     report = {"config": {"seqs": SEQS, "gap": GAP, "static_world_speed_mps": STATIC_WORLD_SPEED,
                          "n_static_tracks": n_static_total},
