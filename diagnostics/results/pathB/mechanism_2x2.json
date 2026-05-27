@@ -1,0 +1,48 @@
+{
+  "config": {
+    "seqs": [
+      "0005",
+      "0011",
+      "0013"
+    ],
+    "gap": 5,
+    "static_world_speed_mps": 0.5,
+    "n_static_tracks": 25
+  },
+  "cells": {
+    "GT_oxts": {
+      "n": 1794,
+      "median": 0.048201091011026986,
+      "p25": 0.020662894357843742,
+      "p75": 0.09644795410741336
+    },
+    "GT_cohort": {
+      "n": 1794,
+      "median": 0.3118950246582024,
+      "p25": 0.12795974046325465,
+      "p75": 0.7610785309906003
+    },
+    "DAv2_oxts": {
+      "n": 1232,
+      "median": 0.4774683184023536,
+      "p25": 0.1571277558683356,
+      "p75": 1.3642465362494174
+    },
+    "DAv2_cohort": {
+      "n": 1232,
+      "median": 0.39315056800842285,
+      "p25": 0.11414015293121338,
+      "p75": 1.2854325771331787
+    }
+  },
+  "dav2_vs_gt_depth": {
+    "n": 1232,
+    "ratio_median": 0.9010424599327796,
+    "ratio_p25": 0.8517763669936527,
+    "ratio_p75": 0.9768654629840111
+  },
+  "gate": {
+    "GT_cohort_over_GT_oxts": 6.470704669046807,
+    "verdict": "MECHANISM CONFIRMED (>2x): cohort ego injects STATIC residual; oxts fixes it -> Path B premise supported"
+  }
+}

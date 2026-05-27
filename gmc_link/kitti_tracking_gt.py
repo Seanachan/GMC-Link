@@ -105,6 +105,16 @@ def R_cam_from_imu(calib: Dict[str, np.ndarray]) -> np.ndarray:
     return T_cam_imu[:3, :3]
 
 
+def cam_to_world(calib: Dict[str, np.ndarray], pose: np.ndarray) -> np.ndarray:
+    """4x4 mapping a rectified-camera point to the nav/world frame, given the
+    IMU pose (imu_t -> nav0). Inverse of the projection chain
+    X_cam_rect = R_rect . Tr_velo_cam . Tr_imu_velo^-1 ... -> world = pose . imu."""
+    return (pose
+            @ np.linalg.inv(calib["Tr_imu_velo"])
+            @ np.linalg.inv(calib["Tr_velo_cam"])
+            @ np.linalg.inv(calib["R_rect"]))
+
+
 # ── ego depth-velocity (the dz_ego replacement) ───────────────────────────
 
 def ego_dz_camera(poses: List[np.ndarray], calib: Dict[str, np.ndarray],
