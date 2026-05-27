@@ -61,6 +61,13 @@ def main():
            f"--architecture shared_weight --seed 0 --save-path {WEIGHTS}",
            label="train")
 
+    # run_build_gmc_cache.py SKIPS rebuild when the cache file already exists.
+    # Delete first so the freshly-trained weights actually produce a new cache —
+    # otherwise the fuse reads a stale cache from a prior architecture and every
+    # iteration silently returns the baseline (CACHE_VER default "v1").
+    for s in SEQS:
+        (REPO / "gmc_link" / f"gmc_scores_v1_{s}{SUFFIX}_cache.json").unlink(missing_ok=True)
+
     cache_env = {"GMC_WEIGHTS": WEIGHTS, "GMC_SUFFIX": SUFFIX, "GMC_RAW_COS": "1"}
     for s in SEQS:
         sh(f"python run_build_gmc_cache.py {s}", env_extra=cache_env,
