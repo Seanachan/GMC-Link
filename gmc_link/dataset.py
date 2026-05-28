@@ -1057,6 +1057,18 @@ def _compute_velocity_at_gap(
     return res_dx, res_dy, bg_residual, ego_dx, ego_dy
 
 
+def _oxts_ego_dz(seq: str, curr_fid: int, gap: int) -> float:
+    """Path B GT oxts ego-ΔZ (camera frame, m) over forward interval
+    [curr_fid, curr_fid+gap]. curr_fid is the 1-based depth-cache key (f1=f0+1),
+    so the 0-based pose/image index is curr_fid-1 and the ego interval is
+    [curr_fid-1, curr_fid-1+gap]. Drop-in replacement for _frame_cohort_dz_ego
+    when depth_source=lidar_oxts. Frame alignment proven in
+    tests/test_pathB_oxts_frame_alignment.py (off0 minimal, static residual 0.196m)."""
+    from gmc_link import kitti_tracking_gt as K
+    poses, calib = K.seq_poses_calib(seq)
+    return K.ego_dz_camera(poses, calib, (curr_fid - 1) + gap, gap)
+
+
 def _frame_cohort_dz_ego(
     depth_cache: Any,
     frame_id: int,
@@ -1098,6 +1110,7 @@ def _generate_positive_pairs(
     use_depth: bool = False,
     depth_cache: Any = None,
     world_xy: bool = False,
+    depth_ego: str = "cohort",
 ) -> Tuple[List[np.ndarray], List[np.ndarray], List[int]]:
     """
     Generate positive (motion, language) pairs with residual velocity (raw - ego).
@@ -1338,12 +1351,19 @@ def _generate_positive_pairs(
                             base_vec.append(0.0)
                             continue
                         dz_track = float(z_fut) - float(z_now)
-                        cohort_key = (curr_fid, gap)
-                        if cohort_key not in cohort_dz_ego_cache:
-                            cohort_dz_ego_cache[cohort_key] = _frame_cohort_dz_ego(
-                                depth_cache, curr_fid, gap
-                            )
-                        dz_ego = cohort_dz_ego_cache[cohort_key]
+                        if depth_ego == "oxts":
+                            # Path B: GT oxts ego-ΔZ over the SAME forward interval.
+                            # curr_fid is the 1-based cache key (f1=f0+1) -> 0-based pose
+                            # idx = curr_fid-1; ego over [curr_fid-1, curr_fid-1+gap].
+                            # Frame alignment proven in tests/test_pathB_oxts_frame_alignment.py.
+                            dz_ego = _oxts_ego_dz(seq, curr_fid, gap)
+                        else:
+                            cohort_key = (curr_fid, gap)
+                            if cohort_key not in cohort_dz_ego_cache:
+                                cohort_dz_ego_cache[cohort_key] = _frame_cohort_dz_ego(
+                                    depth_cache, curr_fid, gap
+                                )
+                            dz_ego = cohort_dz_ego_cache[cohort_key]
                         base_vec.append((dz_track - dz_ego) / 10.0)
 
             # Per-track extras (F1-F4)
@@ -1497,6 +1517,7 @@ def build_training_data(
     use_depth: bool = False,
     depth_cache_dir: str = None,
     world_xy: bool = False,
+    depth_source: str = "monocular",
 ) -> Tuple:
     """
     Build (motion, language, expression_id) training triples for contrastive learning.
@@ -1534,15 +1555,24 @@ def build_training_data(
         if depth_cache_dir is None:
             raise ValueError("use_depth=True requires depth_cache_dir")
         from gmc_link.depth_cache import DepthCache
+        # Path B: lidar_oxts loads the LiDAR twin cache (z_track_lidar_gt_*); the
+        # monocular default keeps the DAv2 cache (z_track_gt_*). depth_cache_dir
+        # selects the directory; both are keyed by refer-kitti tid, 1-based frame.
+        _lidar = depth_source in ("lidar_oxts", "lidar_cohort")
+        depth_prefix = "z_track_lidar_gt" if _lidar else "z_track_gt"
+        depth_ego = "oxts" if depth_source == "lidar_oxts" else "cohort"  # lidar_cohort -> cohort (ego ablation)
         for seq in sequences:
-            p = os.path.join(depth_cache_dir, f"z_track_gt_{seq}.json")
+            p = os.path.join(depth_cache_dir, f"{depth_prefix}_{seq}.json")
             if not os.path.exists(p):
                 raise FileNotFoundError(
                     f"depth cache missing for training seq {seq}: {p} "
-                    f"(build with run_build_depth_cache.py --arch gt --seq {seq})"
+                    f"(build with run_build_depth_cache{'_lidar' if _lidar else ''}.py --arch gt --seq {seq})"
                 )
             depth_caches[seq] = DepthCache.load(p)
-        print(f"  [depth] loaded {len(depth_caches)} per-seq Z caches from {depth_cache_dir}")
+        print(f"  [depth] loaded {len(depth_caches)} per-seq Z caches from "
+              f"{depth_cache_dir} (depth_source={depth_source}, ego={depth_ego})")
+    else:
+        depth_ego = "cohort"
     if use_cache:
         cached = _try_load_cache(cache_key, seq_len)
         if cached is not None:
@@ -1686,6 +1716,7 @@ def build_training_data(
             use_depth=use_depth,
             depth_cache=depth_caches.get(seq) if use_depth else None,
             world_xy=world_xy,
+            depth_ego=depth_ego,
         )
 
         # Offset boundaries to global indices before extending

@@ -70,6 +70,7 @@ class GMCLinkManager:
         self.lang_passthrough = False
         self.app_proj_dim = 256
         self.architecture = "mlp"
+        self.depth_ego = "cohort"  # Path B: "oxts" when ckpt trained --depth-source lidar_oxts
         checkpoint = None
         if weights_path:
             checkpoint = torch.load(weights_path, map_location=device)
@@ -93,6 +94,8 @@ class GMCLinkManager:
                 self.lang_passthrough = bool(checkpoint.get("lang_passthrough", False))
                 self.app_proj_dim = int(checkpoint.get("app_proj_dim") or 256)
                 self.architecture = str(checkpoint.get("architecture") or "mlp")
+                if checkpoint.get("depth_source") == "lidar_oxts":
+                    self.depth_ego = "oxts"  # Path B: GT oxts ego in the 17D depth path
 
         # 17D depth path
         self.use_depth = bool(use_depth)
@@ -514,13 +517,25 @@ class GMCLinkManager:
         # Post-loop: ego-Z compensation per gap (cohort median over stationary tracks)
         # Stationary criterion: residual mid-scale speed < 0.01 (≈1 px/frame at KITTI W=1242).
         if self.use_depth and depth_z_lookup is not None:
-            stat_ids = {tid for tid, mag in per_track_res_speed.items() if mag < 0.01}
             dz_ego_per_gap: Dict[int, float] = {}
-            for g in self.FRAME_GAPS:
-                stat_dz = [per_track_dz_raw[tid][g]
-                           for tid in stat_ids
-                           if tid in per_track_dz_raw and g in per_track_dz_raw[tid]]
-                dz_ego_per_gap[g] = float(np.median(stat_dz)) if stat_dz else 0.0
+            if self.depth_ego == "oxts":
+                # Path B: GT oxts ego-ΔZ per gap, backward interval [now-g, now] to
+                # match dz_raw = z_now - z_past. frame_id is the 1-based cache key ->
+                # 0-based pose idx = frame_id-1. Nominal gap g (one value per gap,
+                # mirroring the cohort path). Frame alignment proven in
+                # tests/test_pathB_oxts_frame_alignment.py.
+                from gmc_link import kitti_tracking_gt as K
+                poses, calib = K.seq_poses_calib(seq)
+                now_img = (frame_id - 1) if frame_id is not None else 0
+                for g in self.FRAME_GAPS:
+                    dz_ego_per_gap[g] = K.ego_dz_camera(poses, calib, now_img, g)
+            else:
+                stat_ids = {tid for tid, mag in per_track_res_speed.items() if mag < 0.01}
+                for g in self.FRAME_GAPS:
+                    stat_dz = [per_track_dz_raw[tid][g]
+                               for tid in stat_ids
+                               if tid in per_track_dz_raw and g in per_track_dz_raw[tid]]
+                    dz_ego_per_gap[g] = float(np.median(stat_dz)) if stat_dz else 0.0
             for i, tid in enumerate(track_ids):
                 z_now = per_track_z_now.get(tid)
                 if z_now is None:

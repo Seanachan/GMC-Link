@@ -258,3 +258,6 @@ ikun_v2_root/
 v2_gt_template_nsconv/
 iKUN/ikun_results_v2_*.json
 hota_eval_ikun_v2*/
+
+# Path B LiDAR depth caches (reproducible from run_build_depth_cache_lidar.py + velodyne)
+gmc_link/depth_cache_lidar/

@@ -59,6 +59,7 @@ def build(seq):
     lang_dim = 384
     use_depth = False
     world_xy = False
+    depth_source = "monocular"
     if os.path.exists(GMC_WEIGHTS):
         ckpt_meta = torch.load(GMC_WEIGHTS, map_location="cpu")
         if isinstance(ckpt_meta, dict) and "model" in ckpt_meta:
@@ -66,13 +67,20 @@ def build(seq):
             lang_dim = ckpt_meta.get("lang_dim") or lang_dim
             use_depth = bool(ckpt_meta.get("use_depth", False))
             world_xy = bool(ckpt_meta.get("world_xy", False))
+            depth_source = ckpt_meta.get("depth_source") or "monocular"
         del ckpt_meta
-    print(f"  [gmc] text_encoder={text_encoder_name} lang_dim={lang_dim} use_depth={use_depth} world_xy={world_xy}")
+    print(f"  [gmc] text_encoder={text_encoder_name} lang_dim={lang_dim} use_depth={use_depth} world_xy={world_xy} depth_source={depth_source}")
     encoder = TextEncoder(model_name=text_encoder_name, device=DEVICE)
 
     depth_cache = None
     if use_depth:
-        depth_path = os.path.join(GMC_DEPTH_DIR, f"z_track_{GMC_DEPTH_ARCH}_{seq}.json")
+        if depth_source in ("lidar_oxts", "lidar_cohort"):
+            # Path B: LiDAR twin caches (z_track_lidar_<arch>_<seq>). Manager auto-uses
+            # oxts ego ONLY for lidar_oxts (from ckpt meta); lidar_cohort keeps cohort ego.
+            ddir = os.environ.get("GMC_DEPTH_DIR", "gmc_link/depth_cache_lidar")
+            depth_path = os.path.join(ddir, f"z_track_lidar_{GMC_DEPTH_ARCH}_{seq}.json")
+        else:
+            depth_path = os.path.join(GMC_DEPTH_DIR, f"z_track_{GMC_DEPTH_ARCH}_{seq}.json")
         depth_cache = DepthCache.load(depth_path)
         print(f"  [gmc] loaded depth cache {depth_path} tracks={len(depth_cache.table)}")
 

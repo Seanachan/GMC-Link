@@ -160,9 +160,28 @@ def ego_dz_camera(poses: List[np.ndarray], calib: Dict[str, np.ndarray],
 
     Replaces stationary-cohort median ΔZ: dz_residual = dz_track - ego_dz_camera.
     """
-    if t - gap < 0 or t >= len(poses):
+    return ego_dz_between(poses, calib, t - gap, t)
+
+
+def ego_dz_between(poses: List[np.ndarray], calib: Dict[str, np.ndarray],
+                   fa: int, fb: int) -> float:
+    """Ego-induced camera-frame ΔZ (m) of a static point seen at 0-based image
+    index fa then fb. = camera-z component of -(ego IMU translation fa->fb).
+    Generalizes ego_dz_camera to an arbitrary frame pair (the inference path's
+    past lag can exceed the nominal gap). ego_dz_camera(.,t,gap)==ego_dz_between(.,t-gap,t)."""
+    if fa < 0 or fb < 0 or fa >= len(poses) or fb >= len(poses):
         return 0.0
-    rel = np.linalg.inv(poses[t - gap]) @ poses[t]      # frame t origin in (t-gap) IMU frame
+    rel = np.linalg.inv(poses[fa]) @ poses[fb]          # frame fb origin in fa IMU frame
     ego_trans_imu = rel[:3, 3]                          # how far ego moved (IMU frame)
     static_disp_cam = R_cam_from_imu(calib) @ (-ego_trans_imu)
     return float(static_disp_cam[2])                     # camera z-component
+
+
+_SEQ_POSES_CALIB: Dict[str, tuple] = {}
+
+
+def seq_poses_calib(seq: str):
+    """Cached (poses, calib) for a sequence; poses indexed by 0-based image idx."""
+    if seq not in _SEQ_POSES_CALIB:
+        _SEQ_POSES_CALIB[seq] = (oxts_to_poses(load_oxts(seq)), load_calib(seq))
+    return _SEQ_POSES_CALIB[seq]

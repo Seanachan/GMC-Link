@@ -150,6 +150,7 @@ def setup_data(
     use_depth: bool = False,
     depth_cache_dir: str = None,
     world_xy: bool = False,
+    depth_source: str = "monocular",
 ) -> Optional[DataLoader]:
     """
     Initialize text encoder, build training dataset, and return a DataLoader.
@@ -195,6 +196,7 @@ def setup_data(
             use_depth=use_depth,
             depth_cache_dir=depth_cache_dir,
             world_xy=world_xy,
+            depth_source=depth_source,
         )
         if seq_len > 0:
             seq_motion, seq_masks, seq_language, seq_labels, src_id_to_class = result
@@ -450,6 +452,7 @@ def _run_single_stage(
     depth_cache_dir: str = None,
     identity_init_depth: bool = False,
     world_xy: bool = False,
+    depth_source: str = "monocular",
     lam_struct: float = 0.0,
     lam_angle: float = 0.5,
     struct_mode: str = "dist",
@@ -472,7 +475,8 @@ def _run_single_stage(
                             clip_cache_path=clip_cache_path if use_clip_feat else None,
                             use_depth=use_depth,
                             depth_cache_dir=depth_cache_dir if use_depth else None,
-                            world_xy=world_xy)
+                            world_xy=world_xy,
+                            depth_source=depth_source)
     if dataloader is None:
         print("ERROR: No training data found.")
         return
@@ -552,6 +556,7 @@ def _run_single_stage(
     checkpoint["depth_cache_dir"] = depth_cache_dir if use_depth else None
     checkpoint["identity_init_depth"] = identity_init_depth
     checkpoint["world_xy"] = world_xy
+    checkpoint["depth_source"] = depth_source  # Path B: drives inference ego mode in manager
     torch.save(checkpoint, save_path)
 
 
@@ -637,6 +642,15 @@ def main() -> None:
                         help="Zero-init the 4 depth weight columns of motion_projector[0] "
                              "so depth tail contributes zero at step 0 (bit-exact 13D init "
                              "until first gradient step).")
+    parser.add_argument("--depth-source",
+                        choices=["monocular", "lidar_oxts", "lidar_cohort"],
+                        default="monocular",
+                        help="Path B depth-axis signal. 'lidar_oxts' = LiDAR depth + GT oxts "
+                             "ego-ΔZ (full Path B, setting A). 'lidar_cohort' = LiDAR depth + "
+                             "stationary-cohort ego (ego ABLATION, setting B; isolates whether "
+                             "the ego swap is the lever). 'monocular' (default) = DAv2 + cohort, "
+                             "byte-identical to the prior depth path. lidar_* use "
+                             "z_track_lidar_gt_<seq> caches; pass --depth-cache-dir gmc_link/depth_cache_lidar.")
     parser.add_argument("--world-xy", action="store_true",
                         help="Project image-plane (dx, dy) per scale to metric world "
                              "(dX, dY) via inverse pinhole `dX = dx_pixel * Z / f_x`. "
@@ -758,6 +772,7 @@ def main() -> None:
             app_proj_dim=args.app_proj_dim,
             use_depth=args.use_depth,
             depth_cache_dir=args.depth_cache_dir,
+            depth_source=args.depth_source,
             identity_init_depth=args.identity_init_depth,
             world_xy=args.world_xy,
             lam_struct=args.lam_struct,
@@ -787,6 +802,7 @@ def main() -> None:
             app_proj_dim=args.app_proj_dim,
             use_depth=args.use_depth,
             depth_cache_dir=args.depth_cache_dir,
+            depth_source=args.depth_source,
             identity_init_depth=args.identity_init_depth,
             world_xy=args.world_xy,
             lam_struct=args.lam_struct,
@@ -830,6 +846,7 @@ def main() -> None:
         app_proj_dim=args.app_proj_dim,
         use_depth=args.use_depth,
         depth_cache_dir=args.depth_cache_dir,
+            depth_source=args.depth_source,
         identity_init_depth=args.identity_init_depth,
         world_xy=args.world_xy,
         lam_struct=args.lam_struct,
