@@ -1,0 +1,37 @@
+[
+  {
+    "tau": 0.1617,
+    "pooled": 41.158,
+    "subset_hota": 20.815,
+    "DetRe": 62.996,
+    "DetPr": 6.848
+  },
+  {
+    "tau": 0.1853,
+    "pooled": 42.106,
+    "subset_hota": 22.416,
+    "DetRe": 56.677,
+    "DetPr": 8.0703
+  },
+  {
+    "tau": 0.2014,
+    "pooled": 42.947,
+    "subset_hota": 22.653,
+    "DetRe": 41.539,
+    "DetPr": 8.7371
+  },
+  {
+    "tau": 0.2129,
+    "pooled": 43.659,
+    "subset_hota": 22.599,
+    "DetRe": 26.977,
+    "DetPr": 9.3861
+  },
+  {
+    "tau": 0.2313,
+    "pooled": 44.364,
+    "subset_hota": 15.218,
+    "DetRe": 6.5526,
+    "DetPr": 8.7577
+  }
+]

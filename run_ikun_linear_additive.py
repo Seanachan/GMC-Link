@@ -126,7 +126,8 @@ def _load_gt_boxes(gt_path):
 
 def gen_predicts(text_feat, gmc_caches, alpha, gmc_scale, thr_motion, run_dir,
                  alpha_a=0.0, scale_a=0.0, thr_a=0.0, mode="ship", dump_path=None,
-                 motion_fuse="add", gmc_gate=0.35):
+                 motion_fuse="add", gmc_gate=0.35, rerank_set=None,
+                 clip_caches=None, rerank_tau=0.0):
     res_dir = os.path.join(run_dir, "results")
     if os.path.exists(res_dir): shutil.rmtree(res_dir)
     os.makedirs(res_dir, exist_ok=True)
@@ -157,7 +158,12 @@ def gen_predicts(text_feat, gmc_caches, alpha, gmc_scale, thr_motion, run_dir,
 
             cls = classify(expr)
             rows = []
-            use_oracle = (mode == "oracle"
+            # rerank_set (if given) restricts oracle/rerank overrides to listed
+            # "seq+expr" keys; all other exprs fall through to ship logic. Lets us
+            # measure "fix ONLY these exprs" pooled headroom (Step 0) and later
+            # apply a reranker to only the catastrophic subset.
+            in_rerank = (rerank_set is None) or (f"{seq}+{expr}" in rerank_set)
+            use_oracle = in_rerank and (mode == "oracle"
                           or (mode == "oracle_motion" and motion)
                           or (mode == "oracle_appear" and not motion))
             if use_oracle:
@@ -172,6 +178,33 @@ def gen_predicts(text_feat, gmc_caches, alpha, gmc_scale, thr_motion, run_dir,
                     for oid, x, y, w, h in dets:
                         if any(_iou_xywh((x, y, w, h), gb) >= 0.5 for gb in gbs):
                             rows.append((fid, oid, x, y, w, h))
+                with open(os.path.join(outd, "predict.txt"), "w") as f:
+                    for fid, oid, x, y, w, h in rows:
+                        f.write(f"{fid},{oid},{x:.2f},{y:.2f},{w:.2f},{h:.2f},1,1,1\n")
+                continue
+            # Step 0.5 mechanism probe: re-rank by a TRACK-level appearance score
+            # that REPLACES native admit (not additive → dodges native veto). Here
+            # the score = median CLIP-B/32 cosine over the track's frames (existing
+            # clip_logit_neuralsort cache). Admit whole track iff score > rerank_tau.
+            use_rerank = in_rerank and mode == "rerank_clipb32"
+            if use_rerank:
+                per_expr_clip = (clip_caches or {}).get(seq, {}).get(expr, {})
+                track_boxes = defaultdict(list)
+                track_cos = defaultdict(list)
+                for fid, dets in ns.items():
+                    if not (min_f < fid < max_f): continue
+                    fclip = per_expr_clip.get(str(fid), {})
+                    for oid, x, y, w, h in dets:
+                        track_boxes[oid].append((fid, x, y, w, h))
+                        c = fclip.get(str(oid))
+                        if c is not None:
+                            track_cos[oid].append(float(c))
+                for oid, boxes in track_boxes.items():
+                    cos_list = track_cos.get(oid, [])
+                    if not cos_list:
+                        continue
+                    if float(np.median(cos_list)) > rerank_tau:
+                        rows.extend((fid, oid, x, y, w, h) for (fid, x, y, w, h) in boxes)
                 with open(os.path.join(outd, "predict.txt"), "w") as f:
                     for fid, oid, x, y, w, h in rows:
                         f.write(f"{fid},{oid},{x:.2f},{y:.2f},{w:.2f},{h:.2f},1,1,1\n")

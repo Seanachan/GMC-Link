@@ -1,0 +1,17 @@
+{
+  "ship": {
+    "pooled": 44.561,
+    "color_subset": 2.1126,
+    "catastrophic_subset": 1.2785
+  },
+  "oracle_color": {
+    "pooled": 46.047,
+    "color_subset": 63.507,
+    "catastrophic_subset": 37.237
+  },
+  "oracle_catastrophic": {
+    "pooled": 48.987,
+    "color_subset": 63.507,
+    "catastrophic_subset": 66.374
+  }
+}
