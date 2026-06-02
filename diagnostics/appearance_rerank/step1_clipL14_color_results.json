@@ -1,9 +1,9 @@
 [
   {
-    "tau": 0.216,
-    "pooled": 45.054,
-    "subset_hota": 30.671,
-    "DetRe": 21.147,
-    "DetPr": 28.049
+    "tau": 0.205,
+    "pooled": 44.629,
+    "subset_hota": 31.303,
+    "DetRe": 36.757,
+    "DetPr": 19.135
   }
 ]

@@ -48,6 +48,7 @@ CASCADE_FULL   = os.environ.get("IKUN_CASCADE_JSON", "/home/seanachan/GMC-Link/i
 _GMC_SUFFIX = os.environ.get("GMC_SUFFIX", "")  # e.g. "_seed0"
 _GMC_CACHE_VER = os.environ.get("GMC_CACHE_VER", "v1")  # v1|v2 cache filename tag
 RAW_COS    = os.environ.get("GMC_RAW_COS", "0") == "1"  # Arm B: GMC cache contains raw cosine [-1,+1]
+RERANK_SPATIAL = os.environ.get("RERANK_SPATIAL", "0") == "1"  # gate rerank admits by cx side
 GMC_CACHE_TPL  = "/home/seanachan/GMC-Link/gmc_link/gmc_scores_" + _GMC_CACHE_VER + "_{seq}" + _GMC_SUFFIX + "_cache.json"
 TRACKEVAL      = "/home/seanachan/TempRMOT/TrackEval/scripts/run_mot_challenge.py"
 _OUT_SUFFIX = os.environ.get("OUT_SUFFIX", "")  # e.g. "_seed0"
@@ -199,12 +200,27 @@ def gen_predicts(text_feat, gmc_caches, alpha, gmc_scale, thr_motion, run_dir,
                         c = fclip.get(str(oid))
                         if c is not None:
                             track_cos[oid].append(float(c))
+                # Optional spatial gate (RERANK_SPATIAL=1): the appearance crop is
+                # position-blind, so for position-qualified exprs ("...-in-the-left")
+                # gate admitted boxes by centroid side (cx). Tests whether POSITION,
+                # not color, is the residual wall on the 16/18 position-qualified exprs.
+                el = expr.lower()
+                side = ("left" if "left" in el else
+                        "right" if "right" in el else None)
+                IMG_W = 1242.0  # KITTI V1
                 for oid, boxes in track_boxes.items():
                     cos_list = track_cos.get(oid, [])
                     if not cos_list:
                         continue
                     if float(np.median(cos_list)) > rerank_tau:
-                        rows.extend((fid, oid, x, y, w, h) for (fid, x, y, w, h) in boxes)
+                        for (fid, x, y, w, h) in boxes:
+                            if RERANK_SPATIAL and side is not None:
+                                cxn = (x + w / 2.0) / IMG_W
+                                if side == "left" and cxn >= 0.5:
+                                    continue
+                                if side == "right" and cxn <= 0.5:
+                                    continue
+                            rows.append((fid, oid, x, y, w, h))
                 with open(os.path.join(outd, "predict.txt"), "w") as f:
                     for fid, oid, x, y, w, h in rows:
                         f.write(f"{fid},{oid},{x:.2f},{y:.2f},{w:.2f},{h:.2f},1,1,1\n")
