@@ -1,0 +1,58 @@
+[
+  {
+    "tau": 0.19,
+    "pooled": 44.134,
+    "subset_hota": 28.238,
+    "DetRe": 48.827,
+    "DetPr": 13.243
+  },
+  {
+    "tau": 0.2,
+    "pooled": 44.517,
+    "subset_hota": 31.656,
+    "DetRe": 40.65,
+    "DetPr": 18.532
+  },
+  {
+    "tau": 0.205,
+    "pooled": 44.641,
+    "subset_hota": 33.152,
+    "DetRe": 36.646,
+    "DetPr": 22.249
+  },
+  {
+    "tau": 0.21,
+    "pooled": 44.763,
+    "subset_hota": 35.335,
+    "DetRe": 32.759,
+    "DetPr": 28.872
+  },
+  {
+    "tau": 0.216,
+    "pooled": 44.854,
+    "subset_hota": 37.003,
+    "DetRe": 26.006,
+    "DetPr": 42.693
+  },
+  {
+    "tau": 0.22,
+    "pooled": 44.786,
+    "subset_hota": 32.136,
+    "DetRe": 18.696,
+    "DetPr": 46.588
+  },
+  {
+    "tau": 0.225,
+    "pooled": 44.767,
+    "subset_hota": 29.579,
+    "DetRe": 15.27,
+    "DetPr": 51.918
+  },
+  {
+    "tau": 0.23,
+    "pooled": 44.659,
+    "subset_hota": 15.714,
+    "DetRe": 4.2896,
+    "DetPr": 41.278
+  }
+]

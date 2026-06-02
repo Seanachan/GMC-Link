@@ -54,7 +54,8 @@ def track_medians(caches, keys):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--signal", choices=["b32", "clipL14", "hsv"], required=True)
-    ap.add_argument("--target", choices=["color", "catastrophic"], default="color")
+    ap.add_argument("--target", default="color",
+                    help="seqmap_{target}.txt (color|catastrophic|colorA|colorB|...)")
     ap.add_argument("--taus", default=None,
                     help="comma-separated explicit tau list (overrides percentile grid)")
     args = ap.parse_args()
@@ -90,8 +91,8 @@ def main():
         print(f"  tau={tau:.4f}: pooled={pooled:.3f}  subset_HOTA={sub:.3f}  "
               f"DetRe={m.get('DetRe')}  DetPr={m.get('DetPr')}", flush=True)
 
-    ceil = {"color": 63.5, "catastrophic": 66.4}[args.target]
-    base = {"color": 2.1, "catastrophic": 1.3}[args.target]
+    ceil = {"color": 63.5, "catastrophic": 66.4}.get(args.target, float("nan"))
+    base = {"color": 2.1, "catastrophic": 1.3}.get(args.target, float("nan"))
     print(f"\n=== STEP 1 ({args.signal}, {args.target}) | ship subset~{base} oracle~{ceil} | ship pooled 44.561 ===")
     print(f"{'tau':>9}{'pooled':>10}{'subsetHOTA':>12}{'DetRe':>9}{'DetPr':>9}")
     for tau, p, s, dre, dpr in res:
