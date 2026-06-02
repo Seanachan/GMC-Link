@@ -1,0 +1,56 @@
+{
+  "ship_pool": 42.813,
+  "ship_sub": 50.98,
+  "n_targets": 75,
+  "sweep": [
+    {
+      "tau": 0.18,
+      "pooled": 41.938,
+      "subset": 33.668,
+      "DetRe": 53.909,
+      "DetPr": 18.004
+    },
+    {
+      "tau": 0.19,
+      "pooled": 42.027,
+      "subset": 33.342,
+      "DetRe": 43.312,
+      "DetPr": 19.328
+    },
+    {
+      "tau": 0.2,
+      "pooled": 42.089,
+      "subset": 31.973,
+      "DetRe": 30.666,
+      "DetPr": 21.069
+    },
+    {
+      "tau": 0.21,
+      "pooled": 42.155,
+      "subset": 30.481,
+      "DetRe": 20.921,
+      "DetPr": 25.392
+    },
+    {
+      "tau": 0.216,
+      "pooled": 42.133,
+      "subset": 27.289,
+      "DetRe": 14.55,
+      "DetPr": 26.598
+    },
+    {
+      "tau": 0.225,
+      "pooled": 42.067,
+      "subset": 18.36,
+      "DetRe": 5.6567,
+      "DetPr": 24.56
+    },
+    {
+      "tau": 0.235,
+      "pooled": 42.05,
+      "subset": 10.348,
+      "DetRe": 1.5853,
+      "DetPr": 24.809
+    }
+  ]
+}
