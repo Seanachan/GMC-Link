@@ -59,8 +59,10 @@ _GMC = None
 def _load():
     global _TF, _GMC
     if _TF is None:
-        _TF = json.load(open(R.TEXT_FEAT_JSON))
-        _GMC = {s: json.load(open(R.GMC_CACHE_TPL.format(seq=s))) for s in R.TEST_SEQS}
+        tf = json.load(open(R.TEXT_FEAT_JSON))
+        gmc = {s: json.load(open(R.GMC_CACHE_TPL.format(seq=s))) for s in R.TEST_SEQS}
+        _TF, _GMC = tf, gmc  # set globals only after both loads succeed
+
 
 
 def _unpack(x, form):
@@ -86,6 +88,8 @@ def evaluate(x, form, run_dir):
         beta_a=p["beta_a"], gamma_a=p["gamma_a"])
     pooled = R.run_te(sm, res_dir)
     static = R.run_te(sm, res_dir, class_filter="STATIC")
+    if pooled is None or static is None:
+        return -1e6, 0.0  # hard fail: keeps DE running, logs a sentinel row
     return pooled, static
 
 
@@ -139,11 +143,13 @@ def main():
               flush=True)
         return -obj  # DE minimizes
 
-    result = differential_evolution(
-        objective, BOUNDS[args.form], x0=X0[args.form], seed=0,
-        maxiter=args.maxiter, popsize=args.popsize, polish=False,
-        mutation=(0.5, 1.0), recombination=0.7, workers=1, updating="immediate")
-    log_f.close()
+    try:
+        result = differential_evolution(
+            objective, BOUNDS[args.form], x0=X0[args.form], seed=0,
+            maxiter=args.maxiter, popsize=args.popsize, polish=False,
+            mutation=(0.5, 1.0), recombination=0.7, workers=1, updating="immediate")
+    finally:
+        log_f.close()
 
     print(f"\n=== Gate C {args.form} DONE ({counter['n']} evals) ===")
     print(f"best pooled={best['pooled']:.3f} STATIC={best['static']:.3f}")
