@@ -1,8 +1,9 @@
 """Unit tests for the F1 nonlinear fusion term. Self-running (no pytest dep):
     python diagnostics/hota_fusion/test_fuse_form.py
 """
+import pathlib
 import sys
-sys.path.insert(0, "/home/seanachan/GMC-Link")
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2]))
 from run_ikun_linear_additive import f1_extra
 
 
