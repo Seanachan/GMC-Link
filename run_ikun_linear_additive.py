@@ -112,6 +112,12 @@ def _iou_xywh(a, b):
     return inter / uni if uni > 0 else 0.0
 
 
+def f1_extra(native_part, gmc_term, beta, gamma):
+    """F1 nonlinear GMC terms: native*gmc interaction + gmc^2 curvature.
+    Returns 0 when beta=gamma=0, so F1 is a strict superset of F0 (additive)."""
+    return beta * (native_part * gmc_term) + gamma * (gmc_term * gmc_term)
+
+
 def _load_gt_boxes(gt_path):
     """frame -> list of (x,y,w,h) GT boxes, KITTI-MOT gt.txt format."""
     boxes = defaultdict(list)
@@ -128,7 +134,8 @@ def _load_gt_boxes(gt_path):
 def gen_predicts(text_feat, gmc_caches, alpha, gmc_scale, thr_motion, run_dir,
                  alpha_a=0.0, scale_a=0.0, thr_a=0.0, mode="ship", dump_path=None,
                  motion_fuse="add", gmc_gate=0.35, rerank_set=None,
-                 clip_caches=None, rerank_tau=0.0):
+                 clip_caches=None, rerank_tau=0.0,
+                 fusion_form="F0", beta_m=0.0, gamma_m=0.0, beta_a=0.0, gamma_a=0.0):
     res_dir = os.path.join(run_dir, "results")
     if os.path.exists(res_dir): shutil.rmtree(res_dir)
     os.makedirs(res_dir, exist_ok=True)
@@ -236,13 +243,17 @@ def gen_predicts(text_feat, gmc_caches, alpha, gmc_scale, thr_motion, run_dir,
                         gmc = float(per_expr_gmc.get(str(fid), {}).get(str(oid), default))
                         gmc_term = gmc if RAW_COS else (gmc - 0.5)
                         gmc_part = alpha * gmc_term * gmc_scale
+                        if fusion_form == "F1":
+                            gmc_part += f1_extra(native_part, gmc_term, beta_m, gamma_m)
                         thr = thr_motion
                     else:
-                        if scale_a != 0.0:
+                        if scale_a != 0.0 or fusion_form == "F1":
                             default = 0.0 if RAW_COS else 0.5
                             gmc = float(per_expr_gmc.get(str(fid), {}).get(str(oid), default))
                             gmc_term = gmc if RAW_COS else (gmc - 0.5)
                             gmc_part = alpha_a * gmc_term * scale_a
+                            if fusion_form == "F1":
+                                gmc_part += f1_extra(native_part, gmc_term, beta_a, gamma_a)
                             thr = thr_a
                         else:
                             gmc = float("nan")
