@@ -41,10 +41,15 @@ HAND = dict(coef_m=0.9, thr_m=0.17, coef_a=0.30, thr_a=0.10)  # seed0 ship (alph
 # Param layout (effective coef = alpha*scale collapsed):
 #   F0: [coef_m, thr_m, coef_a, thr_a]
 #   F1: [coef_m, thr_m, beta_m, gamma_m, coef_a, thr_a, beta_a, gamma_a]
+# Bounds are a TIGHT basin around the hand recipe (coef_m 0.9, thr_m 0.17,
+# coef_a 0.30, thr_a 0.10). The broad [0,20] box wasted the whole initial DE
+# population far from the basin and under-resolved local headroom — the gate's
+# job is to find improvement NEAR the recipe, so search there. F1's beta/gamma
+# are small ([-1,1]) since they augment a small-coef linear term.
 BOUNDS = {
-    "F0": [(0.0, 20.0), (-1.0, 3.0), (0.0, 20.0), (-0.5, 1.0)],
-    "F1": [(0.0, 20.0), (-1.0, 3.0), (-2.0, 2.0), (-2.0, 2.0),
-           (0.0, 20.0), (-0.5, 1.0), (-2.0, 2.0), (-2.0, 2.0)],
+    "F0": [(0.3, 3.0), (-0.2, 0.6), (0.1, 1.5), (-0.2, 0.5)],
+    "F1": [(0.3, 3.0), (-0.2, 0.6), (-1.0, 1.0), (-1.0, 1.0),
+           (0.1, 1.5), (-0.2, 0.5), (-1.0, 1.0), (-1.0, 1.0)],
 }
 X0 = {
     "F0": [HAND["coef_m"], HAND["thr_m"], HAND["coef_a"], HAND["thr_a"]],
