@@ -551,6 +551,42 @@ at 53.716); the local V1 −0.190 vs the mlp ship is an accepted trade for sw un
 
 ---
 
+## 10. Sequence Motion Encoder — HOTA-Direct Rescreen (2026-06-11)
+
+Motivation: 2026-06-11 survey (24/25 claims verified) found sequence-encoder-over-
+trajectory-kinematics aligned to language UNCLAIMED in 2025-26 literature; iKUN oracle
+gap (+6.13 pooled, MOVING DetRe 20.5→69.2 same tracker) is a classification deficit.
+Exp36's transformer kill was AUC-only (0.779 screen) — never HOTA-tested (§6 rule).
+
+Setup: existing `temporal_transformer` arch (CLS-token, d_model=64, 1 layer, seq_len=10)
++ NEW inference windowing in `manager.py` (commit ffc14a7) mirroring training's
+front-pad convention. Train V1 stage-1 seeds {0,1,2}; locked iKUN ship recipe
+(motion α=1.0 sc=0.9 thr=+0.17, appear α=1.0 sc=0.30 thr=+0.10, raw-cos no-EMA).
+Cache build ~22 min / 3 seqs (≤2× MLP).
+
+| seed | pooled | MOVING | STATIC | APPEAR |
+|------|--------|--------|--------|--------|
+| 0 | 44.612 | 29.655 | 44.481 | 46.628 |
+| 1 | 44.446 | 28.353 | 44.580 | 46.500 |
+| 2 | 44.641 | 29.586 | 44.556 | 46.663 |
+| **n=3** | **44.566 ± 0.105** | **29.198 ± 0.733** | **44.539 ± 0.052** | **46.597 ± 0.086** |
+
+Vs sw ship n=3 (44.634 ± 0.066 pooled; seed0 per-class STATIC 43.240 / MOVING 28.885):
+- **pooled FLAT**: Δ = −0.068, inside joint seed noise. Not a ship-swap.
+- **STATIC +~1.3 and tight** (44.539 ± 0.052 vs 43.240 seed0 sw) — sequence window
+  acts as a static-class denoiser; far outside noise.
+- **MOVING +0.31 ± 0.73, NOT significant** — seed0 screen's +0.770 was seed luck
+  (seed1 −0.53 below sw seed0). The oracle axis barely moved.
+- Caveat: ship recipe (sc/thr) was tuned on the sw cosine distribution; recipe is
+  LOCKED by protocol, so the temporal arch runs with a possibly-mismatched calibration.
+
+Verdict: sequence arch at HOTA = per-class profile shift (STATIC↑, MOVING flat), pooled
+flat. Exp36's AUC kill does NOT hold at HOTA (4th AUC-NEG→HOTA-not-NEG case), but no
+pooled win either. B2 variants (seq_len sweep, windowed-stat features targeting MOVING)
+remain the open follow-up; promotion gate (beat 44.634 ± 0.066) NOT met.
+
+---
+
 ## Key Bugs Fixed Along the Way
 
 | File | Bug | Fix |
