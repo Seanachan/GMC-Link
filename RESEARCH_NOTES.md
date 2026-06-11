@@ -582,8 +582,33 @@ Vs sw ship n=3 (44.634 ± 0.066 pooled; seed0 per-class STATIC 43.240 / MOVING 2
 
 Verdict: sequence arch at HOTA = per-class profile shift (STATIC↑, MOVING flat), pooled
 flat. Exp36's AUC kill does NOT hold at HOTA (4th AUC-NEG→HOTA-not-NEG case), but no
-pooled win either. B2 variants (seq_len sweep, windowed-stat features targeting MOVING)
-remain the open follow-up; promotion gate (beat 44.634 ± 0.066) NOT met.
+pooled win either. Promotion gate (beat 44.634 ± 0.066) NOT met.
+
+### B2 variants (2026-06-11, all seed0 screens, locked iKUN recipe)
+
+| variant | pooled | MOVING | STATIC | verdict |
+|---------|--------|--------|--------|---------|
+| temporal T=5 | 44.544 | 28.994 | 44.673 | flat |
+| temporal T=10 (ref) | 44.612 | 29.655 | 44.481 | — |
+| temporal T=20 | 44.537 | 29.635 | 43.929 | flat |
+| sw + window_stats 4D (ungated) | 44.146 | 28.207 | 41.351 | NEG (STATIC −1.9, guardrail FAIL) |
+| sw + window_stats 4D (noise-gated 0.5) | 44.094 | 28.339 | 40.953 | NEG (STATIC −2.3; gate didn't rescue) |
+
+window_stats = [mean window speed, mean-heading sin/cos, circular heading variation]
+over trailing 10 mid-scale residual steps (ReferGPT-style; turning gets distinct
+variation signature — unit-verified). First screen crashed STATIC; hypothesis was the
+static-jitter variation artifact (random noise directions → variation ≈ 1); the 0.5
+noise gate fixed the math (unit test: jitter variation 1→0) but STATIC got WORSE →
+artifact hypothesis falsified, the feature itself hurts (likely mean_speed scale
+imbalance into sw's no-input-LN trunk). 2 strikes → killed, no further HOTA-peeking
+feature iteration. Feature stays registered (default off), like other exp37 NEG extras.
+
+**Track B convergent conclusion:** MOVING signal is NOT extractable from 2D pixel-
+kinematic windows — (a) attention over raw 13D sequences flat at every T, (b) explicit
+window statistics NEG. The +6.13 oracle gap survives both window-shaped levers; whatever
+separates MOVING from STATIC per-trajectory needs information beyond windowed image-plane
+kinematics (3D motion, semantics, or tracker-noise modeling). GRU/Mamba swap over the
+same input deprioritized — same information, no reason to expect a different outcome.
 
 ---
 

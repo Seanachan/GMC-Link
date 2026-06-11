@@ -220,6 +220,7 @@ EXTRA_FEATURE_DIMS = {
     "zoned_flow_2x2": 8,       # exp37 zoned: 2x2 grid Farneback flow mean(dx,dy) per cell × 4 cells (gap=5 only)
     "zoned_flow_3x8": 48,      # exp37 zoned: 3x8 grid Farneback flow mean(dx,dy) per cell × 24 cells (gap=5 only)
     "zoned_orb_flow_3x8": 48,  # exp37 zoned-orb: 3x8 grid ORB-keypoint median(dx,dy) per cell × 24 cells (gap=5 only)
+    "window_stats": 4,         # seqB2: trailing-10-frame mid-scale window — [mean speed, mean-heading sin, cos, circular heading variation]
 }
 
 
@@ -307,7 +308,8 @@ def compute_per_track_extras(extra_features, scale_velocities, ego_dx_m=0.0,
                              omf_stats_per_scale=None,
                              zoned_flow_2x2_vec=None,
                              zoned_flow_3x8_vec=None,
-                             zoned_orb_flow_3x8_vec=None):
+                             zoned_orb_flow_3x8_vec=None,
+                             window_vel_hist=None):
     """
     Compute per-track extra features (F1-F4) from existing velocity data.
 
@@ -403,6 +405,35 @@ def compute_per_track_extras(extra_features, scale_velocities, ego_dx_m=0.0,
                 extras.extend([0.0] * 48)
             else:
                 extras.extend(float(v) for v in zoned_orb_flow_3x8_vec)
+        elif feat == "window_stats":
+            # seqB2: trailing-window trajectory summary (ReferGPT-style windowed
+            # kinematics; survey 2026-06-11). Input = list of (dx_m, dy_m)
+            # mid-scale residual velocities for the last <=10 frames INCLUDING
+            # the current one. 4D: [mean per-frame speed, mean-heading sin,
+            # mean-heading cos, circular heading variation (1-R) over moving
+            # frames]. Stationary/empty -> [0, 0, 1, 0] (atan2(0,0)=0
+            # convention, matches heading_sincos).
+            if not window_vel_hist:
+                extras.extend([0.0, 0.0, 1.0, 0.0])
+            else:
+                wv = np.asarray(window_vel_hist, dtype=np.float64)
+                speeds = np.sqrt((wv ** 2).sum(axis=1))
+                mean_speed = float(speeds.mean())
+                sum_dx, sum_dy = wv.sum(axis=0)
+                theta = np.arctan2(sum_dy, sum_dx)
+                # Noise gate: static-track jitter (~0.16 normalized units at
+                # ±2px) points in random directions -> unit vectors cancel ->
+                # variation saturates at 1, branding every parked car a turner.
+                # Real mid-scale motion is ~4 units; 0.5 sits above the noise
+                # floor and below any real mover.
+                moving = speeds > 0.5
+                if moving.any():
+                    unit = wv[moving] / speeds[moving, None]
+                    r_len = float(np.sqrt((unit.mean(axis=0) ** 2).sum()))
+                else:
+                    r_len = 1.0  # nothing (really) moved -> zero heading variation
+                extras.extend([mean_speed, float(np.sin(theta)),
+                               float(np.cos(theta)), 1.0 - r_len])
         # F5-F9 are relational — handled separately
 
     return extras
@@ -1136,7 +1167,7 @@ def _generate_positive_pairs(
                                 "accel_multiscale", "heading_sincos",
                                 "ego_velocity_concat", "omf_stats",
                                 "zoned_flow_2x2", "zoned_flow_3x8",
-                                "zoned_orb_flow_3x8")]
+                                "zoned_orb_flow_3x8", "window_stats")]
     relational_feats = [f for f in (extra_features or [])
                         if f in ("neighbor_mean_vel", "velocity_rank", "heading_diff",
                                  "nn_dist", "track_density")]
@@ -1154,6 +1185,7 @@ def _generate_positive_pairs(
     cohort_dz_ego_cache: Dict[Tuple[int, int], float] = {}
 
     needs_accel_multiscale = "accel_multiscale" in per_track_feats
+    needs_window_stats = "window_stats" in per_track_feats
     needs_omf_stats = "omf_stats" in per_track_feats
     needs_zoned_flow = "zoned_flow_2x2" in per_track_feats
     needs_zoned_flow_3x8 = "zoned_flow_3x8" in per_track_feats
@@ -1174,6 +1206,8 @@ def _generate_positive_pairs(
         sorted_frames = sorted(centroids.keys())
         # Per-track velocity history: {frame_id: [(dx,dy) per scale]}
         track_vel_hist = {} if needs_accel_multiscale else None
+        # seqB2 window_stats: trailing list of (dx_m, dy_m), trimmed to 10
+        wstat_hist = [] if needs_window_stats else None
         for i in range(len(sorted_frames)):
             curr_fid = sorted_frames[i]
 
@@ -1366,6 +1400,12 @@ def _generate_positive_pairs(
                             dz_ego = cohort_dz_ego_cache[cohort_key]
                         base_vec.append((dz_track - dz_ego) / 10.0)
 
+            # seqB2 window_stats: append current mid-scale step, trim to 10
+            if wstat_hist is not None:
+                wstat_hist.append((mid_dx, mid_dy))
+                if len(wstat_hist) > 10:
+                    del wstat_hist[0]
+
             # Per-track extras (F1-F4)
             base_vec.extend(compute_per_track_extras(
                 per_track_feats, scale_velocities,
@@ -1375,6 +1415,7 @@ def _generate_positive_pairs(
                 zoned_flow_2x2_vec=zoned_flow_vec,
                 zoned_flow_3x8_vec=zoned_flow_3x8_vec,
                 zoned_orb_flow_3x8_vec=zoned_orb_flow_3x8_vec,
+                window_vel_hist=wstat_hist,
             ))
 
             # Store for relational feature computation
@@ -1630,7 +1671,9 @@ def build_training_data(
             gid = motion_type_group(expr["sentence"])
             group_counts[gid] = group_counts.get(gid, 0) + 1
         print(f"  Motion-type groups: {len(group_counts)} — "
-              + ", ".join(f"{MOTION_TYPE_NAMES.get(g, '?')}={n}" for g, n in sorted(group_counts.items())))
+              + ", ".join(f"{MOTION_TYPE_NAMES.get(g, '?')}={n}"
+                          for g, n in sorted(group_counts.items(),
+                                             key=lambda kv: (kv[0] is None, kv[0] if kv[0] is not None else -1))))
 
     # Check if relational features need all-track neighbor context
     relational_feats = [f for f in (extra_features or [])
@@ -1759,6 +1802,8 @@ def build_training_data(
         for expr in motion_expressions:
             sentence = expr["sentence"]
             gid = motion_type_group(sentence)
+            if gid is None:
+                continue  # V2 paraphrases with no motion-type mapping (the '?' bucket)
             if 0 <= gid < len(id_to_class) and id_to_class[gid] == -1:
                 id_to_class[gid] = class_str_to_int[classify_expression(sentence)]
     else:

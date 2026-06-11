@@ -166,6 +166,8 @@ class GMCLinkManager:
         # temporal_transformer: per-track window of the last seq_len per-frame
         # motion vectors (the same vectors the MLP path consumes one at a time)
         self.sequence_history: Dict[int, deque] = {}
+        # window_stats extra: per-track trailing (dx_m, dy_m) steps (seqB2)
+        self.wstat_history: Dict[int, deque] = {}
         # Per-track scale-velocity history for accel_multiscale: {tid: [(frame_idx, scale_vels)]}
         # frame_idx is the manager's live frame counter (monotone); deque keeps last max_gap+1 entries.
         self.scale_vel_history: Dict[int, deque] = {}
@@ -444,10 +446,20 @@ class GMCLinkManager:
                 per_track_names = [
                     f for f in self.extra_features
                     if f in {"speed_m", "heading_m", "accel", "ego_motion",
-                             "accel_multiscale", "heading_sincos"}
+                             "accel_multiscale", "heading_sincos", "window_stats"}
                 ]
                 if per_track_names:
                     scale_velocities = [(dx_s, dy_s), (dx_m, dy_m), (dx_l, dy_l)]
+                    window_vel_hist = None
+                    if "window_stats" in per_track_names:
+                        # Mirror dataset.py: trailing <=10 mid-scale steps incl.
+                        # current. Peek mode (update_state=False) must not mutate.
+                        wh = self.wstat_history.setdefault(tid, deque(maxlen=10))
+                        if update_state:
+                            wh.append((dx_m, dy_m))
+                            window_vel_hist = list(wh)
+                        else:
+                            window_vel_hist = (list(wh) + [(dx_m, dy_m)])[-10:]
                     accel_per_scale = None
                     if "accel_multiscale" in per_track_names:
                         if tid not in self.scale_vel_history:
@@ -476,6 +488,7 @@ class GMCLinkManager:
                     extras = compute_per_track_extras(
                         per_track_names, scale_velocities,
                         accel_per_scale=accel_per_scale,
+                        window_vel_hist=window_vel_hist,
                     )
                     spatial_motion = np.concatenate(
                         [spatial_motion, np.array(extras, dtype=np.float32)]
@@ -662,5 +675,7 @@ class GMCLinkManager:
                     del self.scale_vel_history[d]
                 if d in self.sequence_history:
                     del self.sequence_history[d]
+                if d in self.wstat_history:
+                    del self.wstat_history[d]
 
         return scores_dict, velocities_dict, cosine_dict
