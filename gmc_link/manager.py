@@ -70,6 +70,7 @@ class GMCLinkManager:
         self.lang_passthrough = False
         self.app_proj_dim = 256
         self.architecture = "mlp"
+        self.seq_len = 10  # temporal_transformer window T (ckpt overrides)
         self.depth_ego = "cohort"  # Path B: "oxts" when ckpt trained --depth-source lidar_oxts
         checkpoint = None
         if weights_path:
@@ -94,6 +95,9 @@ class GMCLinkManager:
                 self.lang_passthrough = bool(checkpoint.get("lang_passthrough", False))
                 self.app_proj_dim = int(checkpoint.get("app_proj_dim") or 256)
                 self.architecture = str(checkpoint.get("architecture") or "mlp")
+                ckpt_seq_len = checkpoint.get("seq_len")
+                if ckpt_seq_len:
+                    self.seq_len = int(ckpt_seq_len)
                 if checkpoint.get("depth_source") == "lidar_oxts":
                     self.depth_ego = "oxts"  # Path B: GT oxts ego in the 17D depth path
 
@@ -117,6 +121,7 @@ class GMCLinkManager:
         self.aligner = MotionLanguageAligner(
             motion_dim=motion_dim, lang_dim=lang_dim, embed_dim=256,
             architecture=self.architecture,
+            seq_len=self.seq_len,
             use_clip_feat=self.use_clip_feat,
             clip_feat_dim=self.clip_feat_dim,
             clip_proj_dim=self.clip_proj_dim,
@@ -158,6 +163,9 @@ class GMCLinkManager:
         # CUMULATIVE HOMOGRAPHY: Store original coordinates (never warped)
         self.centroid_history: Dict[int, deque] = {}
         self.wh_history: Dict[int, deque] = {}
+        # temporal_transformer: per-track window of the last seq_len per-frame
+        # motion vectors (the same vectors the MLP path consumes one at a time)
+        self.sequence_history: Dict[int, deque] = {}
         # Per-track scale-velocity history for accel_multiscale: {tid: [(frame_idx, scale_vels)]}
         # frame_idx is the manager's live frame counter (monotone); deque keeps last max_gap+1 entries.
         self.scale_vel_history: Dict[int, deque] = {}
@@ -558,9 +566,33 @@ class GMCLinkManager:
             return {}, {}, {}
 
         # Align motion with language via cosine similarity
-        motion_tensor = torch.tensor(
-            np.array(compensated_velocities), dtype=torch.float32
-        ).to(self.device)
+        padding_mask = None
+        if self.architecture == "temporal_transformer":
+            # Window the per-frame vectors exactly like training's
+            # _vectors_to_sequences: last <=T frames incl. current, FRONT-padded
+            # with zeros, mask True at positions 1..n_padded (position 0 = CLS).
+            # Emits from the track's first vector on (never silent) — a 1-frame
+            # window is a valid training sample too.
+            T = self.seq_len
+            dim = compensated_velocities[0].shape[0]
+            seq_batch = np.zeros((len(track_ids), T, dim), dtype=np.float32)
+            mask_batch = np.zeros((len(track_ids), T + 1), dtype=bool)
+            for i, tid in enumerate(track_ids):
+                hist = self.sequence_history.setdefault(tid, deque(maxlen=T))
+                if update_state:
+                    hist.append(compensated_velocities[i])
+                    window = list(hist)
+                else:
+                    window = (list(hist) + [compensated_velocities[i]])[-T:]
+                n_valid = len(window)
+                seq_batch[i, T - n_valid:] = np.stack(window)
+                mask_batch[i, 1 : T - n_valid + 1] = True
+            motion_tensor = torch.tensor(seq_batch, dtype=torch.float32).to(self.device)
+            padding_mask = torch.tensor(mask_batch).to(self.device)
+        else:
+            motion_tensor = torch.tensor(
+                np.array(compensated_velocities), dtype=torch.float32
+            ).to(self.device)
 
         # Runtime CLIP B/32 forward on tracker bbox crops (Exp 39 path).
         # CLIP features are expression-independent (same frame+boxes across exprs),
@@ -579,6 +611,7 @@ class GMCLinkManager:
         with torch.no_grad():
             motion_emb, lang_emb = self.aligner.encode(
                 motion_tensor, language_embedding.to(self.device),
+                padding_mask=padding_mask,
                 clip_feats=clip_tensor,
             )
             # Case 2 fusion-transformer spike: stash per-track pre-cosine
@@ -627,5 +660,7 @@ class GMCLinkManager:
                     del self.wh_history[d]
                 if d in self.scale_vel_history:
                     del self.scale_vel_history[d]
+                if d in self.sequence_history:
+                    del self.sequence_history[d]
 
         return scores_dict, velocities_dict, cosine_dict
