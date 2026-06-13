@@ -128,3 +128,24 @@ Aligner-only search is EXHAUSTED within the locked charter. No remaining in-scop
 2. **Scope-widen**: unlock motion-feature engineering (manager.py / dataset.py 13D vector) — the only direction with real MOVING headroom. Requires charter change.
 
 Continuing the loop unchanged = re-probing bracketed axes (dropout 0.06, width 640, SiLU) at ~0 expected lift. Not recommended.
+
+## Weak-point ledger (phase-2 CONVERGED, 2026-06-14)
+
+### Phase-2 motion-feature engineering: NEG across all sync-safe families
+Best unchanged: ship `9c000d6` (Dropout 0.05 + trunk 768, 13D [2,5,10]) = 44.739. n=3 gate still owed.
+| feature | +dims | pooled | MOVING | verdict |
+|---------|-------|--------|--------|---------|
+| speed_m | 1 | 44.713 | 30.696 | DISCARD (−0.026, closest) |
+| accel | 2 | 44.685 | 30.201 | DISCARD |
+| depth (17D) | 4 | 44.675 | 30.209 | DISCARD |
+| FRAME_GAPS[2,5,15] clean | 0 | 44.597 | 29.433 | DISCARD |
+| heading_sincos | 6 | 44.523 | 29.414 | DISCARD |
+
+Plus 1 crash (expr_class.py infra, fixed) + 1 invalid (FRAME_GAPS buffer-desync confound).
+
+### Conclusion
+Monotonic dilution: pooled drop ∝ added dims; every kinematic/depth/directional/horizon signal is at-best neutral (speed_m −0.026), never positive. The 13D[2,5,10] vector is INFORMATION-SATURATED for what the aligner+fusion can exploit. neighbor-relational is the only untested family but is BLOCKED (manager has no inference-side neighbor context; adding it = major infra + desync risk).
+
+BOTH phases exhausted: aligner architecture (phase 1, 18 runs) + motion-feature representation (phase 2, 5 valid runs). The MOVING oracle gap (31→69) is classification-bound, not extractable from this 2D-trajectory+depth pipeline — matches seq-encoder + signal-decomp memos. Real headroom needs a different signal source (appearance/LVLM — both explored/NEG/blocked per memory).
+
+### Decision surfaced to user (2026-06-14): promote ship via n=3 gate / try non-sync-safe lever / stop loop.
