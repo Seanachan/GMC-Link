@@ -56,3 +56,28 @@ MOVING DetRe (oracle 20.5→69.2) is not reachable via aligner-only architectura
 1. **Dropout 0.04 at trunk 768** — finer dose-probe between known POS 0.05 and zero. May find sub-0.05 sweet spot for current width.
 2. **LeakyReLU(0.01) in trunk** — preserve signed residual-velocity activations without GELU's smoothness penalty.
 3. **Trunk depth +1 layer** (768×3 hidden) — capacity in depth instead of width. Tests whether 768 saturation is width-specific or general.
+
+## Weak-point ledger (run 17, 2026-06-13) — ALIGNER SURFACE FULLY MAPPED
+
+### Ship unchanged
+`9c000d6` = Dropout 0.05 + trunk 768 → pooled **44.739** (+0.178 vs baseline). 11 consecutive discards since. Single-seed; **n=3 STATIC≥43.2 gate NOT yet run** — required before any claim.
+
+### All axes now bracketed/DEAD (single-seed screen)
+| axis | result | peak |
+|------|--------|------|
+| trunk width | 512 (44.696) < **768 (44.739)** > 1024 (44.530 NEG) | 768 |
+| inter-layer dropout | 0.04 (44.615) < **0.05 (44.739)** > 0.07 (44.549) | 0.05 |
+| input dropout (pre-trunk) | 44.649 NEG | — |
+| activation | **ReLU** > LeakyReLU (44.636) > GELU (44.344); all smooth NEG MOVING | ReLU |
+| depth | **2 hidden** > 3 hidden (STATIC-trip NEG) | 2 |
+| norm | **output-LN** ; internal-LN 44.638 NEG / per-mod-LN 44.693 NEG / BN 43.646 NEG (train/eval shift) | output-LN only |
+| residual skip | 44.428 NEG (MOVING −1.97) | — |
+| adapter capacity | deepen 13→128→256 STATIC-trip NEG | bare Linear |
+
+### Conclusion (the answer to "what is the structure lacking")
+MOVING never broke **31.238** (7c550fe) across 11 architectural variants; oracle ceiling is 69.2. The aligner architecture sits at a tight local optimum — **±2pt swing only**. The deficit is REPRESENTATION-BOUND, not architecture-bound: it lives in the 13D motion features upstream (manager.py/dataset.py), OUTSIDE the locked alignment.py scope. No pointwise-activation / capacity / norm / reg tweak reaches it.
+
+### Next-3 (genuinely-distinct mechanisms only — near-peak dose re-probes have ~0 expected lift)
+1. **Gated FFN / GLU variant** (ReGLU: a·relu(b)) — multiplicative input-dependent gating, structurally distinct from pointwise activation. Last in-scope architectural family. ← THIS RUN
+2. **Learnable logit-scale before L2-norm** — risk: breaks fusion-recipe cos calibration; likely NEG.
+3. **SCOPE-WIDEN (out of current charter)**: motion-feature engineering in manager.py / dataset.py to break the representation ceiling. The only path with real MOVING headroom. Requires user sign-off to unlock scope.
