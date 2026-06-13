@@ -26,6 +26,13 @@ A feature change in one but not the other = silent garbage (aligner trains on X,
 RULES:
 - Any feature edit changes BOTH files together, with matching math + matching slot order.
 - `FRAME_GAPS = [2,5,10]` must match between the two (dataset.py:71, manager.py:38).
+- ⚠ CONFOUND (found run 18a3bf5): changing the LONG gap ALSO requires bumping `frame_gap` default
+  (manager.py:50, currently 10) to ≥ max(FRAME_GAPS), because it sizes `homography_buffer` +
+  `centroid_history` (maxlen=frame_gap+1) at inference. The cache builder constructs the manager with
+  the DEFAULT frame_gap (doesn't pass it), so the default must cover the longest gap. If not bumped,
+  inference can't look back far enough → long-scale velocity zero-fills → train/infer desync → MOVING
+  craters (18a3bf5: [2,5,15] w/ frame_gap=10 gave MOVING 28.2, −2.7; result INVALID not a real NEG).
+  Clean gap re-test = change FRAME_GAPS (both files) + frame_gap default (manager.py:50) together.
 - Dim change (13→N): set `motion_dim` consistently; manager reads `checkpoint["motion_dim"]` (manager.py:77),
   aligner `motion_dim` param flows from there. Verify the aligner's `motion_adapter` in-dim matches.
 - Stage ALL changed files into ONE git commit (eval reverts via `reset --hard HEAD~1` — atomic only if one commit).
