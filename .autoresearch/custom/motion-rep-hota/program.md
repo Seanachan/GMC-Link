@@ -4,8 +4,26 @@
 Maximize `pooled_hota` on `gmc_link/alignment.py`. Higher is better.
 
 ## What the Agent Can Change
-- Only `gmc_link/alignment.py` — this is the single file being optimized.
-- Everything inside that file is fair game unless constrained below.
+- **PHASE 2 (2026-06-13, scope-widened):** motion-feature engineering — the 13D motion vector.
+  Editable: `gmc_link/manager.py` (inference/cache build, vector at ~L395-414) AND
+  `gmc_link/dataset.py` (train build, `compute_motion_vector` ~L1088 + helpers). `gmc_link/alignment.py`
+  still editable (e.g. to thread a new `motion_dim`), but its architecture is EXHAUSTED (phase 1, 18 runs).
+- **PHASE 1 (converged, do not re-probe):** `gmc_link/alignment.py` aligner architecture — fully mapped,
+  ship `9c000d6` (Dropout 0.05 + trunk 768) = 44.739. All width/depth/dropout/activation/norm/residual/
+  adapter/gating axes bracketed or dead. Re-probing = ~0 expected lift.
+
+## ⚠ TRAIN/INFERENCE SYNC HAZARD (phase 2 — read every iteration)
+The 13D vector is computed in TWO places that MUST stay byte-identical:
+  1. `gmc_link/dataset.py` — TRAIN features (what the aligner learns on)
+  2. `gmc_link/manager.py` — INFERENCE features (what the GMC cache is built from)
+A feature change in one but not the other = silent garbage (aligner trains on X, scored on Y → HOTA collapse).
+RULES:
+- Any feature edit changes BOTH files together, with matching math + matching slot order.
+- `FRAME_GAPS = [2,5,10]` must match between the two (dataset.py:71, manager.py:38).
+- Dim change (13→N): set `motion_dim` consistently; manager reads `checkpoint["motion_dim"]` (manager.py:77),
+  aligner `motion_dim` param flows from there. Verify the aligner's `motion_adapter` in-dim matches.
+- Stage ALL changed files into ONE git commit (eval reverts via `reset --hard HEAD~1` — atomic only if one commit).
+- Before committing, sanity-check the two builders produce the same vector for a shared input if feasible.
 
 ## What the Agent Cannot Change
 - The evaluation script (`evaluate.py` or the eval command). It is read-only.
