@@ -161,13 +161,13 @@ class MotionLanguageAligner(nn.Module):
             self.motion_adapter = nn.Linear(adapter_in, embed_dim)
             self.lang_adapter = nn.Linear(lang_dim, embed_dim)
             self.shared_weight = nn.Sequential(
-                nn.Linear(embed_dim, 512),
+                nn.Linear(embed_dim, 768),
                 nn.ReLU(),
                 nn.Dropout(0.05),
-                nn.Linear(512, 512),
+                nn.Linear(768, 768),
                 nn.ReLU(),
                 nn.Dropout(0.05),
-                nn.Linear(512, embed_dim),
+                nn.Linear(768, embed_dim),
                 nn.LayerNorm(embed_dim),
             )
             self.out_dim = embed_dim
