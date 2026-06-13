@@ -81,3 +81,19 @@ MOVING never broke **31.238** (7c550fe) across 11 architectural variants; oracle
 1. **Gated FFN / GLU variant** (ReGLU: a·relu(b)) — multiplicative input-dependent gating, structurally distinct from pointwise activation. Last in-scope architectural family. ← THIS RUN
 2. **Learnable logit-scale before L2-norm** — risk: breaks fusion-recipe cos calibration; likely NEG.
 3. **SCOPE-WIDEN (out of current charter)**: motion-feature engineering in manager.py / dataset.py to break the representation ceiling. The only path with real MOVING headroom. Requires user sign-off to unlock scope.
+
+## Weak-point ledger (run 19, 2026-06-13) — ALIGNER SPACE CLOSED, LOOP CONVERGED
+
+### Gating family closed (the last untried mechanism)
+- 2-block ReGLU (5d863ae): NaN divergence → −100 (stability artifact, not a verdict).
+- single-block ReGLU, bounded input (8b7f806): **44.299 NEG** (STATIC 43.230 / MOVING 29.700). Clean divergence-controlled test → gating does NOT help.
+
+### Status: 13 non-improvements since ship `9c000d6` (44.739). Every aligner architectural family now bracketed or dead:
+width · depth · inter-layer dropout · input dropout · activation (ReLU/GELU/LeakyReLU) · norm (LN-out/LN-in/per-mod-LN/BN) · residual · adapter capacity · gated FFN (ReGLU).
+
+### Decision (surfaced to user)
+Aligner-only search is EXHAUSTED within the locked charter. No remaining in-scope lever has non-trivial expected lift. MOVING is representation-bound (peak 31.2 vs oracle 69.2). Two forward paths, both needing user input:
+1. **Promote**: pause loop, run manual **n=3 STATIC≥43.2 gate** on ship `9c000d6`; if it holds, it's a real +0.178 single-arch ship (Dropout 0.05 + trunk 768).
+2. **Scope-widen**: unlock motion-feature engineering (manager.py / dataset.py 13D vector) — the only direction with real MOVING headroom. Requires charter change.
+
+Continuing the loop unchanged = re-probing bracketed axes (dropout 0.06, width 640, SiLU) at ~0 expected lift. Not recommended.
