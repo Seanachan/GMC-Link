@@ -163,8 +163,10 @@ class MotionLanguageAligner(nn.Module):
             self.shared_weight = nn.Sequential(
                 nn.Linear(embed_dim, 512),
                 nn.ReLU(),
+                nn.Dropout(0.05),
                 nn.Linear(512, 512),
                 nn.ReLU(),
+                nn.Dropout(0.05),
                 nn.Linear(512, embed_dim),
                 nn.LayerNorm(embed_dim),
             )
