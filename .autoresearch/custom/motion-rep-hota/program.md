@@ -29,3 +29,30 @@ Removing code that gets same results is the best outcome.
 ## Stop When
 You don't stop. The human will interrupt you when they're satisfied.
 If no improvement in 20+ consecutive runs, change strategy drastically.
+
+## Weak-point ledger (run 10, 2026-06-13)
+
+### Ship now
+`9c000d6` = Dropout 0.05 + trunk 768 → pooled **44.739** (+0.178 vs baseline). Single-seed; n=3 STATIC≥43.2 gate not yet run.
+
+### Probed axes (DEAD = won't revisit)
+- **Width**: 512→768 POS, 768→1024 NEG. **Sweet at 768.** DEAD beyond 768 at current reg.
+- **Dropout dose at 512 trunk**: 0→0.1 (component+ pooled tied) → 0.05 (pooled +0.135). **Sweet 0.05.**
+- **Activation swap**: ReLU→GELU NEG (MOVING −0.778). DEAD smooth-activation axis.
+- **Adapter capacity**: deepen 13→128→256 MLP NEG (STATIC crash). DEAD.
+- **Per-modality LN before trunk**: NEG (MOVING −0.763 / over-normalized motion variance). DEAD.
+- **Residual skip in trunk (post-LN repositioned)**: catastrophic MOVING −1.973 (raw adapter dominates summed signal). DEAD residual-skip without scale matching.
+
+### Pattern
+- Capacity adds without reg → STATIC crash (overfit).
+- Smooth activation (GELU) → MOVING drop (loses sparse residual signal).
+- Asymmetric per-modality changes (LN, deeper adapter) → MOVING drop (over-normalizes or scale-shifts motion-distinctive features).
+- Sweet spot is **narrow** around the symmetric trunk with mild reg.
+
+### Bottleneck hypothesis
+MOVING DetRe (oracle 20.5→69.2) is not reachable via aligner-only architectural tweaks at this representational ceiling. Current 30.959 vs oracle 69.2 = 38pt gap; aligner perturbations only swing ±2pt. Real lever may be **input representation** (motion features themselves), but locked to alignment.py.
+
+### Next-3 candidate directions
+1. **Dropout 0.04 at trunk 768** — finer dose-probe between known POS 0.05 and zero. May find sub-0.05 sweet spot for current width.
+2. **LeakyReLU(0.01) in trunk** — preserve signed residual-velocity activations without GELU's smoothness penalty.
+3. **Trunk depth +1 layer** (768×3 hidden) — capacity in depth instead of width. Tests whether 768 saturation is width-specific or general.
