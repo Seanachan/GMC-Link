@@ -8,6 +8,12 @@ Maximize `pooled_hota` on `gmc_link/alignment.py`. Higher is better.
   Editable: `gmc_link/manager.py` (inference/cache build, vector at ~L395-414) AND
   `gmc_link/dataset.py` (train build, `compute_motion_vector` ~L1088 + helpers). `gmc_link/alignment.py`
   still editable (e.g. to thread a new `motion_dim`), but its architecture is EXHAUSTED (phase 1, 18 runs).
+  ALSO editable: `gmc_link/train.py` — holds the base-13 constant + `motion_dim = 13 + compute_extra_dims(...)`
+  (L480) + the `--extra-features` argparse default (L589). The eval runs train with NO feature flag, so a
+  feature is enabled by changing that default. Checkpoint carries `extra_features` + `motion_dim`
+  (train.py:535-536); manager.py:78 + the cache builder read them back → enabling at train auto-syncs
+  inference. Existing per-track extras share `compute_per_track_extras` (dataset.py:305) — math identical
+  in train + inference by construction. NEVER touch run_*.py (eval/cache scripts) or the fusion recipe.
 - **PHASE 1 (converged, do not re-probe):** `gmc_link/alignment.py` aligner architecture — fully mapped,
   ship `9c000d6` (Dropout 0.05 + trunk 768) = 44.739. All width/depth/dropout/activation/norm/residual/
   adapter/gating axes bracketed or dead. Re-probing = ~0 expected lift.
