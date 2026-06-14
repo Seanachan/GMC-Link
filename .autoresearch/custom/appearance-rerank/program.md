@@ -49,3 +49,16 @@ Cross-host: rerank is iKUN-only, deficit-conditional (FH V2 NEG — no appearanc
 
 ## Stop When
 Human interrupts, or no improvement in 15+ consecutive runs (subset space is finite ~46 candidates).
+
+## Ledger (CONVERGED, 2026-06-14) — subset expansion exhausted
+Best = `3a32819` pooled **45.241** single-seed (seed posqual-34 + silver-2 + back-to-camera-4 = 36 active exprs), +0.152 over 34-expr baseline 45.089.
+All catastrophic-46 + color-18 candidates tested:
+| candidate group | type | Δ pooled | verdict |
+|-----------------|------|----------|---------|
+| silver (cars/vehicles-in-silver) | rare color | +0.148 | KEEP — the win |
+| back-to-the-camera ×4 | pedestrian orientation | +0.004 | KEEP (noise-level) |
+| carrying/holding-a-bag ×2 | fine-action object | 0.000 | DISCARD (neutral) |
+| in-front-of-ours ×2 | center-cx geometry | 0.000 | DISCARD (neutral) |
+| horizon-direction ×2 | directional | −0.047 | DISCARD (mild FP-flood) |
+
+Conclusion: only rare-color (silver) exprs were genuinely mis-admitted + CLIP-L/14-separable. Pedestrian-fine ≈ neutral; geometry/directional position-blind → neutral/NEG (crop-CLIP can't see position/direction; matches `project_range_rerank_falsified`). Pool exhausted → cron 471c4f40 KILLED. Real deliverable = n=3 + stack (rerank ⊕ Path B) re-confirm of the 36-expr subset before any claim.
