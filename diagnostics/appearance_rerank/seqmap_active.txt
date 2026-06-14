@@ -32,3 +32,5 @@
 0013+people-in-the-right
 0013+persons-in-the-right
 0013+women-in-the-right
+0005+cars-in-silver
+0005+vehicles-in-silver
