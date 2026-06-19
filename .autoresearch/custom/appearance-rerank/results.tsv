@@ -1,0 +1,7 @@
+commit	metric	status	description
+5e56abb	45.089000	keep	baseline posqual 34-expr subset (CLIP-L/14 spatial rerank on ship GMC, single-seed)
+f885b74	45.237000	keep	diagnostics/appearance_rerank/seqmap_active.txt | 
+3a32819	45.241000	keep	diagnostics/appearance_rerank/seqmap_active.txt | 
+cc01ce8	45.241000	discard	no_improvement_45.2410_vs_45.2410
+ab2990e	45.241000	discard	no_improvement_45.2410_vs_45.2410
+53b1dc6	45.194000	discard	no_improvement_45.1940_vs_45.2410

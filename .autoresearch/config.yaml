@@ -1,0 +1,4 @@
+# autoresearch global config
+default_time_budget_minutes: 5
+default_scope: project
+dashboard_format: markdown

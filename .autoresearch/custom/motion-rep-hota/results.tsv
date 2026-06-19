@@ -1,0 +1,27 @@
+commit	metric	status	description
+f572ee4	44.561000	keep	baseline unmodified shared_weight aligner (pooled 44.561 / STATIC 43.240 / MOVING 28.885)
+0ac70a8	-55.779000	discard	no_improvement_-55.7790_vs_44.5610
+68c2779	44.344000	discard	no_improvement_44.3440_vs_44.5610
+a2e9746	-55.687000	discard	no_improvement_-55.6870_vs_44.5610
+ed8f1a3	44.552000	discard	no_improvement_44.5520_vs_44.5610
+7c550fe	44.696000	keep	.autoresearch/custom/motion-rep-hota/config.cfg | 
+9c000d6	44.739000	keep	gmc_link/alignment.py | 6 +++---
+b44e1fa	44.530000	discard	no_improvement_44.5300_vs_44.7390
+16072e0	44.693000	discard	no_improvement_44.6930_vs_44.7390
+3021a62	44.428000	discard	no_improvement_44.4280_vs_44.7390
+b8cc20f	44.636000	discard	no_improvement_44.6360_vs_44.7390
+ea0e553	-55.611000	discard	no_improvement_-55.6110_vs_44.7390
+efdb7be	44.549000	discard	no_improvement_44.5490_vs_44.7390
+67cdc93	44.615000	discard	no_improvement_44.6150_vs_44.7390
+eed4d55	44.638000	discard	no_improvement_44.6380_vs_44.7390
+964760f	44.649000	discard	no_improvement_44.6490_vs_44.7390
+28ccbb0	43.646000	discard	no_improvement_43.6460_vs_44.7390
+5d863ae	-100.000000	discard	no_improvement_-100.0000_vs_44.7390
+8b7f806	44.299000	discard	no_improvement_44.2990_vs_44.7390
+a927ed1	N/A	crash	exit_1
+61ca16e	44.685000	discard	no_improvement_44.6850_vs_44.7390
+a31783b	44.675000	discard	no_improvement_44.6750_vs_44.7390
+18a3bf5	44.405000	discard	no_improvement_44.4050_vs_44.7390
+1e44c7e	44.597000	discard	no_improvement_44.5970_vs_44.7390
+ec93b1b	44.713000	discard	no_improvement_44.7130_vs_44.7390
+8ad7a3d	44.523000	discard	no_improvement_44.5230_vs_44.7390

@@ -251,6 +251,9 @@ gmc_link/depth_cache/
 
 # GMC score caches (derived from weights, reproducible)
 gmc_link/gmc_scores_*.json
+# Appearance rerank + CLIP-logit caches (reproducible from build_rerank_caches.py)
+gmc_link/rerank_clipL14_*_cache.json
+gmc_link/clip_logit_*_cache.json
 results/*.tsv
 
 # iKUN-V2 derived artifacts (reproducible from run_v2_inference + GT-shift scripts)
