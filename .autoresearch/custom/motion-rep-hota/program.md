@@ -149,3 +149,24 @@ Monotonic dilution: pooled drop ∝ added dims; every kinematic/depth/directiona
 BOTH phases exhausted: aligner architecture (phase 1, 18 runs) + motion-feature representation (phase 2, 5 valid runs). The MOVING oracle gap (31→69) is classification-bound, not extractable from this 2D-trajectory+depth pipeline — matches seq-encoder + signal-decomp memos. Real headroom needs a different signal source (appearance/LVLM — both explored/NEG/blocked per memory).
 
 ### Decision surfaced to user (2026-06-14): promote ship via n=3 gate / try non-sync-safe lever / stop loop.
+
+## Weak-point ledger (2026-06-21) — NEIGHBOR-RELATIONAL TESTED, NEG. LOOP FULLY EXHAUSTED.
+
+### velocity_rank (the last untested family) = NEG
+Wired `velocity_rank` (1-dim: fraction of same-frame neighbors slower than me; moving-among-parked
+ranks high, parked-among-traffic low) into BOTH builders. Correction to the 2026-06-14 note: manager
+DOES have neighbor context — `active_tracks` passed to `process_frame` IS the full frame (cache builder
+feeds every detection). Train infra (`compute_relational_extras`, `_extract_all_track_centroids`) already
+existed; manager wiring was ~15 lines (post-loop concat mirroring the depth path), NOT "major infra".
+- **Result: pooled 44.440 = −0.121 vs unmod baseline 44.561, −0.299 vs ship 9c000d6 44.739. DISCARD.**
+- Harness emitted a FALSE "KEEP" — results.tsv history was absent on this branch → Best=None → any valid
+  number kept. Corrected: reverted commit 0f606ae (`reset --hard`), results.tsv row fixed to discard.
+- Soft-desync (expected, contributes to the drop): train neighbors = GT all-tracks vs inference
+  neighbors = NeuralSORT detections → velocity_rank distribution differs train↔infer.
+
+### Conclusion: ALL motion-feature families now closed.
+Magnitude/kinematic/depth/directional/horizon (2026-06-14) + neighbor-relational (today), every one ≤0,
+monotonic dilution holds. The 13D[2,5,10] vector is information-saturated; the MOVING oracle gap is
+classification-bound, not extractable from this 2D-trajectory pipeline. Aligner arch (phase 1) +
+motion features (phase 2) BOTH exhausted. No in-charter lever remains. Loop stopped 2026-06-21.
+Owed before any ship claim: n=3 STATIC≥43.2 gate on 9c000d6 (44.739 single-seed, +0.178).
