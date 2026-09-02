@@ -1,0 +1,1216 @@
+{
+ "protocol": "ego = mean px displacement of a 16x8 road-band grid under the road homography per adjacent pair, averaged over the expression's GT frames; gain = per-expr HOTA (ship am1.0_aa0.1 n=3 mean) - native; TrackEval pedestrian_detailed.csv rows",
+ "n_rows": 150,
+ "spearman_moving": {
+  "rho": 0.41,
+  "p": 0.0648,
+  "n": 21
+ },
+ "spearman_all": {
+  "rho": 0.121,
+  "p": 0.141,
+  "n": 150
+ },
+ "rows": [
+  {
+   "expr": "0005+black-cars-in-the-left",
+   "class": "APPEARANCE",
+   "ego_px": 51.919,
+   "native": 45.40394082496802,
+   "ship": 45.751,
+   "gain": 0.347
+  },
+  {
+   "expr": "0005+black-vehicles-in-the-left",
+   "class": "APPEARANCE",
+   "ego_px": 51.919,
+   "native": 45.40394082496802,
+   "ship": 45.867,
+   "gain": 0.463
+  },
+  {
+   "expr": "0005+cars-in-black",
+   "class": "APPEARANCE",
+   "ego_px": 52.218,
+   "native": 68.9382035610115,
+   "ship": 68.969,
+   "gain": 0.031
+  },
+  {
+   "expr": "0005+cars-in-front-of-ours",
+   "class": "APPEARANCE",
+   "ego_px": 52.218,
+   "native": 0.0,
+   "ship": 0.0,
+   "gain": 0.0
+  },
+  {
+   "expr": "0005+cars-in-left",
+   "class": "APPEARANCE",
+   "ego_px": 52.225,
+   "native": 51.25412671853524,
+   "ship": 51.325,
+   "gain": 0.071
+  },
+  {
+   "expr": "0005+cars-in-light-color",
+   "class": "APPEARANCE",
+   "ego_px": 50.74,
+   "native": 56.37023739613196,
+   "ship": 56.5,
+   "gain": 0.129
+  },
+  {
+   "expr": "0005+cars-in-right",
+   "class": "APPEARANCE",
+   "ego_px": 35.896,
+   "native": 35.002391429049915,
+   "ship": 35.462,
+   "gain": 0.46
+  },
+  {
+   "expr": "0005+cars-in-silver",
+   "class": "APPEARANCE",
+   "ego_px": 49.34,
+   "native": 8.477683139719904,
+   "ship": 10.078,
+   "gain": 1.6
+  },
+  {
+   "expr": "0005+cars-in-the-counter-direction-of-ours",
+   "class": "APPEARANCE",
+   "ego_px": 54.045,
+   "native": 49.18576838346385,
+   "ship": 49.359,
+   "gain": 0.174
+  },
+  {
+   "expr": "0005+cars-in-the-same-direction-of-ours",
+   "class": "APPEARANCE",
+   "ego_px": 52.218,
+   "native": 61.7784458142053,
+   "ship": 61.85,
+   "gain": 0.072
+  },
+  {
+   "expr": "0005+counter-direction-cars-in-the-left",
+   "class": "APPEARANCE",
+   "ego_px": 54.196,
+   "native": 45.885109489274754,
+   "ship": 46.079,
+   "gain": 0.194
+  },
+  {
+   "expr": "0005+counter-direction-vehicles-in-the-left",
+   "class": "APPEARANCE",
+   "ego_px": 54.196,
+   "native": 45.885109489274754,
+   "ship": 46.079,
+   "gain": 0.194
+  },
+  {
+   "expr": "0005+left-cars-in-black",
+   "class": "APPEARANCE",
+   "ego_px": 51.919,
+   "native": 43.297104021849776,
+   "ship": 43.544,
+   "gain": 0.247
+  },
+  {
+   "expr": "0005+left-cars-in-light-color",
+   "class": "APPEARANCE",
+   "ego_px": 51.794,
+   "native": 50.372856201853224,
+   "ship": 50.452,
+   "gain": 0.079
+  },
+  {
+   "expr": "0005+left-cars-in-silver",
+   "class": "APPEARANCE",
+   "ego_px": 50.794,
+   "native": 4.920512539744924,
+   "ship": 9.059,
+   "gain": 4.138
+  },
+  {
+   "expr": "0005+left-cars-in-the-counter-direction-of-ours",
+   "class": "APPEARANCE",
+   "ego_px": 54.196,
+   "native": 45.885109489274754,
+   "ship": 46.031,
+   "gain": 0.145
+  },
+  {
+   "expr": "0005+left-cars-in-the-same-direction-of-ours",
+   "class": "APPEARANCE",
+   "ego_px": 58.096,
+   "native": 0.0,
+   "ship": 0.0,
+   "gain": 0.0
+  },
+  {
+   "expr": "0005+left-cars-which-are-parking",
+   "class": "STATIC",
+   "ego_px": 42.397,
+   "native": 18.435941560215117,
+   "ship": 21.353,
+   "gain": 2.917
+  },
+  {
+   "expr": "0005+left-vehicles-in-black",
+   "class": "APPEARANCE",
+   "ego_px": 51.919,
+   "native": 43.297104021849776,
+   "ship": 43.544,
+   "gain": 0.247
+  },
+  {
+   "expr": "0005+left-vehicles-in-light-color",
+   "class": "APPEARANCE",
+   "ego_px": 51.794,
+   "native": 50.372856201853224,
+   "ship": 50.375,
+   "gain": 0.002
+  },
+  {
+   "expr": "0005+left-vehicles-in-silver",
+   "class": "APPEARANCE",
+   "ego_px": 50.794,
+   "native": 4.920512539744924,
+   "ship": 7.055,
+   "gain": 2.134
+  },
+  {
+   "expr": "0005+left-vehicles-in-the-counter-direction-of-ours",
+   "class": "APPEARANCE",
+   "ego_px": 54.196,
+   "native": 45.885109489274754,
+   "ship": 46.039,
+   "gain": 0.154
+  },
+  {
+   "expr": "0005+left-vehicles-in-the-same-direction-of-ours",
+   "class": "APPEARANCE",
+   "ego_px": 58.096,
+   "native": 0.0,
+   "ship": 0.0,
+   "gain": 0.0
+  },
+  {
+   "expr": "0005+left-vehicles-which-are-parking",
+   "class": "STATIC",
+   "ego_px": 42.397,
+   "native": 18.435941560215117,
+   "ship": 21.349,
+   "gain": 2.913
+  },
+  {
+   "expr": "0005+light-color-cars-in-the-left",
+   "class": "APPEARANCE",
+   "ego_px": 51.794,
+   "native": 47.489120414595625,
+   "ship": 47.258,
+   "gain": -0.231
+  },
+  {
+   "expr": "0005+light-color-cars-in-the-right",
+   "class": "APPEARANCE",
+   "ego_px": 36.218,
+   "native": 0.0,
+   "ship": 0.0,
+   "gain": 0.0
+  },
+  {
+   "expr": "0005+light-color-vehicles-in-the-left",
+   "class": "APPEARANCE",
+   "ego_px": 51.794,
+   "native": 47.489120414595625,
+   "ship": 47.144,
+   "gain": -0.345
+  },
+  {
+   "expr": "0005+light-color-vehicles-in-the-right",
+   "class": "APPEARANCE",
+   "ego_px": 36.218,
+   "native": 0.0,
+   "ship": 0.0,
+   "gain": 0.0
+  },
+  {
+   "expr": "0005+moving-cars",
+   "class": "MOVING",
+   "ego_px": 52.218,
+   "native": 44.33298993064073,
+   "ship": 56.661,
+   "gain": 12.328
+  },
+  {
+   "expr": "0005+moving-vehicles",
+   "class": "MOVING",
+   "ego_px": 52.218,
+   "native": 44.33298993064073,
+   "ship": 56.661,
+   "gain": 12.328
+  },
+  {
+   "expr": "0005+right-cars-in-light-color",
+   "class": "APPEARANCE",
+   "ego_px": 36.218,
+   "native": 5.238133569348217,
+   "ship": 5.238,
+   "gain": 0.0
+  },
+  {
+   "expr": "0005+right-cars-in-silver",
+   "class": "APPEARANCE",
+   "ego_px": 35.896,
+   "native": 0.0,
+   "ship": 0.0,
+   "gain": 0.0
+  },
+  {
+   "expr": "0005+right-vehicles-in-light-color",
+   "class": "APPEARANCE",
+   "ego_px": 36.218,
+   "native": 5.238133569348217,
+   "ship": 5.238,
+   "gain": 0.0
+  },
+  {
+   "expr": "0005+right-vehicles-in-silver",
+   "class": "APPEARANCE",
+   "ego_px": 35.896,
+   "native": 0.0,
+   "ship": 0.0,
+   "gain": 0.0
+  },
+  {
+   "expr": "0005+same-direction-cars-in-the-left",
+   "class": "APPEARANCE",
+   "ego_px": 58.096,
+   "native": 0.0,
+   "ship": 0.0,
+   "gain": 0.0
+  },
+  {
+   "expr": "0005+same-direction-vehicles-in-the-left",
+   "class": "APPEARANCE",
+   "ego_px": 58.096,
+   "native": 0.0,
+   "ship": 0.0,
+   "gain": 0.0
+  },
+  {
+   "expr": "0005+silver-cars-in-right",
+   "class": "APPEARANCE",
+   "ego_px": 35.896,
+   "native": 0.0,
+   "ship": 0.0,
+   "gain": 0.0
+  },
+  {
+   "expr": "0005+silver-cars-in-the-left",
+   "class": "APPEARANCE",
+   "ego_px": 50.794,
+   "native": 0.18828912457313657,
+   "ship": 0.356,
+   "gain": 0.167
+  },
+  {
+   "expr": "0005+silver-vehicles-in-right",
+   "class": "APPEARANCE",
+   "ego_px": 35.896,
+   "native": 0.0,
+   "ship": 0.0,
+   "gain": 0.0
+  },
+  {
+   "expr": "0005+silver-vehicles-in-the-left",
+   "class": "APPEARANCE",
+   "ego_px": 50.794,
+   "native": 0.18828912457313657,
+   "ship": 0.356,
+   "gain": 0.167
+  },
+  {
+   "expr": "0005+vehicles-in-black",
+   "class": "APPEARANCE",
+   "ego_px": 52.218,
+   "native": 68.9382035610115,
+   "ship": 68.954,
+   "gain": 0.015
+  },
+  {
+   "expr": "0005+vehicles-in-front-of-ours",
+   "class": "APPEARANCE",
+   "ego_px": 52.218,
+   "native": 0.0,
+   "ship": 0.0,
+   "gain": 0.0
+  },
+  {
+   "expr": "0005+vehicles-in-left",
+   "class": "APPEARANCE",
+   "ego_px": 52.225,
+   "native": 51.25412671853524,
+   "ship": 51.311,
+   "gain": 0.056
+  },
+  {
+   "expr": "0005+vehicles-in-light-color",
+   "class": "APPEARANCE",
+   "ego_px": 50.74,
+   "native": 56.37023739613196,
+   "ship": 56.537,
+   "gain": 0.167
+  },
+  {
+   "expr": "0005+vehicles-in-right",
+   "class": "APPEARANCE",
+   "ego_px": 35.896,
+   "native": 35.002391429049915,
+   "ship": 35.462,
+   "gain": 0.46
+  },
+  {
+   "expr": "0005+vehicles-in-silver",
+   "class": "APPEARANCE",
+   "ego_px": 49.34,
+   "native": 8.477683139719904,
+   "ship": 10.296,
+   "gain": 1.818
+  },
+  {
+   "expr": "0005+vehicles-in-the-counter-direction-of-ours",
+   "class": "APPEARANCE",
+   "ego_px": 54.045,
+   "native": 49.18576838346385,
+   "ship": 49.359,
+   "gain": 0.174
+  },
+  {
+   "expr": "0005+vehicles-in-the-same-direction-of-ours",
+   "class": "APPEARANCE",
+   "ego_px": 52.218,
+   "native": 61.7784458142053,
+   "ship": 61.85,
+   "gain": 0.072
+  },
+  {
+   "expr": "0011+black-cars-in-right",
+   "class": "APPEARANCE",
+   "ego_px": 22.962,
+   "native": 0.0,
+   "ship": 0.0,
+   "gain": 0.0
+  },
+  {
+   "expr": "0011+black-cars-in-the-left",
+   "class": "APPEARANCE",
+   "ego_px": 22.105,
+   "native": 50.24700990203452,
+   "ship": 50.506,
+   "gain": 0.259
+  },
+  {
+   "expr": "0011+black-vehicles-in-right",
+   "class": "APPEARANCE",
+   "ego_px": 22.962,
+   "native": 0.0,
+   "ship": 0.0,
+   "gain": 0.0
+  },
+  {
+   "expr": "0011+black-vehicles-in-the-left",
+   "class": "APPEARANCE",
+   "ego_px": 22.105,
+   "native": 50.24700990203452,
+   "ship": 50.509,
+   "gain": 0.262
+  },
+  {
+   "expr": "0011+cars-in-black",
+   "class": "APPEARANCE",
+   "ego_px": 24.008,
+   "native": 47.397271190804894,
+   "ship": 47.42,
+   "gain": 0.023
+  },
+  {
+   "expr": "0011+cars-in-left",
+   "class": "APPEARANCE",
+   "ego_px": 23.574,
+   "native": 56.26078168407722,
+   "ship": 56.287,
+   "gain": 0.026
+  },
+  {
+   "expr": "0011+cars-in-light-color",
+   "class": "APPEARANCE",
+   "ego_px": 23.205,
+   "native": 45.0498768866067,
+   "ship": 45.285,
+   "gain": 0.235
+  },
+  {
+   "expr": "0011+cars-in-right",
+   "class": "APPEARANCE",
+   "ego_px": 23.307,
+   "native": 40.01496180043909,
+   "ship": 40.043,
+   "gain": 0.028
+  },
+  {
+   "expr": "0011+cars-in-the-counter-direction-of-ours",
+   "class": "APPEARANCE",
+   "ego_px": 23.574,
+   "native": 57.707004554224554,
+   "ship": 57.735,
+   "gain": 0.028
+  },
+  {
+   "expr": "0011+cars-in-the-same-direction-of-ours",
+   "class": "APPEARANCE",
+   "ego_px": 22.675,
+   "native": 48.45111572640796,
+   "ship": 48.418,
+   "gain": -0.033
+  },
+  {
+   "expr": "0011+cars-in-white",
+   "class": "APPEARANCE",
+   "ego_px": 30.772,
+   "native": 39.203240288556955,
+   "ship": 38.71,
+   "gain": -0.493
+  },
+  {
+   "expr": "0011+cars-which-are-faster-than-ours",
+   "class": "APPEARANCE",
+   "ego_px": 24.533,
+   "native": 0.0,
+   "ship": 0.0,
+   "gain": 0.0
+  },
+  {
+   "expr": "0011+counter-direction-cars-in-the-left",
+   "class": "APPEARANCE",
+   "ego_px": 23.574,
+   "native": 58.60273463006544,
+   "ship": 58.603,
+   "gain": 0.0
+  },
+  {
+   "expr": "0011+counter-direction-vehicles-in-the-left",
+   "class": "APPEARANCE",
+   "ego_px": 23.574,
+   "native": 58.60273463006544,
+   "ship": 58.603,
+   "gain": 0.0
+  },
+  {
+   "expr": "0011+left-cars-in-black",
+   "class": "APPEARANCE",
+   "ego_px": 22.105,
+   "native": 52.35704976550283,
+   "ship": 51.805,
+   "gain": -0.552
+  },
+  {
+   "expr": "0011+left-cars-in-light-color",
+   "class": "APPEARANCE",
+   "ego_px": 23.52,
+   "native": 56.0606310425336,
+   "ship": 55.733,
+   "gain": -0.328
+  },
+  {
+   "expr": "0011+left-cars-in-the-counter-direction-of-ours",
+   "class": "APPEARANCE",
+   "ego_px": 23.574,
+   "native": 58.544202739914866,
+   "ship": 58.544,
+   "gain": 0.0
+  },
+  {
+   "expr": "0011+left-cars-in-white",
+   "class": "APPEARANCE",
+   "ego_px": 33.346,
+   "native": 33.50422316911326,
+   "ship": 33.206,
+   "gain": -0.298
+  },
+  {
+   "expr": "0011+left-cars-which-are-parking",
+   "class": "STATIC",
+   "ego_px": 23.574,
+   "native": 51.34699529134769,
+   "ship": 51.48,
+   "gain": 0.133
+  },
+  {
+   "expr": "0011+left-vehicles-in-black",
+   "class": "APPEARANCE",
+   "ego_px": 22.105,
+   "native": 52.35704976550283,
+   "ship": 51.741,
+   "gain": -0.616
+  },
+  {
+   "expr": "0011+left-vehicles-in-light-color",
+   "class": "APPEARANCE",
+   "ego_px": 23.52,
+   "native": 56.0606310425336,
+   "ship": 55.862,
+   "gain": -0.199
+  },
+  {
+   "expr": "0011+left-vehicles-in-the-counter-direction-of-ours",
+   "class": "APPEARANCE",
+   "ego_px": 23.574,
+   "native": 58.544202739914866,
+   "ship": 58.544,
+   "gain": 0.0
+  },
+  {
+   "expr": "0011+left-vehicles-in-white",
+   "class": "APPEARANCE",
+   "ego_px": 33.346,
+   "native": 33.50422316911326,
+   "ship": 33.252,
+   "gain": -0.252
+  },
+  {
+   "expr": "0011+left-vehicles-which-are-parking",
+   "class": "STATIC",
+   "ego_px": 23.574,
+   "native": 51.34699529134769,
+   "ship": 51.48,
+   "gain": 0.133
+  },
+  {
+   "expr": "0011+light-color-cars-in-the-left",
+   "class": "APPEARANCE",
+   "ego_px": 23.52,
+   "native": 51.99655857775317,
+   "ship": 53.014,
+   "gain": 1.017
+  },
+  {
+   "expr": "0011+light-color-cars-in-the-right",
+   "class": "APPEARANCE",
+   "ego_px": 21.919,
+   "native": 0.0,
+   "ship": 0.0,
+   "gain": 0.0
+  },
+  {
+   "expr": "0011+light-color-vehicles-in-the-left",
+   "class": "APPEARANCE",
+   "ego_px": 23.52,
+   "native": 51.99655857775317,
+   "ship": 53.4,
+   "gain": 1.403
+  },
+  {
+   "expr": "0011+light-color-vehicles-in-the-right",
+   "class": "APPEARANCE",
+   "ego_px": 21.919,
+   "native": 0.0,
+   "ship": 0.0,
+   "gain": 0.0
+  },
+  {
+   "expr": "0011+moving-cars",
+   "class": "MOVING",
+   "ego_px": 22.854,
+   "native": 27.13286719802092,
+   "ship": 40.451,
+   "gain": 13.318
+  },
+  {
+   "expr": "0011+moving-pedestrian",
+   "class": "MOVING",
+   "ego_px": 17.161,
+   "native": 0.0,
+   "ship": 0.0,
+   "gain": 0.0
+  },
+  {
+   "expr": "0011+moving-vehicles",
+   "class": "MOVING",
+   "ego_px": 22.854,
+   "native": 27.13286719802092,
+   "ship": 40.474,
+   "gain": 13.341
+  },
+  {
+   "expr": "0011+parking-cars",
+   "class": "STATIC",
+   "ego_px": 23.091,
+   "native": 48.332929208751544,
+   "ship": 48.263,
+   "gain": -0.07
+  },
+  {
+   "expr": "0011+parking-vehicles",
+   "class": "STATIC",
+   "ego_px": 23.091,
+   "native": 48.332929208751544,
+   "ship": 48.265,
+   "gain": -0.068
+  },
+  {
+   "expr": "0011+pedestrian",
+   "class": "APPEARANCE",
+   "ego_px": 16.587,
+   "native": 36.32575579146102,
+   "ship": 35.764,
+   "gain": -0.561
+  },
+  {
+   "expr": "0011+pedestrian-who-are-walking",
+   "class": "MOVING",
+   "ego_px": 17.161,
+   "native": 0.0,
+   "ship": 0.377,
+   "gain": 0.377
+  },
+  {
+   "expr": "0011+people",
+   "class": "APPEARANCE",
+   "ego_px": 16.587,
+   "native": 36.32575579146102,
+   "ship": 36.005,
+   "gain": -0.32
+  },
+  {
+   "expr": "0011+people-who-are-walking",
+   "class": "MOVING",
+   "ego_px": 17.161,
+   "native": 0.0,
+   "ship": 0.0,
+   "gain": 0.0
+  },
+  {
+   "expr": "0011+persons",
+   "class": "APPEARANCE",
+   "ego_px": 16.587,
+   "native": 36.32575579146102,
+   "ship": 35.804,
+   "gain": -0.521
+  },
+  {
+   "expr": "0011+persons-who-are-walking",
+   "class": "MOVING",
+   "ego_px": 17.161,
+   "native": 0.0,
+   "ship": 0.0,
+   "gain": 0.0
+  },
+  {
+   "expr": "0011+right-cars-in-black",
+   "class": "APPEARANCE",
+   "ego_px": 22.962,
+   "native": 7.81262945841433,
+   "ship": 8.277,
+   "gain": 0.464
+  },
+  {
+   "expr": "0011+right-cars-in-light-color",
+   "class": "APPEARANCE",
+   "ego_px": 21.919,
+   "native": 2.7149622379575025,
+   "ship": 3.816,
+   "gain": 1.101
+  },
+  {
+   "expr": "0011+right-cars-in-white",
+   "class": "APPEARANCE",
+   "ego_px": 17.185,
+   "native": 0.0,
+   "ship": 0.0,
+   "gain": 0.0
+  },
+  {
+   "expr": "0011+right-cars-which-are-parking",
+   "class": "STATIC",
+   "ego_px": 22.975,
+   "native": 37.025814696942035,
+   "ship": 40.464,
+   "gain": 3.438
+  },
+  {
+   "expr": "0011+right-vehicles-in-black",
+   "class": "APPEARANCE",
+   "ego_px": 22.962,
+   "native": 7.81262945841433,
+   "ship": 9.131,
+   "gain": 1.318
+  },
+  {
+   "expr": "0011+right-vehicles-in-light-color",
+   "class": "APPEARANCE",
+   "ego_px": 21.919,
+   "native": 2.7149622379575025,
+   "ship": 3.816,
+   "gain": 1.101
+  },
+  {
+   "expr": "0011+right-vehicles-in-white",
+   "class": "APPEARANCE",
+   "ego_px": 17.185,
+   "native": 0.0,
+   "ship": 0.0,
+   "gain": 0.0
+  },
+  {
+   "expr": "0011+right-vehicles-which-are-parking",
+   "class": "STATIC",
+   "ego_px": 22.975,
+   "native": 37.025814696942035,
+   "ship": 40.434,
+   "gain": 3.408
+  },
+  {
+   "expr": "0011+turning-cars",
+   "class": "APPEARANCE",
+   "ego_px": 29.81,
+   "native": 0.0,
+   "ship": 0.0,
+   "gain": 0.0
+  },
+  {
+   "expr": "0011+turning-vehicles",
+   "class": "APPEARANCE",
+   "ego_px": 29.81,
+   "native": 0.0,
+   "ship": 0.0,
+   "gain": 0.0
+  },
+  {
+   "expr": "0011+vehicles-in-black",
+   "class": "APPEARANCE",
+   "ego_px": 24.008,
+   "native": 47.397271190804894,
+   "ship": 47.349,
+   "gain": -0.048
+  },
+  {
+   "expr": "0011+vehicles-in-left",
+   "class": "APPEARANCE",
+   "ego_px": 23.574,
+   "native": 56.26078168407722,
+   "ship": 56.282,
+   "gain": 0.022
+  },
+  {
+   "expr": "0011+vehicles-in-light-color",
+   "class": "APPEARANCE",
+   "ego_px": 23.205,
+   "native": 45.0498768866067,
+   "ship": 45.213,
+   "gain": 0.163
+  },
+  {
+   "expr": "0011+vehicles-in-right",
+   "class": "APPEARANCE",
+   "ego_px": 23.307,
+   "native": 40.01496180043909,
+   "ship": 40.043,
+   "gain": 0.028
+  },
+  {
+   "expr": "0011+vehicles-in-the-counter-direction-of-ours",
+   "class": "APPEARANCE",
+   "ego_px": 23.574,
+   "native": 57.707004554224554,
+   "ship": 57.735,
+   "gain": 0.028
+  },
+  {
+   "expr": "0011+vehicles-in-the-same-direction-of-ours",
+   "class": "APPEARANCE",
+   "ego_px": 22.675,
+   "native": 48.45111572640796,
+   "ship": 48.418,
+   "gain": -0.033
+  },
+  {
+   "expr": "0011+vehicles-in-white",
+   "class": "APPEARANCE",
+   "ego_px": 30.772,
+   "native": 39.203240288556955,
+   "ship": 38.82,
+   "gain": -0.383
+  },
+  {
+   "expr": "0011+vehicles-which-are-faster-than-ours",
+   "class": "APPEARANCE",
+   "ego_px": 24.533,
+   "native": 0.0,
+   "ship": 0.0,
+   "gain": 0.0
+  },
+  {
+   "expr": "0011+walking-pedestrian",
+   "class": "MOVING",
+   "ego_px": 17.161,
+   "native": 0.0,
+   "ship": 7.085,
+   "gain": 7.085
+  },
+  {
+   "expr": "0011+white-cars-in-the-left",
+   "class": "APPEARANCE",
+   "ego_px": 33.346,
+   "native": 36.72850870391957,
+   "ship": 36.623,
+   "gain": -0.105
+  },
+  {
+   "expr": "0011+white-cars-in-the-right",
+   "class": "APPEARANCE",
+   "ego_px": 17.185,
+   "native": 0.0,
+   "ship": 0.0,
+   "gain": 0.0
+  },
+  {
+   "expr": "0011+white-vehicles-in-the-left",
+   "class": "APPEARANCE",
+   "ego_px": 33.346,
+   "native": 36.72850870391957,
+   "ship": 36.589,
+   "gain": -0.139
+  },
+  {
+   "expr": "0011+white-vehicles-in-the-right",
+   "class": "APPEARANCE",
+   "ego_px": 17.185,
+   "native": 0.0,
+   "ship": 0.0,
+   "gain": 0.0
+  },
+  {
+   "expr": "0013+cars-in-the-left",
+   "class": "APPEARANCE",
+   "ego_px": 24.182,
+   "native": 11.398620783606361,
+   "ship": 11.519,
+   "gain": 0.121
+  },
+  {
+   "expr": "0013+cars-in-the-right",
+   "class": "APPEARANCE",
+   "ego_px": 28.974,
+   "native": 53.214285714285715,
+   "ship": 53.214,
+   "gain": 0.0
+  },
+  {
+   "expr": "0013+females",
+   "class": "APPEARANCE",
+   "ego_px": 26.035,
+   "native": 35.60811408506995,
+   "ship": 38.744,
+   "gain": 3.136
+  },
+  {
+   "expr": "0013+females-in-the-left",
+   "class": "APPEARANCE",
+   "ego_px": 26.294,
+   "native": 43.42651591189318,
+   "ship": 43.427,
+   "gain": 0.0
+  },
+  {
+   "expr": "0013+females-in-the-right",
+   "class": "APPEARANCE",
+   "ego_px": 25.383,
+   "native": 0.0,
+   "ship": 0.0,
+   "gain": 0.0
+  },
+  {
+   "expr": "0013+left-pedestrian-who-are-walking",
+   "class": "MOVING",
+   "ego_px": 26.195,
+   "native": 0.0,
+   "ship": 17.517,
+   "gain": 17.517
+  },
+  {
+   "expr": "0013+left-people-who-are-walking",
+   "class": "MOVING",
+   "ego_px": 26.195,
+   "native": 0.0,
+   "ship": 29.266,
+   "gain": 29.266
+  },
+  {
+   "expr": "0013+left-persons-who-are-walking",
+   "class": "MOVING",
+   "ego_px": 26.195,
+   "native": 0.0,
+   "ship": 30.149,
+   "gain": 30.149
+  },
+  {
+   "expr": "0013+males",
+   "class": "APPEARANCE",
+   "ego_px": 27.043,
+   "native": 22.147087326367263,
+   "ship": 22.796,
+   "gain": 0.649
+  },
+  {
+   "expr": "0013+males-in-the-left",
+   "class": "APPEARANCE",
+   "ego_px": 28.311,
+   "native": 20.69216196322711,
+   "ship": 20.692,
+   "gain": 0.0
+  },
+  {
+   "expr": "0013+males-in-the-right",
+   "class": "APPEARANCE",
+   "ego_px": 26.681,
+   "native": 0.0,
+   "ship": 0.0,
+   "gain": 0.0
+  },
+  {
+   "expr": "0013+men",
+   "class": "APPEARANCE",
+   "ego_px": 27.043,
+   "native": 22.147087326367263,
+   "ship": 22.796,
+   "gain": 0.649
+  },
+  {
+   "expr": "0013+men-in-the-left",
+   "class": "APPEARANCE",
+   "ego_px": 28.311,
+   "native": 20.69216196322711,
+   "ship": 20.692,
+   "gain": 0.0
+  },
+  {
+   "expr": "0013+men-in-the-right",
+   "class": "APPEARANCE",
+   "ego_px": 26.681,
+   "native": 0.0,
+   "ship": 0.0,
+   "gain": 0.0
+  },
+  {
+   "expr": "0013+moving-left-pedestrian",
+   "class": "MOVING",
+   "ego_px": 26.195,
+   "native": 22.96425843696892,
+   "ship": 23.366,
+   "gain": 0.402
+  },
+  {
+   "expr": "0013+moving-right-pedestrian",
+   "class": "MOVING",
+   "ego_px": 25.532,
+   "native": 0.0,
+   "ship": 0.0,
+   "gain": 0.0
+  },
+  {
+   "expr": "0013+pedestrian-in-the-left",
+   "class": "APPEARANCE",
+   "ego_px": 26.772,
+   "native": 47.602967708803384,
+   "ship": 47.603,
+   "gain": 0.0
+  },
+  {
+   "expr": "0013+pedestrian-in-the-right",
+   "class": "APPEARANCE",
+   "ego_px": 25.914,
+   "native": 0.0,
+   "ship": 0.0,
+   "gain": 0.0
+  },
+  {
+   "expr": "0013+people-in-the-left",
+   "class": "APPEARANCE",
+   "ego_px": 26.772,
+   "native": 47.602967708803384,
+   "ship": 47.614,
+   "gain": 0.011
+  },
+  {
+   "expr": "0013+people-in-the-right",
+   "class": "APPEARANCE",
+   "ego_px": 25.914,
+   "native": 0.0,
+   "ship": 0.0,
+   "gain": 0.0
+  },
+  {
+   "expr": "0013+persons-in-the-left",
+   "class": "APPEARANCE",
+   "ego_px": 26.772,
+   "native": 47.602967708803384,
+   "ship": 47.603,
+   "gain": 0.0
+  },
+  {
+   "expr": "0013+persons-in-the-right",
+   "class": "APPEARANCE",
+   "ego_px": 25.914,
+   "native": 0.0,
+   "ship": 0.0,
+   "gain": 0.0
+  },
+  {
+   "expr": "0013+right-pedestrian-who-are-walking",
+   "class": "MOVING",
+   "ego_px": 25.532,
+   "native": 0.0,
+   "ship": 3.57,
+   "gain": 3.57
+  },
+  {
+   "expr": "0013+right-people-who-are-walking",
+   "class": "MOVING",
+   "ego_px": 25.532,
+   "native": 0.0,
+   "ship": 5.338,
+   "gain": 5.338
+  },
+  {
+   "expr": "0013+right-persons-who-are-walking",
+   "class": "MOVING",
+   "ego_px": 25.532,
+   "native": 0.0,
+   "ship": 2.774,
+   "gain": 2.774
+  },
+  {
+   "expr": "0013+standing-females",
+   "class": "STATIC",
+   "ego_px": 25.575,
+   "native": 0.0,
+   "ship": 1.016,
+   "gain": 1.016
+  },
+  {
+   "expr": "0013+standing-males",
+   "class": "STATIC",
+   "ego_px": 28.044,
+   "native": 0.0,
+   "ship": 0.954,
+   "gain": 0.954
+  },
+  {
+   "expr": "0013+standing-men",
+   "class": "STATIC",
+   "ego_px": 28.044,
+   "native": 0.0,
+   "ship": 7.225,
+   "gain": 7.225
+  },
+  {
+   "expr": "0013+standing-women",
+   "class": "STATIC",
+   "ego_px": 25.575,
+   "native": 0.0,
+   "ship": 2.092,
+   "gain": 2.092
+  },
+  {
+   "expr": "0013+vehicles-in-the-left",
+   "class": "APPEARANCE",
+   "ego_px": 24.182,
+   "native": 11.398620783606361,
+   "ship": 11.531,
+   "gain": 0.133
+  },
+  {
+   "expr": "0013+vehicles-in-the-right",
+   "class": "APPEARANCE",
+   "ego_px": 28.974,
+   "native": 53.214285714285715,
+   "ship": 53.214,
+   "gain": 0.0
+  },
+  {
+   "expr": "0013+walking-females",
+   "class": "MOVING",
+   "ego_px": 25.888,
+   "native": 0.0,
+   "ship": 0.0,
+   "gain": 0.0
+  },
+  {
+   "expr": "0013+walking-males",
+   "class": "MOVING",
+   "ego_px": 26.186,
+   "native": 0.0,
+   "ship": 0.0,
+   "gain": 0.0
+  },
+  {
+   "expr": "0013+walking-men",
+   "class": "MOVING",
+   "ego_px": 26.186,
+   "native": 0.0,
+   "ship": 0.0,
+   "gain": 0.0
+  },
+  {
+   "expr": "0013+walking-women",
+   "class": "MOVING",
+   "ego_px": 25.888,
+   "native": 0.0,
+   "ship": 3.13,
+   "gain": 3.13
+  },
+  {
+   "expr": "0013+women",
+   "class": "APPEARANCE",
+   "ego_px": 26.035,
+   "native": 35.60811408506995,
+   "ship": 40.247,
+   "gain": 4.639
+  },
+  {
+   "expr": "0013+women-carrying-a-bag",
+   "class": "APPEARANCE",
+   "ego_px": 26.333,
+   "native": 0.0,
+   "ship": 0.0,
+   "gain": 0.0
+  },
+  {
+   "expr": "0013+women-holding-a-bag",
+   "class": "APPEARANCE",
+   "ego_px": 26.333,
+   "native": 0.0,
+   "ship": 0.0,
+   "gain": 0.0
+  },
+  {
+   "expr": "0013+women-in-the-left",
+   "class": "APPEARANCE",
+   "ego_px": 26.294,
+   "native": 43.42651591189318,
+   "ship": 43.427,
+   "gain": 0.0
+  },
+  {
+   "expr": "0013+women-in-the-right",
+   "class": "APPEARANCE",
+   "ego_px": 25.383,
+   "native": 0.0,
+   "ship": 0.0,
+   "gain": 0.0
+  }
+ ]
+}
