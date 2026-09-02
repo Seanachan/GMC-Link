@@ -1,0 +1,12 @@
+{
+  "date": "2026-09-02",
+  "protocol": "independent semantic audit of the 150 official V1 test expressions under the A43 three-class definition (direction/turning/faster = appearance BY DESIGN), then mechanical comparison with gmc_link.moving_kw.classify",
+  "agreement": "150/150",
+  "disagreements": [],
+  "note": "classifier-vs-definition agreement; the definitional exclusion of direction/turning/speed expressions from MOVING (214/818 V1) is a separate, disclosed design choice (paper \u00a75)",
+  "manual_counts": {
+    "moving": 21,
+    "static": 12,
+    "appearance": 117
+  }
+}
