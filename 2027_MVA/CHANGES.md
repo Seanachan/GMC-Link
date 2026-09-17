@@ -11,6 +11,21 @@
 
 ---
 
+## 未發布 — `gmc_v3.tex`(2026-09-17,審查小組 issue #41:敘事/文字/版面)
+
+全部 [編輯] — 數字不變;在 issue #40 修正之上疊加。
+
+- **摘要**:R3 逐句修正(平行結構、"relate motion to text"、去 "motion-matching extent")+ 尾句改為具體結果句(Refer-KITTI、三架構四設定、iKUN moving-class +9.44、6.7 ms CPU)。注意:教授版摘要偏短,此句是唯一新增的數字句。
+- **§1**:貢獻點改「four host settings spanning three architectures」;新增第三點(增益與 host 自身運動理解成反比);"Contrastive Motion Aligner" → "contrastive motion–language aligner";累積齊次矩陣句改為「量測相機運動」(原句邏輯反了);intro 與 §2.2 重複的 "underexplored" 句去重。
+- **§2**:Related Works→Related Work;TempRMOT 一句(temporal query memory + V2 來源);FlexHook 描述補 camera-ready 實況(feature-level temporal差分,無相機補償);ReferGPT 補 zero-shot;DeepRMOT 單數;VMRMOT 對比句加「to our knowledge, none applies camera-motion compensation」;UCMCTrack 兩處統一為 ground-plane 說法;rotation/translation 取代 turning/movement。
+- **§3.1**:開頭一句 credit BoT-SORT 式 sparse-flow CMC 配方、標明我們的差異(road band);段尾一句辯護「global」用詞(全幀 keypoints 偏離路面 → 路帶擬合就是可用的全域運動模型,A39);RANSAC 句因果修正;Shi--Tomasi / Lucas--Kanade en-dash;引 KITTI。
+- **§3.2**:三個 velocity 定義 bullet 去重複;Eq. (3) 改用 $v^{\mathrm{res}}_g$ 記號(s/m/l 下標廢除);"is mixed with" → "mixes";1/g 句改 "absorbed by";abstention 句白話化。
+- **§3.3/3.4**:MiniLM 句改為標準寫法(384-d、pre-trained);InfoNCE 全稱錯誤刪除;Eq. (4) 處定義 c∈{mot,app}(static 併入 mot 不再只存在於表頭);weighting→weight 全文;"adds extra influence"→"adds a term"。
+- **§4**:不平衡段(primary metric 論證)移到 §4.1 開頭;§4.2 改為 moving-class(Table 3)先行、pooled(Table 2)在後,浮動順序同步對調;L213 單調因果句軟化為觀察句 + headroom 對抗解讀一句;「order of magnitude」→「factor of twenty」;§4.1 定義三架構/四設定一次。
+- **§5**:結論孤兒句併回主句;「improves for different host models」→「in all four host settings」;limitations 加第三項(TempRMOT 類 temporal-memory host 出界,內部量測退化)。
+- **圖表**:Fig.1 `[t]` + `\textwidth`(原 13 cm = 73% 版寬)、caption 展開 GMC;Fig.2 caption 改 \enquote、與正文說法一致(image-plane)、加 "In this example";Table 1 α 欄 7.0/5.0;Table 3 \small→\footnotesize + caption 定義 gain 與 ±;表格 caption 樣式統一。
+- **LaTeX**:刪未用 packages(multirow/comment/xcolor)與模板 \def\x/\def\L(\L 覆蓋 Ł);Eqn.→Eq.;Eq. (2)/(3) 補 \ref;版面:正文收第 5 頁,參考文獻約半頁溢至第 6 頁(MVA 頁限確認前不再壓縮)。
+
 ## 未發布 — `gmc_v3.tex`(2026-09-17,審查小組 issue #40:數字/事實修正)
 
 2026-09-13 模擬審查小組(`review_gmc_v3_panel_2026-09-13.md`,本地)發現的數字/事實問題,全部查證後修正。開工前重新查證 FlexHook camera-ready(arXiv 2503.07516 v5):**published V2 = 42.53(不是 repo 記錄的 42.81)**,V1 53.83;我們的複現(42.526 / 53.824)在其發表精度下吻合,DetA/AssA 也逐位吻合 — 小組的 P0 第 1 項(「exceeds published 對 V2 不成立」)因此不成立,論文原主張是對的,只需標註精度。42.81 是 landscape 記憶的舊值,已更正。
