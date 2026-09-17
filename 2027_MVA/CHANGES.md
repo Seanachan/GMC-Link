@@ -11,6 +11,23 @@
 
 ---
 
+## 未發布 — `gmc_v3.tex`(2026-09-17,審查小組 issue #40:數字/事實修正)
+
+2026-09-13 模擬審查小組(`review_gmc_v3_panel_2026-09-13.md`,本地)發現的數字/事實問題,全部查證後修正。開工前重新查證 FlexHook camera-ready(arXiv 2503.07516 v5):**published V2 = 42.53(不是 repo 記錄的 42.81)**,V1 53.83;我們的複現(42.526 / 53.824)在其發表精度下吻合,DetA/AssA 也逐位吻合 — 小組的 P0 第 1 項(「exceeds published 對 V2 不成立」)因此不成立,論文原主張是對的,只需標註精度。42.81 是 landscape 記憶的舊值,已更正。
+
+### [筆誤] — 稿子寫錯,數據一直是對的
+- §3(架構總覽):iKUN 誤寫為「performs object detection and tracking」;改為 scores frozen off-the-shelf tracklets(與 §2.1 一致)。
+- §3.4 LOSO 句:「(on the validation set)」與 §4.1 自相矛盾且流程寫反;改為正確協議(逐 fold 留一序列、其餘序列上選 α、全測試集用 fold 中位數)。§4.1 的「No weight is chosen on the sequence it is evaluated on」改為誠實版本,並引早期配置上的 out-of-fold composite 檢查(~88% moving-class 增益存活)。
+- §5:「routes only moving-class」→「moving- and static-class」(與 Table 1 / `moving_kw.py` 一致);分母改官方名單(24/150,818 全集留括號)。
+
+### [編輯] — 揭露補強,數字不變
+- §3.4 腳註印出完整關鍵字分類器(19 MOVING + 7 STATIC 字根)+「先凍結、後選 α」。
+- Table 2:全欄統一 2 位小數、+GMC 列加 ±(0.12/0.03/0.06/0.03)、去掉全 bold;caption 逐列標 published vs reproduced($^*$);iKUN 44.543 複現句加進 §4.1。
+- §4.1:± = seed std 定義;19 seqs =「18 V1 + 1 條 V2-only」子句;V1-trained aligner 用於全部四設定(含 V2)句;host 分數尺度句(score std:iKUN 0.50 / TransRMOT 0.35 / FlexHook margin 10.2 — 本輪新量測,解釋 α=7)+ gate 凍結句(0.0;TransRMOT 0.5)。
+- §4.3:Welch 補 df 與精確 p(A43 現成:ego 8×10⁻⁶ / 2×10⁻⁶;multiscale 均 1.6×10⁻³)、標明 seed-stability;n=3/n=5 對帳括號;routing +4.57 / ego +4.62 分解句。
+- Table 4 caption:逐列 α 政策(變體繼承 (1.0, 0.1),未重選;single-α 列 = 0.35)。
+- 版面:正文收在第 5 頁,參考文獻溢出一條到第 6 頁(#41 版面輪會再收)。
+
 ## paper-2026-08-31 — `gmc_v3.tex`(對 `paper-2026-08-30`)
 
 ### [編輯] — latexdiff 基準改為教授版(release 後修正)
